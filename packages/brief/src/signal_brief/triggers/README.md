@@ -1,0 +1,5 @@
+# signal_brief.triggers
+
+`on_interaction(paths, now) -> Interaction`, for a present interaction. While away only the gap one-liner (rule 4). Otherwise: the day's first check from 04:00 to 12:00 marks a general full brief due unless a delivery given this morning was already acked (rule 3); a due brief is offered `full` however old it is, so it builds up until the owner sees it (rule 2); else after 6 h since `last_human_at`, with something unseen and no delivery since then that reached the newest unseen item, the one-liner (rule 4). An acked delivery reaches only as far as its ack, so an item a relay left out still gets the one-liner. `Interaction.gap_one_liner` says whether rule 4 holds whatever the offer, at most once per gap, so a session that already got the due brief can give the one-liner instead of nothing. A due brief drops only on an ack of a delivery given at or after it was marked. Never an empty brief. `decide_offer` is the pure core; `one_liner_text` the wording.
+
+Depends on: `away`, `compose`, `deliveries`, `presence`, `store`.

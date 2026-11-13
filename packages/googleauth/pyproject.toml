@@ -1,0 +1,36 @@
+[project]
+name = "signal-googleauth"
+version = "0.1.0"
+description = "Google OAuth plumbing shared by Signal's mail and calendar tools: client file, sign-in, DPAPI tokens."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+dependencies = [
+    # Credentials objects and token refresh. Same pins as tools/mail.
+    "google-auth==2.62.0",
+    # The installed-app loopback OAuth flow.
+    "google-auth-oauthlib==1.5.0",
+]
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

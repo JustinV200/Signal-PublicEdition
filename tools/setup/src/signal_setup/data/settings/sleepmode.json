@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "path": "tools/sleepmode/sleepmode.toml",
+      "example": "tools/sleepmode/sleepmode.example.toml"
+    }
+  ],
+  "settings": [
+    {
+      "key": "lighting.enabled",
+      "file": "tools/sleepmode/sleepmode.toml",
+      "type": "bool",
+      "level": "basic",
+      "description": "Turn RGB lights off in sleep mode (needs OpenRGB)",
+      "hint": "yes or no"
+    },
+    {
+      "key": "lighting.openrgb_path",
+      "file": "tools/sleepmode/sleepmode.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Path to OpenRGB.exe",
+      "hint": "leave as is to find it on PATH"
+    },
+    {
+      "key": "input.mouse_move_px",
+      "file": "tools/sleepmode/sleepmode.toml",
+      "type": "int",
+      "level": "advanced",
+      "description": "How far the mouse must move to wake the screens",
+      "hint": "pixels"
+    }
+  ]
+}

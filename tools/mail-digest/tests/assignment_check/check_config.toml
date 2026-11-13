@@ -1,0 +1,9 @@
+# Test data for the assignment_check tests: three Moodle courses and one Classroom class.
+[moodle]
+base = "https://lms.example.edu"
+courses = ["side-project:1001", "hist-205:1002", "art-110:1003"]
+
+[classroom]
+base = "https://classroom.google.com/u/1"
+account = "student@school.example.edu"
+courses = ["chem-120:Q2xhc3NBQkMx:Course 101 Fall - 01"]

@@ -1,0 +1,74 @@
+{
+  "files": [
+    {
+      "path": "tools/audiohub/audiohub.toml",
+      "example": "tools/audiohub/audiohub.example.toml"
+    }
+  ],
+  "settings": [
+    {
+      "key": "tts.voice",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "The speaking voice",
+      "hint": "a Kokoro voice id, e.g. bm_george or af_heart"
+    },
+    {
+      "key": "tts.speed",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "float",
+      "level": "basic",
+      "description": "Speaking speed",
+      "hint": "1.0 is normal"
+    },
+    {
+      "key": "ducking.level",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "float",
+      "level": "basic",
+      "description": "Music volume while the hub speaks",
+      "hint": "0.0 to 1.0"
+    },
+    {
+      "key": "wake.phrases",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Wake phrases",
+      "hint": "comma-separated, e.g. hey claude, claude"
+    },
+    {
+      "key": "audio.input_device",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Microphone (part of its device name)",
+      "hint": "leave unset for the system default"
+    },
+    {
+      "key": "audio.output_device",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Speaker or headset (part of its device name)",
+      "hint": "leave unset for the system default"
+    },
+    {
+      "key": "brain.model",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Model alias that answers spoken requests",
+      "hint": "sonnet, opus or haiku"
+    },
+    {
+      "key": "kernel.model",
+      "file": "tools/audiohub/audiohub.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Model alias that orders notifications",
+      "hint": "sonnet, opus or haiku"
+    }
+  ]
+}

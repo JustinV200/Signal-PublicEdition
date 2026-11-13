@@ -1,0 +1,42 @@
+# The assignment checker's Moodle launch (refdocs/research/checker-v2.md section 3.1).
+# The shipped example; setup copies it to browser-checker-<site>.toml (gitignored)
+# and replaces the example hosts with yours. It IS the checker's security policy.
+# Read by `browser-tool-visit --config browser-checker-moodle.toml`, never by the
+# MCP server. The pins below are tested (tests/visit/test_checker_configs.py).
+#
+# Hard rules: no Google host at all, so the resolver rules block every Google
+# request (redirect hops and Edge's own background requests included), and no
+# wildcard that could cover one.
+
+[browser]
+# The checker's own profile, never the desktop browser's .profile.
+profile_dir = ".profile-checker"
+# Headed, so the owner can answer Duo's "trust this browser" prompt.
+headless = false
+# Behind a proxy the DNS-level redirect block wouldn't apply.
+use_system_proxy = false
+# DRAFT [unverified]: phase 0 records each real page's size and sets this from them.
+max_snapshot_chars = 25000
+
+[policy]
+allow_all = false
+deny = []
+# DRAFT [unverified]: phase 0 adds Moodle's static asset hosts from the browser
+# log, none of them Google.
+allow = ["lms.example.edu", "sso.example.edu", "*.duosecurity.com"]
+
+[downloads]
+# The checker only reads pages: every download is refused.
+enabled = false
+
+[visit]
+login_host = "sso.example.edu"
+login_from_hosts = ["lms.example.edu"]
+# The vault credential (origin https://sso.example.edu); owner step 1 checks its username.
+login_credential = "school"
+login_wait_s = 150
+settle_s = 8
+
+[duo]
+# Read Duo's Verified Push code out for CAS only.
+code_relay_sites = ["sso.example.edu"]

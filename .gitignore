@@ -1,0 +1,130 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments and tool caches
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+*.env
+.env.*
+!.env.example
+
+# audiohub local state: downloaded models, per-machine config, runtime state
+tools/audiohub/models/
+tools/audiohub/audiohub.toml
+tools/audiohub/.cache/
+
+# browser tool local state: browser profile, per-machine config, screenshots, downloads
+tools/browser/.profile/
+tools/browser/.profile-checker/
+tools/browser/.profile-jobs/
+tools/browser/browser.toml
+tools/browser/browser-docker.toml
+tools/browser/browser-jobs.toml
+tools/browser/.screenshots/
+tools/browser/.downloads/
+tools/browser/.state/
+
+# sessions and whiteboard local state: IPC tokens, transcripts, snapshots, per-machine config
+tools/sessions/.state/
+tools/whiteboard/.state/
+tools/whiteboard/whiteboard.toml
+*.whiteboard-tmp
+
+# mail tool local state: Google OAuth client file, DPAPI-encrypted sign-ins, config
+tools/mail/.state/
+
+# mail digest local state: search windows, announced items, run log
+tools/mail-digest/.state/
+
+# calendar tool local state: DPAPI-encrypted sign-in, agenda cache
+tools/calendar/.state/
+
+# sleepmode local state: sleep/wake state, log, per-machine config
+tools/sleepmode/.state/
+tools/sleepmode/sleepmode.toml
+
+# usage local state: usage windows and active subagents (usage.json), lock, error log
+tools/usage/.state/
+
+# console front end: installed packages and the Vite build output
+tools/console/web/node_modules/
+tools/console/web/dist/
+
+# console local state: orchestrator inbox claim, local key, history, hub log
+tools/console/.state/
+
+# jobhunt local state: run logs, the run lock, DPAPI-encrypted dedicated account passwords
+# (the template runbook and profile are copied into life/, which is gitignored)
+tools/jobhunt/.logs/
+tools/jobhunt/.state/
+
+# brief local state: event log, bookmark, away, presence, deliveries, hook log
+tools/brief/.state/
+
+# Claude Code per-machine settings (permission mode, MCP approvals, hooks), written by setup
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+# The project MCP config setup writes from .mcp.example.json for the tools you chose
+.mcp.json
+
+# Setup progress (which tools are done or skipped)
+.setup/
+
+# The owner's private knowledge base: everything but its README stays local
+life/*
+!life/README.md
+
+# Per-machine configs copied from the *.example.* files
+tools/browser/browser-jobs.toml
+tools/browser/browser-checker-classroom.toml
+tools/browser/browser-checker-moodle.toml
+tools/mail-digest/assignment-check.toml
+
+# Credentials, cookies, keys and OAuth files anywhere
+*.pem
+*.key
+*.pfx
+*.p12
+*.kdbx
+cookies*.bin
+google_client*.json
+token*.json
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Vault data
+tools/vault/.state/
+tools/vault/.vault/
+
+# Any other per-tool state or logs
+**/.state/
+**/.logs/
+**/.profile*/
+**/.downloads/
+**/.screenshots/
+node_modules/
+
+# copytone: your writing samples and the voice profile built from them stay local
+.claude/skills/copytone/samples/*
+!.claude/skills/copytone/samples/README.md
+.claude/skills/copytone/voice-profile.md

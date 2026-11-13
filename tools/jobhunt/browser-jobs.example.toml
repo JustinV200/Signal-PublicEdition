@@ -1,0 +1,29 @@
+# browser-tool config for the job-application runner (the browser-jobs MCP server).
+#
+# install-schedule.ps1 copies this to tools/browser/browser-jobs.toml (gitignored)
+# when that file is missing. Every other key keeps browser.example.toml's default.
+#
+# Why it differs from browser.toml: runs happen while the owner is asleep or
+# away, so "Submit application" and resume uploads (the "send" gate) must not
+# wait for an on-screen Allow. Purchases and deletes still ask, and the vault
+# still asks before every login fill (so unattended runs can't sign in).
+
+[browser]
+# Own profile and saved cookies, so this instance runs beside the main browser.
+# Relative to tools/browser.
+profile_dir = ".profile-jobs"
+cookie_file = ".state/cookies-jobs.bin"
+
+[policy]
+# Job boards and ATS sites are too many to list; navigations are logged.
+allow_all = true
+
+[gates]
+always_confirm = ["purchase", "delete"]
+# The runner makes its own dedicated job-site accounts (tools/jobhunt/account.ps1
+# makes the password) and types their passwords and emailed codes. Off in browser.toml.
+allow_secret_fields = true
+
+[uploads]
+# Only the resume folder: a run uploads nothing else.
+roots = ["../../life/areas/job-search/resume"]

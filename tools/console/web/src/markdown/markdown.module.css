@@ -1,0 +1,114 @@
+/* Markdown looks from DESIGN.md section 8, scoped to one rendered body. */
+.body {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.body > * + * {
+  margin-top: 0.6em;
+}
+
+.body h1,
+.body h2,
+.body h3,
+.body h4,
+.body h5,
+.body h6 {
+  font-weight: 600;
+  line-height: 1.4;
+  /* Relative to the body size so the 16 / 15 / 14 steps scale with it at 4K. */
+  font-size: var(--font-body);
+}
+
+.body h1 {
+  font-size: calc(var(--font-body) + 2px);
+}
+
+.body h2 {
+  font-size: calc(var(--font-body) + 1px);
+}
+
+.body > :is(h1, h2, h3, h4, h5, h6):not(:first-child) {
+  margin-top: 0.9em;
+}
+
+.body strong {
+  font-weight: 600;
+}
+
+.body pre {
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  padding: 12px;
+  font-size: var(--font-small);
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.body pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* `-` and `1.` markers in fg-2, 2ch per level, outside the text. */
+.body ul,
+.body ol {
+  padding-left: 2ch;
+}
+
+.body ul {
+  list-style: "- ";
+}
+
+.body ol {
+  list-style: decimal;
+}
+
+.body li::marker {
+  color: var(--fg-2);
+}
+
+.body li > ul,
+.body li > ol {
+  margin-top: 0;
+}
+
+/* remark-gfm leaves a space after the checkbox, so no extra margin. */
+.check {
+  color: var(--fg-2);
+}
+
+.body blockquote {
+  border-left: 2px solid var(--rule);
+  padding-left: 1.5ch;
+  color: var(--fg-2);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.body table {
+  border-collapse: collapse;
+}
+
+.body th,
+.body td {
+  padding: 0 1ch;
+  text-align: left;
+  font-weight: 400;
+}
+
+.body th {
+  border-bottom: 1px solid var(--rule);
+}
+
+.body hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.body del {
+  color: var(--fg-2);
+}

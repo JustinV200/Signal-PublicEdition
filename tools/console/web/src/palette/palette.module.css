@@ -1,0 +1,45 @@
+/* Command palette: up to 8 matches rising above the input line. */
+.list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  background: var(--bg-2);
+  border-top: 1px solid var(--rule);
+  padding: 6px 0;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 2px 0 2px 2ch;
+  color: var(--fg-2);
+  transition: background-color 80ms linear;
+}
+
+.item:hover {
+  color: var(--fg);
+}
+
+.selected {
+  color: var(--fg);
+  background: var(--bg-3);
+}
+
+.mark {
+  display: inline-block;
+  width: 2ch;
+  color: var(--accent);
+}
+
+.none {
+  color: var(--fg-3);
+  padding-left: 4ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

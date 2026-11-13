@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mail": {
+      "command": "uv",
+      "args": ["run", "--env-file", "../.env", "--project", "../tools/mail", "--frozen", "--no-sync", "mail", "mcp"]
+    }
+  }
+}

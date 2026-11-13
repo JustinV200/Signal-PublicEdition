@@ -1,0 +1,159 @@
+/* Devices view: header and hint, the Away/Here block, the device rows
+   (shape, name, state words, action), then the camera panel when open. */
+.view {
+  padding: 14px 0 18px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 3ch;
+  color: var(--fg-2);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.meta {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+}
+
+.hint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding: 8px 0 12px;
+}
+
+.away {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2ch;
+  padding: 8px 1ch;
+  margin-bottom: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.awayState {
+  font-weight: 600;
+}
+
+.awayNote {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+}
+
+.awayActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1ch;
+  margin-left: auto;
+}
+
+.until {
+  width: 30ch;
+  height: var(--control-height);
+  padding: 0 1ch;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--fg-3);
+  border-radius: 3px;
+}
+
+.until::placeholder {
+  color: var(--fg-3);
+}
+
+.list {
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2ch 22ch minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1ch;
+  padding: 6px 1ch 6px 0.5ch;
+  border-bottom: 1px solid var(--rule);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.mark {
+  text-align: center;
+  color: var(--fg-3);
+}
+
+/* Second cue only: the state word beside it says the same. */
+.on {
+  color: var(--ok);
+}
+
+.unknown {
+  color: var(--warn);
+}
+
+.name {
+  color: var(--fg);
+}
+
+.words {
+  min-width: 0;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.stateWord {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.camera {
+  margin-top: 12px;
+  padding: 10px 1ch;
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.cameraHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  color: var(--fg-2);
+}
+
+.frame {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--rule);
+}
+
+.problem {
+  color: var(--warn);
+  padding-top: 6px;
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 2ch minmax(0, 1fr);
+  }
+  .words,
+  .action {
+    grid-column: 2;
+  }
+}

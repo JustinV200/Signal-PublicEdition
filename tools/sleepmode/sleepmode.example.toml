@@ -1,0 +1,30 @@
+# sleepmode example config.
+#
+# Copy this file to sleepmode.toml (same folder; gitignored) and edit what you need.
+# Every key is optional. Leave a key or a whole section out to keep its default. The
+# values below ARE the defaults.
+
+[lighting]
+# Read on every sleep and wake, so an edit applies at once. An unknown key or a wrong
+# type leaves the lights alone, with a note in the sleep or wake answer.
+# Turn the RGB lights off at sleep and back on at wake. false leaves them alone.
+enabled = true
+# Full path to OpenRGB.exe. Empty = %LOCALAPPDATA%\Programs\OpenRGB\OpenRGB.exe.
+# It's run through cmd.exe, so a path with a % in it can't be used.
+openrgb_path = ""
+# Extra commands for lights OpenRGB can't reach (a vendor CLI, a Chroma SDK script).
+# Each is an argv list, run with no shell and no window, with a 10 s timeout. Sleep
+# runs off_commands after OpenRGB, and wake runs restore_commands.
+# Example: off_commands = [["C:\\Tools\\vendor-rgb.exe", "--off"]]
+off_commands = []
+restore_commands = []
+
+[input]
+# What wakes sleep mode from the mouse. Keys (not media keys), clicks and the wheel wake
+# it at once, but a move only counts once the cursor spans mouse_move_px across or down
+# within mouse_move_window_s, so an optical mouse's few-pixel jitter doesn't wake the
+# screens in the night. A normal shake of the mouse covers 100 px in well under a second.
+# Each new keeper reads this, so an edit applies from the next sleep. A bad value is
+# logged and the defaults are used.
+mouse_move_px = 100
+mouse_move_window_s = 1.5

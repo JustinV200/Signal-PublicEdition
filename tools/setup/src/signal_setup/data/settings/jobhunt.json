@@ -1,0 +1,111 @@
+{
+  "files": [
+    {
+      "path": "life/areas/job-search/runbook.md",
+      "example": "tools/jobhunt/templates/runbook.example.md"
+    },
+    {
+      "path": "life/areas/job-search/profile.md",
+      "example": "tools/jobhunt/templates/profile.example.md"
+    },
+    {
+      "path": "tools/jobhunt/schedule.psd1"
+    }
+  ],
+  "settings": [
+    {
+      "key": "RunTimes",
+      "file": "tools/jobhunt/schedule.psd1",
+      "type": "times",
+      "level": "basic",
+      "description": "When the job-application run starts each day",
+      "hint": "24-hour local times, comma-separated, e.g. 07:00, 18:00",
+      "rerun": "schedule"
+    },
+    {
+      "key": "Applications per run",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "int",
+      "level": "basic",
+      "description": "The most applications one run submits",
+      "hint": "a whole number, e.g. 5"
+    },
+    {
+      "key": "Digest email every N applications",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "int",
+      "level": "basic",
+      "description": "Draft a digest email after this many new applications",
+      "hint": "a whole number, e.g. 10"
+    },
+    {
+      "key": "Stop after jobs attempted",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "int",
+      "level": "advanced",
+      "description": "A run stops starting new applications after this many jobs",
+      "hint": "a whole number"
+    },
+    {
+      "key": "Stop after minutes",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "int",
+      "level": "advanced",
+      "description": "A run stops starting new applications after this many minutes",
+      "hint": "a whole number"
+    },
+    {
+      "key": "Name",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "Your full name as it goes on applications"
+    },
+    {
+      "key": "Email to apply with",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "The email address applications use (digests go here too)"
+    },
+    {
+      "key": "Phone",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "Your phone number"
+    },
+    {
+      "key": "City for \"current location\" fields",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "Your city for current-location fields",
+      "hint": "e.g. Chicago, IL"
+    },
+    {
+      "key": "Target roles",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "The roles to apply for",
+      "hint": "e.g. backend software engineer, new grad"
+    },
+    {
+      "key": "Location preference",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "Where you want to work",
+      "hint": "e.g. New York City or remote"
+    },
+    {
+      "key": "Salary field required",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "Your answer when a salary field is required",
+      "hint": "a range, and one number for single-value fields"
+    }
+  ]
+}

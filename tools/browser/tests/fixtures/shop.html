@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<head><title>Shop fixture</title></head>
+<body>
+  <h1>Shop</h1>
+  <p id="status">idle</p>
+  <button id="buy" onclick="document.getElementById('status').textContent = 'bought'">Buy now for $42</button>
+  <button id="info" onclick="document.getElementById('status').textContent = 'info shown'">Show details</button>
+  <iframe title="widget" srcdoc="<button onclick=&quot;parent.document.getElementById('status').textContent = 'frame clicked'&quot;>Next</button>"></iframe>
+</body>
+</html>

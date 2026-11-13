@@ -1,0 +1,57 @@
+[project]
+name = "mail-tool"
+version = "0.1.0"
+description = "Claude's multi-account Gmail tool: search, read and draft mail, send only with owner approval."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+dependencies = [
+    # Credentials objects, token refresh, and AuthorizedSession for the Gmail REST calls.
+    "google-auth==2.62.0",
+    # The installed-app loopback OAuth flow used by `mail add`.
+    "google-auth-oauthlib==1.5.0",
+    # The HTTP transport AuthorizedSession is built on.
+    "requests==2.34.2",
+    # Same pin as tools/sessions, tools/audiohub and tools/whiteboard.
+    "mcp==2.3.0",
+    # The shared owner Allow/Deny dialog (packages/confirm, stdlib only).
+    "signal-confirm",
+]
+
+[project.scripts]
+mail = "mail_tool.cli:main"
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "mail_tool"
+
+[tool.uv.sources]
+signal-confirm = { path = "../../packages/confirm", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames across the mirrored folders
+# without needing __init__.py files in tests/. `support` holds shared fakes.
+addopts = ["--import-mode=importlib"]
+pythonpath = ["tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

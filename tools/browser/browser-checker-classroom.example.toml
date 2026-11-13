@@ -1,0 +1,41 @@
+# The assignment checker's Classroom launch (refdocs/research/checker-v2.md section 3.1).
+# The shipped example; setup copies it to browser-checker-<site>.toml (gitignored)
+# and replaces the example hosts with yours. It IS the checker's security policy.
+# Read by `browser-tool-visit --config browser-checker-classroom.toml`, never by
+# the MCP server. The pins below are tested (tests/visit/test_checker_configs.py).
+#
+# Hard rules: no sso.example.edu (or any school host), so Google's SAML hop for
+# the school account can never reach CAS; never "*.google.com" or
+# "www.google.com"; no wildcard that could cover either.
+
+[browser]
+# The checker's own profile, never the desktop browser's .profile.
+profile_dir = ".profile-checker"
+# Headed, so the owner can see the window.
+headless = false
+# Behind a proxy the DNS-level redirect block wouldn't apply.
+use_system_proxy = false
+# DRAFT [unverified]: phase 0 records each real page's size and sets this from them.
+max_snapshot_chars = 25000
+
+[policy]
+allow_all = false
+deny = []
+# DRAFT [unverified]: phase 0 adds Classroom's static asset hosts from the browser
+# log. They go only into this config, and never "*.google.com" or "www.google.com".
+allow = ["classroom.google.com", "accounts.google.com"]
+
+[downloads]
+# The checker only reads pages: every download is refused.
+enabled = false
+
+[visit]
+# No login keys: this launch has no fill path at all.
+signin_hosts = ["accounts.google.com"]
+# Your school's SSO login host and cookie domain. They are matched, never allowed:
+# a failed hop to sso_host means a Google sign-in is needed, and every school_domain
+# cookie is cleared before the launch.
+sso_host = "sso.example.edu"
+school_domain = "example.edu"
+login_wait_s = 150
+settle_s = 8

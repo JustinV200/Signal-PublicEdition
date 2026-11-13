@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head><title>Confirm fixture</title></head>
+<body>
+  <p id="status">idle</p>
+  <script>function setStatus(text) { document.getElementById('status').textContent = text; }</script>
+  <button onclick="setStatus('paid')">Pay $10</button>
+  <button onclick="setStatus('sent')" ondblclick="setStatus('sent')">Send reply</button>
+  <button onclick="setStatus('deleted')">Delete draft</button>
+  <button draggable="true">Old note</button>
+  <!-- A hover swap: under the mouse, "Preview" turns into a Send button. -->
+  <button onmousemove="this.textContent = 'Send'; this.onclick = () => setStatus('sent')"
+    onclick="setStatus('previewed')">Preview</button>
+  <button ondblclick="setStatus('opened')">Open</button>
+  <!-- A scroll on click: the first click moves "Other" to where "Shift" was. -->
+  <div>
+    <button style="display:block; margin:0; height:40px" onclick="window.scrollBy(0, 40)">Shift</button>
+    <button style="display:block; margin:0; height:40px" onclick="setStatus('other pressed')">Other</button>
+  </div>
+  <!-- A double-click swap: the first click turns "Edit" into a Send button. -->
+  <button onclick="this.textContent = 'Send'; this.ondblclick = () => setStatus('sent')">Edit</button>
+  <!-- A focus jump: the first key moves focus to a button a space would press. -->
+  <input aria-label="Jumpy" oninput="document.getElementById('jump').focus()">
+  <button id="jump" onclick="setStatus('jumped')">Jump</button>
+  <section aria-label="Trash" ondragover="event.preventDefault()" ondrop="setStatus('trashed')">Trash</section>
+  <select multiple aria-label="Bulk" onchange="setStatus('bulk')">
+    <option>Archive</option>
+    <option>Delete</option>
+  </select>
+  <input aria-label="Notes">
+  <div contenteditable="true" role="combobox" aria-label="Message"></div>
+  <form onsubmit="event.preventDefault(); setStatus('signed in')">
+    <input aria-label="Username">
+    <input type="password" aria-label="Password">
+    <button>Sign in</button>
+  </form>
+  <form onsubmit="event.preventDefault(); setStatus(event.submitter.textContent)">
+    <textarea aria-label="Online text"></textarea>
+    <input type="checkbox" aria-label="My own work">
+    <button>Save changes</button>
+    <button>Save draft</button>
+  </form>
+  <form method="get" onsubmit="event.preventDefault(); setStatus('opened')">
+    <button>Add submission</button>
+    <button formmethod="post">Apply</button>
+  </form>
+  <form onsubmit="event.preventDefault(); setStatus('chatted')">
+    <textarea role="combobox" aria-label="Chat"></textarea>
+    <button>&gt;</button>
+  </form>
+  <form onsubmit="event.preventDefault(); setStatus('said')">
+    <input aria-label="Say something">
+  </form>
+  <form role="search" onsubmit="event.preventDefault(); setStatus('searched')">
+    <input aria-label="Query">
+    <button>Go</button>
+  </form>
+  <form onsubmit="event.preventDefault(); setStatus('found')">
+    <input type="search" aria-label="Find">
+    <button>Find</button>
+  </form>
+  <iframe title="widget" srcdoc="<button onclick=&quot;parent.setStatus('frame clicked')&quot;>Next</button><button onclick=&quot;parent.setStatus('frame sent')&quot;>Send</button>"></iframe>
+  <div style="height:1500px"></div><!-- room to scroll -->
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "PasswordManagerEnabled": false,
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
+  "DownloadRestrictions": 3,
+  "SyncDisabled": true,
+  "BrowserSignin": 0,
+  "ExtensionInstallBlocklist": ["*"],
+  "HideFirstRunExperience": true,
+  "NewTabPageLocation": "about:blank"
+}

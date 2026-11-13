@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "browser-jobs": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/browser", "--frozen", "browser-tool", "--config", "tools/browser/browser-jobs.toml"]
+    }
+  }
+}

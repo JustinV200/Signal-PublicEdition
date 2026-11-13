@@ -1,0 +1,23 @@
+<!doctype html>
+<title>Dialogs</title>
+<p id="status">idle</p>
+<label>Password <input type="password" id="pw"></label>
+<button onclick="say(confirm('Delete 3 messages?') ? 'deleted' : 'kept')">Clear inbox</button>
+<button onclick="say(confirm('Are you sure?') ? 'tidied' : 'kept')">Tidy up</button>
+<button onclick="say(confirm('Are you sure?') ? 'removed' : 'kept')">Remove draft</button>
+<button onclick="say(confirm('Pay $10 now?') ? 'paid' : 'kept')">Finish</button>
+<button onclick="say('renamed:' + prompt('New name?', 'old'))">Rename</button>
+<button onclick="say('pin:' + prompt('Enter your PIN'))">Change PIN</button>
+<button onclick="alert('hello there'); say('alerted')">Say hi</button>
+<button onclick="for (let i = 0; i < 8; i++) alert('spam ' + i); say('spammed')">Spam</button>
+<button onclick="say(confirm('Your password is ' + pw.value) ? 'echoed' : 'kept')">Echo</button>
+<button onmouseover="confirm('Leave?')">Hover trap</button>
+<label>Attachment <input type="file" id="file" onchange="readFile(this)"></label>
+<button onclick="document.getElementById('file').click()">Attach</button>
+<script>
+  function say(text) { document.getElementById('status').textContent = text; }
+  function readFile(input) {
+    const file = input.files[0];
+    file.text().then((text) => say('got ' + file.name + ':' + text));
+  }
+</script>

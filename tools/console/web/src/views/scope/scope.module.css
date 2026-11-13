@@ -1,0 +1,115 @@
+/* Scope view: the radar SVG beside the text readout (stacked when narrow).
+   Everything on the scope is drawn in the phosphor accent at low alpha; the
+   blip shapes and labels carry the meaning. */
+.view {
+  padding: 14px 0 18px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 3ch;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+
+.hint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(240px, 400px) minmax(0, 1fr);
+  gap: 4ch;
+  align-items: center;
+  padding-top: 16px;
+}
+
+.scope {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.face {
+  fill: color-mix(in srgb, var(--accent) 5%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-width: 1;
+}
+
+.grid {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 22%, transparent);
+  stroke-width: 1;
+}
+
+.sweep {
+  fill: var(--accent);
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+.sweepEdge {
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Slow and linear so it never pulls the eye; the view stops it when the page is hidden. */
+.sweeping {
+  animation: sweep 8s linear infinite;
+}
+
+.blips {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 3px var(--glow));
+}
+
+.hollow {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.label {
+  fill: var(--fg);
+  font-size: 12px;
+  filter: none;
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: 11ch minmax(0, 1fr);
+  row-gap: 10px;
+  column-gap: 2ch;
+  align-content: start;
+}
+
+.readoutRow {
+  display: contents;
+}
+
+.readoutRow dd {
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweeping {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}

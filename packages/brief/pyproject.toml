@@ -1,0 +1,43 @@
+[project]
+name = "signal-brief"
+version = "0.1.0"
+description = "Signal's brief: the event log, bookmark, away mode, presence and the composer."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+dependencies = [
+    # The data frame for model-bound brief text (packages/untrusted, stdlib only).
+    "signal-untrusted",
+    # The shared lock and atomic JSON files (packages/jsonstate, stdlib only).
+    "signal-jsonstate",
+]
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+signal-untrusted = { path = "../untrusted", editable = true }
+signal-jsonstate = { path = "../jsonstate", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames across the mirrored folders
+# without needing __init__.py files in tests/. `support` holds shared helpers.
+addopts = ["--import-mode=importlib"]
+pythonpath = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

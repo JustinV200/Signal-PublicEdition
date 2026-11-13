@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head><title>Consent fixture</title></head>
+<body>
+  <!-- Served at /consent.html, a path that reads as an OAuth consent page. Consent
+       and sign-in don't ask the owner; purchases, sends and deletes still do. -->
+  <p id="status">idle</p>
+  <script>function setStatus(text) { document.getElementById('status').textContent = text; }</script>
+  <button onclick="setStatus('allowed')">Allow</button>
+  <button onclick="setStatus('authorized')">Authorize MyApp</button>
+  <button onclick="setStatus('continued')">Continue as the owner</button>
+  <button onclick="setStatus('paid')">Pay $10</button>
+  <button onclick="setStatus('sent')">Send</button>
+  <form onsubmit="event.preventDefault(); setStatus(event.submitter.textContent)">
+    <input type="password" aria-label="Confirm with password">
+    <button>Delete account</button>
+    <!-- Owned by the comment form, so it is no sign-in submit. -->
+    <button form="comment">OK</button>
+  </form>
+  <form id="comment" onsubmit="event.preventDefault(); setStatus('commented')">
+    <textarea aria-label="Comment box"></textarea>
+  </form>
+  <!-- A hidden password decoy doesn't make a form a sign-in form. -->
+  <form onsubmit="event.preventDefault(); setStatus('saved')">
+    <input type="password" style="display: none" value="decoy-1">
+    <input aria-label="Display name">
+    <button>Save changes</button>
+  </form>
+  <!-- Nor does one pushed off the page, even under sign-in wording, -->
+  <form onsubmit="event.preventDefault(); setStatus('updated')">
+    <input type="password" style="position: absolute; left: -9999px" value="decoy-2">
+    <button>Sign in</button>
+  </form>
+  <!-- one nearly transparent, -->
+  <form onsubmit="event.preventDefault(); setStatus('faded')">
+    <input type="password" style="opacity: 0.02" value="decoy-3">
+    <input aria-label="Faded note">
+    <button>Log in</button>
+  </form>
+  <!-- or one beside a custom element that may hide an editor in its shadow DOM. -->
+  <form onsubmit="event.preventDefault(); setStatus('shadow posted')">
+    <input type="password" aria-label="Shadow password" value="decoy-4">
+    <rich-editor></rich-editor>
+    <button>Verify</button>
+  </form>
+  <script>
+    customElements.define('rich-editor', class extends HTMLElement {
+      connectedCallback() {
+        this.attachShadow({mode: 'open'}).innerHTML = '<div contenteditable="true">hi</div>';
+      }
+    });
+  </script>
+  <!-- Filled decoys cut away by a clip-path, or by a 1px overflow-hidden wrapper. -->
+  <form onsubmit="event.preventDefault(); setStatus('clipped')">
+    <input type="password" style="clip-path: inset(50%)" value="decoy-5">
+    <button>Continue →</button>
+  </form>
+  <form onsubmit="event.preventDefault(); setStatus('wrapped')">
+    <div style="width: 1px; height: 1px; overflow: hidden">
+      <input type="password" value="decoy-6">
+    </div>
+    <button>Continue ›</button>
+  </form>
+  <!-- Too many other fields (past MAX_SIGN_IN_FIELDS) for a sign-in form. -->
+  <form onsubmit="event.preventDefault(); setStatus('registered')">
+    <input aria-label="First name">
+    <input aria-label="Last name">
+    <input aria-label="Phone">
+    <input type="password" aria-label="Busy password">
+    <button>Sign in →</button>
+  </form>
+  <!-- A real login form whose button says "Next" doesn't ask, once filled. -->
+  <form onsubmit="event.preventDefault(); setStatus('next')">
+    <input aria-label="Email">
+    <input type="password" aria-label="Login password">
+    <button>Next</button>
+  </form>
+  <!-- Nor does a visible one in a form with a message field. -->
+  <form onsubmit="event.preventDefault(); setStatus('posted')">
+    <input type="password" aria-label="Room password">
+    <textarea aria-label="Room message"></textarea>
+    <button>Go</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,40 @@
+[project]
+name = "signal-mcpshim"
+version = "0.1.0"
+description = "Stdio proxy that keeps an MCP server's pipe open and respawns the server when it dies."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+# Standard library only (asyncio, json, threading).
+dependencies = []
+
+[project.scripts]
+mcpshim = "signal_mcpshim.cli:main"
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames with other projects' tests
+# without needing __init__.py files in tests/.
+addopts = ["--import-mode=importlib"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

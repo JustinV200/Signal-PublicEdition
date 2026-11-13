@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head><title>Waits fixture</title></head>
+<body>
+  <h1>Waits</h1>
+  <p id="spinner">Loading results</p>
+  <button onclick="setTimeout(() => { document.getElementById('spinner').remove(); document.body.insertAdjacentHTML('beforeend', '<p>Results ready</p>'); }, 300)">Load results</button>
+  <button onclick="document.title = 'clicked'">Stay here</button>
+  <a href="/slow?ms=1200">Slow page</a>
+  <form role="search" action="/slow">
+    <input name="ms" value="1200" aria-label="Slow search">
+  </form>
+  <form role="search" action="/status">
+    <input name="code" value="204" aria-label="No content search">
+  </form>
+</body>
+</html>

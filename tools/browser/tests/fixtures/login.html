@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head><title>Login fixture</title></head>
+<body>
+  <h1>Sign in</h1>
+  <form id="login" action="/plain.html">
+    <label>Username <input id="username" name="username" autocomplete="username"></label>
+    <label>Password <input id="password" name="password" type="password" value="prefilled-pw-1234"></label>
+    <label>Code <input id="otp" name="code" autocomplete="one-time-code" value="654321"></label>
+    <label>New password <input id="newpw" type="text" autocomplete="new-password" value="visible-new-pw-777"></label>
+    <label>Card security <input id="cvv" name="cvv" value="cvv-731"></label>
+    <label>Masked <input id="masked" style="-webkit-text-security: disc" value="css-masked-555"></label>
+    <label>Zero <input type="password" style="width:0;height:0;border:0;padding:0" value="zero-size-pw-31"></label>
+    <label>Inert <input type="password" style="pointer-events:none" value="no-pointer-pw-62"></label>
+    <label>Search <input id="search" type="search" value="ordinary search"></label>
+    <button type="submit">Sign in</button>
+  </form>
+  <iframe title="embedded" srcdoc="<label>Frame password <input type=password value=frame-pw-4242></label>"></iframe>
+</body>
+</html>

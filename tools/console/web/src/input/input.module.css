@@ -1,0 +1,64 @@
+/* Input line: a prompt glyph, the textarea (1 to 8 rows), then the Send and
+   Commands buttons, on --bg-2 under a 1px rule that brightens when focused. */
+.line {
+  border-top: 1px solid var(--rule);
+  background: var(--bg-2);
+  position: relative;
+}
+
+.line:focus-within {
+  border-top-color: var(--fg-3);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2ch 1fr auto;
+  align-items: start;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.prompt {
+  color: var(--fg-3);
+  line-height: var(--row);
+}
+
+.line:focus-within .prompt {
+  color: var(--accent);
+}
+
+.textarea {
+  font: inherit;
+  color: var(--fg);
+  background: none;
+  border: 0;
+  resize: none;
+  width: 100%;
+  line-height: var(--row);
+  height: var(--row);
+  caret-color: var(--accent);
+  outline: none;
+  overflow-y: hidden;
+}
+
+.textarea::placeholder {
+  color: var(--fg-3);
+}
+
+.buttons {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1ch;
+  padding-left: 2ch;
+}
+
+/* Confirm mode: the question sits where the textarea was and takes the keys. */
+.confirm {
+  line-height: var(--row);
+  outline: none;
+}
+
+.confirm .keys {
+  color: var(--fg-2);
+}

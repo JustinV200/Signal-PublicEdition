@@ -1,0 +1,147 @@
+/* Status line: a title row (app name and connection words, both inert, Help
+   on the right) over a row of bordered tabs. The active tab is filled,
+   brighter-bordered and bold. The small font sits on the rows, not the
+   column, so the column keeps the body's 96ch width. */
+.bar {
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg-2);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 2ch;
+  height: var(--status-height);
+  font-size: var(--font-small);
+  white-space: nowrap;
+}
+
+.help {
+  display: flex;
+  align-items: center;
+  gap: 2ch;
+  margin-left: auto;
+}
+
+.freshness {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  color: var(--fg-2);
+}
+
+.appName {
+  font-size: var(--font-small);
+}
+
+.connection {
+  color: var(--fg-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.8ch;
+  padding-bottom: 8px;
+  font-size: var(--font-small);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+  height: var(--control-height);
+  padding: 0 1.2ch;
+  color: var(--fg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  transition:
+    background-color 80ms linear,
+    border-color 80ms linear;
+}
+
+.tab:hover {
+  color: var(--fg);
+  background: var(--bg-3);
+  border-color: var(--fg-3);
+}
+
+.tabActive {
+  color: var(--fg);
+  background: var(--bg-3);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--glow);
+}
+
+.tabActive .tabName {
+  font-weight: 600;
+}
+
+.tabStatus {
+  color: var(--fg-2);
+}
+
+.hint {
+  font: inherit;
+  color: var(--fg-3);
+}
+
+.sep {
+  color: var(--fg-3);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+/* Phase dot: 7px, filled with --ok (and glowing) while running, hollow when stopped. */
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--glow);
+  margin-right: 0.6ch;
+}
+
+.hollow {
+  background: none;
+  box-shadow: none;
+  border: 1px solid var(--fg-3);
+}
+
+/* Speaking: three 2px bars in the dot's footprint. */
+.bars {
+  display: inline-flex;
+  gap: 1px;
+  width: 8px;
+  height: 9px;
+  align-items: flex-end;
+  margin-right: 0.6ch;
+  vertical-align: -1px;
+}
+
+.speakBar {
+  width: 2px;
+  height: 100%;
+  background: var(--ok);
+  transform-origin: bottom;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .appName,
+  .tabStatus,
+  .hint {
+    display: none;
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "files": [
+    {
+      "path": "tools/mail-digest/schedule.psd1"
+    },
+    {
+      "path": "tools/mail-digest/assignment-check.toml",
+      "example": "tools/mail-digest/assignment-check.example.toml",
+      "group": "checker"
+    },
+    {
+      "path": "tools/browser/browser-checker-moodle.toml",
+      "example": "tools/browser/browser-checker-moodle.example.toml",
+      "group": "checker"
+    },
+    {
+      "path": "tools/browser/browser-checker-classroom.toml",
+      "example": "tools/browser/browser-checker-classroom.example.toml",
+      "group": "checker"
+    }
+  ],
+  "settings": [
+    {
+      "key": "RunTimes",
+      "file": "tools/mail-digest/schedule.psd1",
+      "type": "times",
+      "level": "basic",
+      "description": "When the digest runs each day",
+      "hint": "24-hour local times, comma-separated, e.g. 07:00, 18:00",
+      "rerun": "schedule"
+    },
+    {
+      "key": "moodle.base",
+      "file": "tools/mail-digest/assignment-check.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Your school's Moodle address",
+      "hint": "https://moodle.yourschool.edu, no trailing slash"
+    },
+    {
+      "key": "moodle.courses",
+      "file": "tools/mail-digest/assignment-check.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Your Moodle courses, one tag:id each",
+      "hint": "the course's tag in life/ and the number after ?id= on its page, e.g. chem-120:12345, math-200:23456"
+    },
+    {
+      "key": "classroom.base",
+      "file": "tools/mail-digest/assignment-check.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Google Classroom for your school account",
+      "hint": "https://classroom.google.com/u/N, where N is the account's slot in the checker's browser (0 if it's the only one)"
+    },
+    {
+      "key": "classroom.account",
+      "file": "tools/mail-digest/assignment-check.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Your school Google account, which every Classroom page must show",
+      "hint": "your full school email address"
+    },
+    {
+      "key": "classroom.courses",
+      "file": "tools/mail-digest/assignment-check.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Your Classroom classes, one tag:id:class name each",
+      "hint": "the life/ tag, the class id from its URL, and the name as Classroom shows it; none if you don't use Classroom"
+    },
+    {
+      "key": "policy.allow",
+      "file": "tools/browser/browser-checker-moodle.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Hosts the checker's Moodle browser may open",
+      "hint": "your Moodle host, your SSO login host, *.duosecurity.com (no Google host)",
+      "id": "moodle.allow"
+    },
+    {
+      "key": "visit.login_host",
+      "file": "tools/browser/browser-checker-moodle.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Your school's SSO (single sign-on) login host",
+      "hint": "the host Moodle sends you to for sign-in, e.g. sso.yourschool.edu",
+      "id": "moodle.login_host"
+    },
+    {
+      "key": "visit.login_from_hosts",
+      "file": "tools/browser/browser-checker-moodle.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Hosts that redirect to that SSO login",
+      "hint": "your Moodle host",
+      "id": "moodle.login_from_hosts"
+    },
+    {
+      "key": "visit.login_credential",
+      "file": "tools/browser/browser-checker-moodle.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "The vault credential for the SSO login",
+      "hint": "the credential's name in the vault (its origin is your SSO host)",
+      "id": "moodle.login_credential"
+    },
+    {
+      "key": "duo.code_relay_sites",
+      "file": "tools/browser/browser-checker-moodle.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Hosts whose Duo Verified Push code is read out to you",
+      "hint": "your SSO login host, or none",
+      "id": "moodle.duo_code_relay_sites"
+    },
+    {
+      "key": "visit.sso_host",
+      "file": "tools/browser/browser-checker-classroom.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Your school's SSO login host, matched (never allowed) by the Classroom launch",
+      "hint": "the same host as moodle.login_host",
+      "id": "classroom.sso_host"
+    },
+    {
+      "key": "visit.school_domain",
+      "file": "tools/browser/browser-checker-classroom.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Your school's cookie domain, cleared before each Classroom launch",
+      "hint": "e.g. yourschool.edu",
+      "id": "classroom.school_domain"
+    }
+  ]
+}

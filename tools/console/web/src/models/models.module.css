@@ -1,0 +1,85 @@
+/* Models view: a header and a hint over the model strip, two small rows (a
+   HUD key, the words, the pickers, a note saying when a pick applies), then
+   the strip's own hint. */
+.view {
+  padding: 14px 0 18px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 3ch;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.viewHint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding: 8px 0 12px;
+}
+
+.strip {
+  padding: 2px 0 8px;
+  font-size: var(--font-small);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4ch 1.2ch;
+  min-height: var(--control-height);
+}
+
+.key {
+  min-width: 14ch;
+}
+
+.now {
+  color: var(--fg);
+}
+
+.label,
+.note {
+  color: var(--fg-2);
+}
+
+.select {
+  height: var(--control-height);
+  padding: 0 0.6ch;
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 1px solid var(--fg-3);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.select:hover {
+  background: var(--bg-3);
+  border-color: var(--fg-2);
+}
+
+.select:disabled {
+  color: var(--fg-3);
+  border-color: var(--rule);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.hint {
+  color: var(--fg-3);
+  padding-top: 2px;
+}
+
+.problem {
+  color: var(--warn);
+  padding-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .key {
+    min-width: 0;
+  }
+}

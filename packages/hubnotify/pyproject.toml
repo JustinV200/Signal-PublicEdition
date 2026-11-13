@@ -1,0 +1,37 @@
+[project]
+name = "signal-hub-notify"
+version = "0.1.0"
+description = "Asyncio client that hands voice notes to the audiohub hub's kernel, shared by the Signal tools."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+# Standard library only (asyncio, json, logging).
+dependencies = []
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames with other projects' tests
+# without needing __init__.py files in tests/.
+addopts = ["--import-mode=importlib"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md"
+    }
+  ],
+  "settings": [
+    {
+      "key": "context-handoff-percent",
+      "file": "AGENTS.md",
+      "type": "int",
+      "level": "basic",
+      "min": 30,
+      "max": 90,
+      "description": "Hand off to a fresh agent at this % of the context window",
+      "hint": "30 to 90 (default 75). Lower hands off sooner: more handoffs, but less risk of an agent working with a crowded, forgetful context. Higher keeps one agent going longer with fewer handoffs, but risks running out mid-task."
+    }
+  ]
+}

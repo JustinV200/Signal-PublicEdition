@@ -1,0 +1,130 @@
+# whiteboard example config.
+#
+# Copy this file to whiteboard.toml (same folder; gitignored) and edit what you need.
+# Every key is optional. Leave a key or a whole [section] out to keep its default.
+# The values below ARE the defaults. Unknown keys or wrong types are an error.
+
+[display]
+# Case-insensitive substring of the projector's friendly name (as shown by
+# `whiteboard displays`) or of its \\.\DISPLAYn device name. With no match, the
+# first non-primary display is used.
+name_match = "PROJ-1"
+# The daemon's HTTP/WebSocket port. It always listens on 127.0.0.1 only.
+port = 8770
+# Open the board page in an Edge kiosk window on the projector when serving.
+launch_kiosk = true
+# Full path to msedge.exe. Empty = look in the usual Program Files folders.
+edge_path = ""
+# Logical stage height (pixels) once a board fit (keystone quad) is set via
+# POST /api/fit. The width follows the board's aspect ratio.
+fit_height = 720
+
+[camera]
+# OpenCV camera index, capture resolution, and capture API ("msmf", "dshow" or "any").
+index = 0
+width = 1920
+height = 1080
+backend = "msmf"
+
+[capture]
+# Milliseconds the page stays all black for a clean read of the owner's ink (0-5000).
+blank_ms = 250
+# How many snapshots to keep in .state/snapshots/.
+keep_snapshots = 50
+
+[watcher]
+# Watch the board and wake the agent when the owner's ink changes.
+enabled = true
+# Seconds between motion samples.
+sample_s = 1.0
+# Seconds of no motion before a clean capture is taken.
+stable_s = 4.0
+# Minimum seconds between two clean captures (each blanks the board). A large change
+# (10x ink_change_ratio of new ink already visible) goes ahead sooner.
+min_interval_s = 30.0
+# Grey-level difference (1-255) that counts a pixel as changed.
+pixel_threshold = 40
+# Changed-pixel fraction between samples that means someone is drawing.
+motion_ratio = 0.01
+# Changed-pixel fraction between clean captures that counts as new ink. A short
+# cross-out on the TODO view is about 0.0005-0.001, a quick "yes" about 0.0004.
+ink_change_ratio = 0.0003
+# Seconds after the daemon changes the board itself (a blank, the markers, a drawing,
+# the TODO view) in which nothing the camera sees counts as motion.
+settle_s = 3.0
+# Median grey level (0-255) of the camera view under which the room is too dark to
+# read ink; no clean captures are taken until it brightens. Lit rooms read about 100-160.
+dark_floor = 30.0
+
+[agent]
+# Let a Claude session react to board changes.
+enabled = true
+# Model alias for the board agent.
+model = "sonnet"
+# Ask a cheap model first whether the new writing is meant for Claude; skip the turn if not.
+triage = true
+# Model alias for that check. It also confirms cross-outs on the TODO view.
+triage_model = "haiku"
+# Seconds before a slow check is given up on (the board agent then runs anyway).
+triage_timeout_s = 15.0
+# After a turn that drew or changed something, look at the board once and let Claude fix problems.
+verify_after_draw = true
+# Seconds before a hung turn is given up. Keep it above the 120 s permission dialog.
+turn_timeout_s = 300.0
+
+[align]
+# Re-align by itself when the camera, projector or board moves (see the README).
+auto = true
+# Seconds between drift checks while the board is idle (each check blanks the page briefly).
+# Neither timed check runs while the room is too dark ([watcher] dark_floor).
+check_s = 1800.0
+# Seconds between marker checks while idle: the markers flash for about a second and a
+# fresh solve catches a projector that moved (the photo check above can't see that).
+marker_check_s = 3600.0
+# Mean board-corner error, in camera px, that counts as drift. Two in a row re-align.
+drift_px = 15.0
+# A new calibration is kept only if its reprojection error is at most this (projector px).
+max_reprojection_px = 2.0
+
+[idle]
+# Show the idle view (clock, today's tasks, weather, agents, upcoming dates, a headline)
+# once the items view has had nothing drawn for empty_s seconds. Drawing brings the items
+# back; the night view still wins. board_idle_show / whiteboard idle show work either way.
+auto = true
+empty_s = 10.0
+# New marker ink on the board (a change the watcher reports) while the idle view shows
+# blanks it so the ink is clear, and the idle view only comes back once no new ink has
+# been seen for this many minutes and nothing is projected, or as soon as the ink is
+# wiped off again.
+ink_quiet_minutes = 10.0
+# It counts as new ink once at least this fraction of the board's pixels (this value
+# included) is ink added since the board was last accepted; erasing never counts, and
+# slow writing that arrives as several small reports adds up (for up to 5 minutes).
+# Replaying the kept snapshots (2026-10-20/21, after the glare fix): noise on an untouched
+# board added 0.0000-0.0004 against the photo before it; the smallest real marks 0.0029
+# (one stroke) and 0.0032 (that stroke plus a small X). The board agent and the TODO
+# cross-out check still get every change.
+ink_min_ratio = 0.0015
+# Look up the PC's approximate place by IP (ipapi.co, keyless) at daemon start and every
+# locate_hours, for the weather. Without it, or if the lookup fails with nothing cached,
+# the weather is for `place` at lat/lon.
+locate = true
+locate_hours = 6.0
+place = "Springfield, IL"
+lat = 39.7817
+lon = -89.6501
+# One https feed, RSS 2.0 or Atom; the board's footer scrolls its first few items from
+# the last 24 h, titles only, labelled news_source. Switch sources here, no code change needed.
+news_feed = "https://www.allsides.com/rss/news"
+news_source = "AllSides"
+# Minutes between weather (Open-Meteo, keyless) and headline refreshes.
+weather_min = 30.0
+news_min = 30.0
+# How fast the headlines scroll by, in design pixels a second (the board is 1112 wide).
+ticker_px_s = 75.0
+# Short chip names for course tags, "tag=Label" (under 10 characters). Other tags show
+# title-cased with dashes as spaces.
+tag_labels = [
+    # "chem-120=CHEM 120",
+    # "work=Work",
+]

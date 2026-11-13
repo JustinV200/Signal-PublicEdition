@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "tools/calendar/schedule/schedule.psd1"
+    }
+  ],
+  "settings": [
+    {
+      "key": "IntervalMinutes",
+      "file": "tools/calendar/schedule/schedule.psd1",
+      "type": "int",
+      "level": "basic",
+      "description": "How often the agenda cache refreshes",
+      "hint": "minutes, e.g. 10",
+      "rerun": "schedule"
+    }
+  ]
+}

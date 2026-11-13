@@ -1,0 +1,66 @@
+[project]
+name = "signal-console"
+version = "0.1.0"
+description = "Signal console: a local web front end to the owner's Claude Code orchestrator session."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+dependencies = [
+    # HTTP server for the page, the JSON API and the SSE feed; same pin as tools/whiteboard.
+    "aiohttp==3.14.5",
+    # Start time and process tree of the voice hub it starts; same pin as tools/audiohub.
+    "psutil==7.2.2",
+    # Reading the orchestrator's claim and sending to its inbox; shared with the
+    # voice hub's hand-off (packages/orchestrator, stdlib only).
+    "signal-orchestrator",
+    # The orchestrator's task list (packages/tasks) behind `console tasks` and the Tasks page.
+    "signal-tasks",
+    # Away mode for the Devices page's Away/Here control (packages/brief, stdlib only).
+    "signal-brief",
+    # The allowed model and effort picks and voice's pick file, shared with the
+    # voice brain (packages/modelchoice, stdlib only).
+    "signal-modelchoice",
+    # signal-tasks' and signal-brief's own path dependencies, listed so uv finds them.
+    "signal-jsonstate",
+    "signal-untrusted",
+]
+
+[project.scripts]
+console = "signal_console.cli.main:main"
+
+[tool.uv.sources]
+signal-orchestrator = { path = "../../packages/orchestrator", editable = true }
+signal-tasks = { path = "../../packages/tasks", editable = true }
+signal-brief = { path = "../../packages/brief", editable = true }
+signal-modelchoice = { path = "../../packages/modelchoice", editable = true }
+signal-jsonstate = { path = "../../packages/jsonstate", editable = true }
+signal-untrusted = { path = "../../packages/untrusted", editable = true }
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames across the mirrored folders
+# without needing __init__.py files in tests/.
+addopts = ["--import-mode=importlib"]
+pythonpath = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

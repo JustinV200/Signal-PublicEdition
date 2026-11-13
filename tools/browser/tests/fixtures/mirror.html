@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<head><title>Mirror fixture</title></head>
+<body>
+  <h1>Mirror</h1>
+  <label>Password <input type="password" id="pw" value="mirror-secret-53"></label>
+  <p id="mirror"></p>
+  <script>
+    // Mirrors the password into page text and the title, as a careless page might.
+    const value = document.getElementById("pw").value;
+    document.getElementById("mirror").textContent = "Your password is " + value;
+    document.title = "Mirror " + value;
+  </script>
+</body>
+</html>

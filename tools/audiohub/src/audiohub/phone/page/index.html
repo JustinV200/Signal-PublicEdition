@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- The phone page of audiohub's phone bridge (audiohub run --phone). Served by
+     audiohub/phone/server.py; app.js does the work. No external resources. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <title>audiohub phone</title>
+  <style>
+    :root {
+      --bg: #f6f5f2;
+      --fg: #1d1c1a;
+      --muted: #5e5b55;
+      --accent: #c2410c;
+      --accent-fg: #ffffff;
+      --stop: #3f3f46;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141413;
+        --fg: #eceae5;
+        --muted: #a5a29b;
+        --accent: #ea6a32;
+        --accent-fg: #141413;
+        --stop: #d4d4d8;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--fg);
+      font: 17px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main {
+      max-width: 32rem;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    h1 { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--muted); }
+    #status { margin: 8px 0 0; font-size: 2.2rem; font-weight: 700; text-transform: capitalize; }
+    #detail { margin: 0; min-height: 3em; color: var(--muted); overflow-wrap: anywhere; }
+    #toggle {
+      width: 100%;
+      min-height: 38vh;
+      border: 0;
+      border-radius: 24px;
+      background: var(--accent);
+      color: var(--accent-fg);
+      font: inherit;
+      font-size: 2.4rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #toggle[aria-pressed="true"] { background: var(--stop); color: var(--bg); }
+    #toggle:focus-visible { outline: 4px solid var(--fg); outline-offset: 4px; }
+    .note { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    #connection, #warning { margin: 0; min-height: 1.45em; }
+    #warning { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>audiohub</h1>
+    <p id="status" role="status" aria-live="polite">stopped</p>
+    <p id="detail"></p>
+    <button id="toggle" type="button" aria-pressed="false">Start</button>
+    <p id="connection" aria-live="polite">Tap Start to talk to Claude through your glasses.</p>
+    <p id="warning" aria-live="polite"></p>
+    <p class="note">Keep this screen on and this page in front. The mic stops if the screen
+      locks or you switch apps; come back and it reconnects.</p>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

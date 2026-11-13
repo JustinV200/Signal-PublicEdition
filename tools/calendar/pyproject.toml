@@ -1,0 +1,53 @@
+[project]
+name = "calendar-tool"
+version = "0.1.0"
+description = "Read-only Google Calendar access for the owner's idle board: agenda and a cached JSON file."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+dependencies = [
+    # Credentials, token refresh and AuthorizedSession for the Calendar REST calls.
+    "google-auth==2.62.0",
+    # The HTTP transport AuthorizedSession is built on. Same pin as tools/mail.
+    "requests==2.34.2",
+    # Shared Google OAuth plumbing: client file, browser sign-in, DPAPI (packages/googleauth).
+    "signal-googleauth",
+    # The atomic JSON writer for .state/agenda.json (packages/jsonstate, stdlib only).
+    "signal-jsonstate",
+]
+
+[project.scripts]
+calendar = "calendar_tool.cli:main"
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "calendar_tool"
+
+[tool.uv.sources]
+signal-googleauth = { path = "../../packages/googleauth", editable = true }
+signal-jsonstate = { path = "../../packages/jsonstate", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames across the mirrored folders
+# without needing __init__.py files in tests/. `support` holds shared fakes.
+addopts = ["--import-mode=importlib"]
+pythonpath = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

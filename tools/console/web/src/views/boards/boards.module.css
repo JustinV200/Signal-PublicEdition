@@ -1,0 +1,163 @@
+/* Boards view: header and hint, then the list on the left and the preview
+   panel on the right (stacked when narrow). */
+.view {
+  padding: 14px 0 18px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3ch;
+  color: var(--fg-2);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.value {
+  color: var(--fg);
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1ch;
+  margin-left: auto;
+}
+
+.hint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding: 8px 0 12px;
+}
+
+/* The whiteboard-off note under the hint: quiet, but a shade brighter than the hint. */
+.note {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+  padding-bottom: 12px;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(32ch, 44ch);
+  gap: 3ch;
+  align-items: start;
+}
+
+.list {
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+/* Rows are buttons that only select; the selected one is filled and marked `▸`. */
+.row {
+  display: grid;
+  grid-template-columns: 2ch minmax(10ch, 1fr) auto auto;
+  gap: 1ch;
+  width: 100%;
+  text-align: left;
+  padding: 5px 1ch 5px 0.5ch;
+  color: var(--fg);
+  border-bottom: 1px solid var(--rule);
+  transition: background-color 80ms linear;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row:hover {
+  background: var(--bg-2);
+}
+
+.selected,
+.selected:hover {
+  background: var(--bg-3);
+}
+
+.mark {
+  color: var(--accent);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+}
+
+.tag {
+  color: var(--fg);
+  font-weight: 600;
+  font-size: var(--font-small);
+}
+
+.empty {
+  color: var(--fg-3);
+  padding: 5px 1ch;
+}
+
+/* Preview panel. */
+.preview {
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 12px 2ch 14px;
+}
+
+.previewName {
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2ch;
+  align-items: baseline;
+}
+
+.previewName .tag {
+  color: var(--fg-2);
+  font-weight: 400;
+}
+
+.description {
+  color: var(--fg-2);
+  padding: 6px 0 2px;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  padding-top: 12px;
+}
+
+.caption {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .row {
+    grid-template-columns: 2ch 1fr auto;
+  }
+  .row .meta {
+    display: none;
+  }
+}

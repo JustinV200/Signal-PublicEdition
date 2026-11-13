@@ -1,0 +1,291 @@
+/*
+ * The idle view (idle/idle.js): the board's default when nothing is drawn, drawn light on
+ * black because the page is projected onto a whiteboard (black is no light). No filled
+ * areas, thin strokes, HUD labels in mono like the Signal console, body text in the board
+ * font. Lifted from refdocs/research/idle-board/mock.css; every rule is scoped to
+ * .idle-board so none touches the board page's items. Sizes are design pixels
+ * (1112x720), scaled onto the board by idle.js.
+ */
+
+.idle-board {
+  --light-font: "Segoe UI Light", "Segoe UI", system-ui, sans-serif;
+  --mono-font: Consolas, "Cascadia Mono", ui-monospace, monospace;
+  --white: #ffffff;
+  --cyan: #00e5ff;
+  --yellow: #ffea00;
+  --grey: #90a4ae;
+  --grey-bright: #cfd8dc;
+  --rule-cyan: rgba(0, 229, 255, 0.6);
+  --rule-label: rgba(0, 229, 255, 0.35);
+  --rule-faint: rgba(255, 255, 255, 0.22);
+  --track: rgba(255, 255, 255, 0.18);
+  --ease-out: cubic-bezier(0.3, 0.7, 0.4, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1112px;
+  height: 720px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  color: var(--white);
+  font-family: var(--board-font);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.idle-board *,
+.idle-board *::before,
+.idle-board *::after {
+  box-sizing: border-box;
+}
+
+/* Every region is placed in design pixels by idle.js; rows stack inside it, except the
+   weather and the news footer, which are one row each. */
+.idle-board > .region {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+}
+
+.idle-board > .region.weather,
+.idle-board > .region.news {
+  flex-direction: row;
+  align-items: center;
+}
+
+/* A region whose data changed fades its rows in once; nothing moves. */
+.idle-board > .region.fresh > * {
+  animation: idle-fade 400ms var(--ease-out) both;
+}
+
+@keyframes idle-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Long text is cut with an ellipsis, never shrunk. */
+.idle-board .cut {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Alignment ticks: an L at each corner, in the margin ring outside the content, so a
+   misaligned or clipped fit shows at a glance (a missing top tick means the top is cut). */
+.idle-board .tick {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 0 solid var(--rule-cyan);
+}
+
+.idle-board .tick.tl { border-top-width: 1.5px; border-left-width: 1.5px; }
+.idle-board .tick.tr { border-top-width: 1.5px; border-right-width: 1.5px; }
+.idle-board .tick.bl { border-bottom-width: 1.5px; border-left-width: 1.5px; }
+.idle-board .tick.br { border-bottom-width: 1.5px; border-right-width: 1.5px; }
+
+.idle-board .rule-cyan { background: var(--rule-cyan); }
+.idle-board .rule-faint { background: var(--rule-faint); }
+
+/* HUD labels: mono, uppercase, letter-spaced, in the board's cyan. */
+.idle-board .hud {
+  font-family: var(--mono-font);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  white-space: nowrap;
+}
+
+.idle-board .meta {
+  font-size: 20px;
+  color: var(--grey);
+  white-space: nowrap;
+}
+
+/* A region's first row: label, counts, then a thin rule to the edge. */
+.idle-board .label-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 28px;
+  margin-bottom: 10px;
+}
+
+.idle-board .label-row .rule-fill {
+  flex: 1;
+  height: 1px;
+  background: var(--rule-label);
+}
+
+/* Course chips: the TODO view's outlined tag, in the tag's colour. The label is the
+   tag's short display name ([idle] tag_labels), so a chip never needs more than its column. */
+.idle-board .chip {
+  flex: none;
+  padding: 0 6px 2px;
+  border: 1.5px solid var(--tag-color);
+  border-radius: 5px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--tag-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.idle-board .chip-col { width: 120px; display: flex; flex: none; }
+
+/* Today's tasks */
+.idle-board .task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  flex: none;
+}
+
+.idle-board .task-row .text { flex: 1; font-size: 26px; }
+
+.idle-board .task-row .due {
+  width: 84px;
+  flex: none;
+  text-align: right;
+  font-size: 22px;
+  color: var(--due-color);
+}
+
+/* A ticked item: the TODO view's cross-out line under the text, then dimmed. One that
+   just turned done draws the line and dims with the TODO view's animation (todo.css). */
+.idle-board .task-row .text {
+  background: linear-gradient(var(--tag-color), var(--tag-color)) no-repeat 0 58% / 0 0.11em;
+}
+
+.idle-board .task-row.done { opacity: 0.38; }
+.idle-board .task-row.done .text { background-size: 100% 0.11em; }
+
+.idle-board .task-row.just-done .text {
+  animation: todo-strike 750ms var(--ease-out) both;
+}
+
+.idle-board .task-row.just-done {
+  animation: todo-dim 450ms ease-out 800ms both;
+}
+
+/* Priorities: a blockquote-style left rule, then chip and text rows. */
+.idle-board .note-rows { border-left: 2px solid var(--rule-cyan); padding-left: 14px; }
+
+.idle-board .note-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 34px;
+  flex: none;
+  font-size: 24px;
+}
+
+.idle-board .note-row .text { flex: 1; }
+
+/* Keynotes: up to 4 plain lines in the priorities' box (label 38 px + 4 x 25 px). */
+.idle-board .keynote-row {
+  display: block;
+  height: 25px;
+  font-size: 21px;
+  line-height: 25px;
+}
+
+/* Agent tasks: status chip (number bold white, word in the status colour), name, %,
+   and a thin progress line under the row. */
+.idle-board .agent-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  flex: none;
+}
+
+.idle-board .status-chip {
+  flex: none;
+  width: 124px;
+  padding: 0 6px 1px;
+  border: 1.5px solid var(--status-color);
+  border-radius: 5px;
+  font-family: var(--mono-font);
+  font-size: 20px;
+  color: var(--status-color);
+  white-space: nowrap;
+}
+
+.idle-board .status-chip b { color: var(--white); margin-right: 6px; }
+.idle-board .agent-row .name { flex: 1; font-size: 24px; }
+.idle-board .agent-row .pct { width: 54px; flex: none; text-align: right; font-size: 24px; }
+
+.idle-board .agent-row .bar {
+  position: absolute;
+  left: 134px;
+  right: 0;
+  bottom: 1px;
+  height: 2px;
+  background: var(--track);
+}
+
+.idle-board .agent-row .bar i { display: block; height: 100%; background: var(--status-color); }
+
+.idle-board .you-line {
+  height: 34px;
+  padding-left: 134px;
+  font-size: 22px;
+  line-height: 30px;
+  flex: none;
+}
+
+.idle-board .you-line b { color: #ff99ff; margin-right: 8px; }
+
+/* Upcoming: day, chip, item. The first row carries the console's "next" glyph. */
+.idle-board .event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  flex: none;
+}
+
+.idle-board .event-row .day {
+  width: 64px;
+  flex: none;
+  font-family: var(--mono-font);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--cyan);
+}
+
+.idle-board .event-row .day.today { color: var(--yellow); }
+.idle-board .event-row .title { flex: 1; font-size: 24px; }
+.idle-board .event-row .title .next { color: var(--yellow); margin-right: 6px; }
+
+.idle-board .more,
+.idle-board .empty {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  font-size: 22px;
+  color: var(--grey);
+  flex: none;
+}
+
+.idle-board .empty { font-size: 24px; }
+
+/* News footer: NEWS, the ticker window (ticker.css), the source. */
+.idle-board .news { gap: 16px; }
+.idle-board .news .headline { flex: 1; font-size: 26px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .idle-board > .region.fresh > *,
+  .idle-board .task-row.just-done,
+  .idle-board .task-row.just-done .text {
+    animation: none;
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "files": [
+    {
+      "path": "tools/whiteboard/whiteboard.toml",
+      "example": "tools/whiteboard/whiteboard.example.toml"
+    },
+    {
+      "path": "tools/whiteboard/schedule/schedule.psd1"
+    }
+  ],
+  "settings": [
+    {
+      "key": "display.name_match",
+      "file": "tools/whiteboard/whiteboard.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Part of the projector's display name",
+      "hint": "`whiteboard displays` lists names; with no match the first non-primary display is used"
+    },
+    {
+      "key": "camera.index",
+      "file": "tools/whiteboard/whiteboard.toml",
+      "type": "int",
+      "level": "basic",
+      "description": "The webcam's camera index",
+      "hint": "0 for the first camera; `whiteboard cameras` lists them"
+    },
+    {
+      "key": "RunTimes",
+      "file": "tools/whiteboard/schedule/schedule.psd1",
+      "type": "times",
+      "level": "basic",
+      "description": "When the morning run (keynotes, TODO refresh) starts",
+      "hint": "24-hour local times, comma-separated, e.g. 07:00, 18:00",
+      "rerun": "schedule"
+    },
+    {
+      "key": "idle.place",
+      "file": "tools/whiteboard/whiteboard.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Fallback place name for the idle screen's weather",
+      "hint": "used only when the IP location lookup fails, e.g. Chicago, IL"
+    },
+    {
+      "key": "idle.lat",
+      "file": "tools/whiteboard/whiteboard.toml",
+      "type": "float",
+      "level": "advanced",
+      "description": "Fallback latitude for the weather",
+      "hint": "decimal degrees"
+    },
+    {
+      "key": "idle.lon",
+      "file": "tools/whiteboard/whiteboard.toml",
+      "type": "float",
+      "level": "advanced",
+      "description": "Fallback longitude for the weather",
+      "hint": "decimal degrees"
+    },
+    {
+      "key": "agent.model",
+      "file": "tools/whiteboard/whiteboard.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Model alias for the board agent",
+      "hint": "sonnet, opus or haiku"
+    }
+  ]
+}

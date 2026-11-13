@@ -1,0 +1,82 @@
+/* Voice view: a header line with the state and the two buttons, a hint, then
+   the feed as `HH:MM:SS  kind  text` rows. */
+.view {
+  padding: 14px 0 18px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 3ch;
+  color: var(--fg-2);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+
+.status {
+  color: var(--fg);
+}
+
+.sep {
+  color: var(--fg-3);
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1ch;
+  margin-left: auto;
+}
+
+.lastAction {
+  color: var(--fg-2);
+  padding-top: 8px;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding: 8px 0 12px;
+}
+
+.feed {
+  display: grid;
+  grid-template-columns: 10ch 6ch 1fr;
+  row-gap: 3px;
+}
+
+.row {
+  display: contents;
+}
+
+.meta {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+  line-height: var(--row);
+}
+
+.text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--fg-3);
+}
+
+.empty {
+  color: var(--fg-3);
+}
+
+@media (max-width: 720px) {
+  .feed {
+    grid-template-columns: 10ch 6ch;
+  }
+  .text {
+    grid-column: 1 / -1;
+    padding-bottom: 4px;
+  }
+}

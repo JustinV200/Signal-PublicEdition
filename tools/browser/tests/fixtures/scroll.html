@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><title>Scroll fixture</title></head>
+<body style="margin:0">
+  <h1>Feed</h1>
+  <div id="feed"><div style="height:3000px">first batch</div></div>
+  <script>
+    // An infinite list: near the bottom, one more batch loads after a short delay.
+    let isLoading = false;
+    addEventListener('scroll', () => {
+      if (isLoading || innerHeight + scrollY < document.body.scrollHeight - 10) return;
+      isLoading = true;
+      setTimeout(() => {
+        const batch = document.createElement('div');
+        batch.style.height = '2000px';
+        batch.textContent = 'more';
+        document.getElementById('feed').append(batch);
+      }, 100);
+    });
+  </script>
+</body>
+</html>

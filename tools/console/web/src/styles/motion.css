@@ -1,0 +1,127 @@
+/* Motion from DESIGN.md section 6. Things that appear ease out and rise a few
+   pixels; nothing bounces. Components opt in with these global classes, and
+   only on elements that mount live (never on initial load or SSE replay).
+   Under prefers-reduced-motion: no translates, no infinite animation, 80ms fades. */
+
+@keyframes rise-4 {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rise-3 {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Message or feed row appended live. */
+.anim-row {
+  animation: rise-4 160ms var(--ease-out);
+}
+
+/* Incoming view on a switch; the outgoing one is removed instantly. */
+.anim-view {
+  animation: rise-3 140ms var(--ease-out);
+}
+
+/* Segment text change, working row and pill appearing. */
+.anim-fade {
+  animation: fade-in 120ms var(--ease-out);
+}
+
+/* Working row leaving. */
+.anim-fade-out {
+  animation: fade-out 120ms linear forwards;
+}
+
+/* Command palette opening. */
+.anim-pop {
+  animation: rise-4 120ms var(--ease-out);
+}
+
+/* Voice phase dot: thinking pulses, speaking shows three bars. The phase text
+   next to the dot carries the state, so both can be switched off. */
+@keyframes pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+
+@keyframes bar {
+  from {
+    transform: scaleY(0.3);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.anim-pulse {
+  animation: pulse 1200ms ease-in-out infinite alternate;
+}
+
+/* Claude's blip while only its agents run. */
+.anim-pulse-slow {
+  animation: pulse 2400ms ease-in-out infinite alternate;
+}
+
+.anim-bar {
+  animation: bar 900ms ease-in-out infinite alternate;
+}
+
+.anim-bar:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.anim-bar:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-row,
+  .anim-view,
+  .anim-fade,
+  .anim-pop {
+    animation: fade-in 80ms linear;
+  }
+  .anim-fade-out {
+    animation: fade-out 80ms linear forwards;
+  }
+  .anim-pulse,
+  .anim-pulse-slow,
+  .anim-bar {
+    animation: none;
+  }
+}

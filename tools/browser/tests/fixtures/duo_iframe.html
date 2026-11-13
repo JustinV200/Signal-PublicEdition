@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<head><title>Duo iframe fixture</title></head>
+<body>
+  <h1>Sign in</h1>
+  <button onclick="document.getElementById('status').textContent = 'continued'">Continue</button>
+  <p id="status">waiting</p>
+  <!-- The older embedded Duo prompt; the test fakes this host with page.route. -->
+  <iframe id="duo" title="Duo" src="https://api-test.duosecurity.com/frame"></iframe>
+</body>
+</html>

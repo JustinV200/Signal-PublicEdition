@@ -1,0 +1,1060 @@
+{
+  "_comment": "Signal's tool registry, read by the setup CLI (tools/setup) and the setup skill (.claude/skills/setup). Paths are relative to the repo root, where every command runs. {email} is the address the user gave in an 'email' step. Step kinds: run (a command), copy (an example config, kept if it already exists), manual (instructions the user follows), confirm (a yes/no choice), email (asks an address and writes it into source constants), env (asks a non-secret value for .env), settings (creates the tool's config files from their examples and asks its settings, from data/settings/<tool>.json; done only when no placeholder is left; 'group' picks an optional group such as the assignment checker), samples (copytone writing samples). 'terminal' steps need the user's own interactive terminal, so the agent never runs them. A step's mcp/permissions apply only once that step is done; a tool's apply once all its required steps are done.",
+  "tools": [
+    {
+      "id": "agents",
+      "name": "Agent rules (AGENTS.md)",
+      "description": "The rules every agent follows in this repo. Its one setting is when an agent stops and hands off to a fresh one as its context fills up.",
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "prereqs": [],
+      "steps": [
+        {
+          "id": "settings",
+          "title": "Choose when agents hand off (context threshold)",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "brief",
+      "name": "Catch-up brief and away mode",
+      "description": "Sessions log what you should hear about; 'brief me' gives a ranked catch-up, and away mode tells sessions to keep working without you.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "mcp": [
+        "brief"
+      ],
+      "permissions": [
+        "mcp__brief"
+      ],
+      "hooks": [
+        {
+          "event": "UserPromptSubmit",
+          "module": "brief_tool.hooks.prompt",
+          "isolated": true,
+          "timeout": 10
+        }
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/brief",
+            "--frozen"
+          ]
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/brief",
+        "--frozen",
+        "--no-sync",
+        "brief",
+        "away",
+        "status"
+      ]
+    },
+    {
+      "id": "usage",
+      "name": "Usage tracker",
+      "description": "Keeps your 5-hour and weekly Claude usage and the running subagent count in one file, for the status line and the console.",
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "hooks": [
+        {
+          "event": "SubagentStart",
+          "module": "usage.hook",
+          "isolated": true,
+          "timeout": 5
+        },
+        {
+          "event": "SubagentStop",
+          "module": "usage.hook",
+          "isolated": true,
+          "timeout": 5
+        }
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/usage",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "statusline",
+          "title": "Show usage in Claude Code's status line (writes statusLine in your user settings, ~/.claude/settings.json)",
+          "kind": "confirm",
+          "optional": true,
+          "default": true,
+          "statusline": true
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/usage",
+        "--frozen",
+        "--no-sync",
+        "usage",
+        "show"
+      ]
+    },
+    {
+      "id": "copytone",
+      "name": "Writing in your voice (copytone)",
+      "description": "Writes in your own style from your samples: Claude learns your voice from your own writing and drafts outbound text (emails, posts) in it.",
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "prereqs": [],
+      "steps": [
+        {
+          "id": "samples",
+          "title": "Add writing samples for copytone (files, pasted text, or your own sent mail)",
+          "kind": "samples",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "voice-test",
+          "title": "Check the voice",
+          "kind": "manual",
+          "optional": true,
+          "default": true,
+          "text": "In Claude Code, say: \"test my copytone voice\". Claude rewrites a short paragraph in your voice and asks if it sounds right.",
+          "doc": ".claude/skills/copytone/SKILL.md"
+        }
+      ],
+      "verify": []
+    },
+    {
+      "id": "console",
+      "name": "Task console",
+      "description": "A terminal-style window onto your main Claude Code session, with a Tasks page showing what each agent is doing.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "node",
+        "edge"
+      ],
+      "permissions": [
+        "Bash(uv run --project tools/console --frozen --no-sync console tasks:*)",
+        "PowerShell(uv run --project tools/console --frozen --no-sync console tasks:*)"
+      ],
+      "hooks": [
+        {
+          "event": "UserPromptSubmit",
+          "module": "signal_console.hooks.turn",
+          "async": true
+        },
+        {
+          "event": "Stop",
+          "module": "signal_console.hooks.turn",
+          "async": true
+        },
+        {
+          "event": "StopFailure",
+          "module": "signal_console.hooks.turn",
+          "async": true
+        },
+        {
+          "event": "Notification",
+          "matcher": "idle_prompt",
+          "module": "signal_console.hooks.turn",
+          "async": true
+        },
+        {
+          "event": "SessionStart",
+          "module": "signal_console.hooks.session",
+          "async": true
+        },
+        {
+          "event": "PostModelSwitch",
+          "module": "signal_console.hooks.session",
+          "async": true
+        }
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/console",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "web-deps",
+          "title": "Install the web front end's packages",
+          "kind": "run",
+          "argv": [
+            "npm",
+            "ci",
+            "--prefix",
+            "tools/console/web"
+          ]
+        },
+        {
+          "id": "web-build",
+          "title": "Build the web front end",
+          "kind": "run",
+          "argv": [
+            "npm",
+            "run",
+            "build",
+            "--prefix",
+            "tools/console/web"
+          ]
+        },
+        {
+          "id": "claim",
+          "title": "Claim your main session",
+          "kind": "manual",
+          "optional": true,
+          "default": true,
+          "text": "From your main Claude Code session (not a plain terminal), run:\n  uv run --project tools/console --frozen --no-sync console claim --label \"orchestrator\"\nThe setup skill does this for you. Then open the console with:\n  uv run --project tools/console --frozen --no-sync console open",
+          "doc": "tools/console/README.md"
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/console",
+        "--frozen",
+        "--no-sync",
+        "console",
+        "--help"
+      ]
+    },
+    {
+      "id": "audiohub",
+      "name": "Voice hub and music control",
+      "description": "Speaks agents' notifications aloud in order, and plays, pauses and searches music (Spotify, or any app in the Windows media controls).",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "claude"
+      ],
+      "mcp": [
+        "audiohub"
+      ],
+      "permissions": [
+        "mcp__audiohub"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install (large: speech models and optional GPU libraries)",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/audiohub",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "config",
+          "title": "Create tools/audiohub/audiohub.toml and choose its settings (voice, ducking, wake phrases)",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "spotify-app",
+          "title": "Spotify search, queue and volume (needs Spotify Premium)",
+          "kind": "manual",
+          "optional": true,
+          "default": false,
+          "text": "1. Create a Web API app at https://developer.spotify.com/dashboard.\n2. Register the redirect URI http://127.0.0.1:8888/callback exactly.\n3. Copy the app's client ID (not secret) for the next step.",
+          "doc": "tools/audiohub/README.md"
+        },
+        {
+          "id": "spotify-id",
+          "title": "Spotify client ID",
+          "kind": "env",
+          "key": "SPOTIPY_CLIENT_ID",
+          "optional": true,
+          "default": false,
+          "terminal": true
+        },
+        {
+          "id": "spotify-login",
+          "title": "Spotify sign-in (opens your browser)",
+          "kind": "run",
+          "optional": true,
+          "default": false,
+          "terminal": true,
+          "argv": [
+            "uv",
+            "run",
+            "--env-file",
+            ".env",
+            "--project",
+            "tools/audiohub",
+            "--frozen",
+            "--no-sync",
+            "audiohub",
+            "music",
+            "login"
+          ]
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--env-file",
+        ".env",
+        "--project",
+        "tools/audiohub",
+        "--frozen",
+        "--no-sync",
+        "audiohub",
+        "music",
+        "status"
+      ]
+    },
+    {
+      "id": "browser",
+      "name": "Gated web browser",
+      "description": "Lets Claude drive a dedicated Edge profile on sites you allow. Purchases, sends and deletes always wait for your OK.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "edge"
+      ],
+      "mcp": [
+        "browser"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/browser",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "config",
+          "title": "Create tools/browser/browser.toml and choose its settings (allowed sites, downloads)",
+          "kind": "settings"
+        },
+        {
+          "id": "auto-approve",
+          "title": "Auto-approve browser actions in Claude Code, so it doesn't ask before every click? The browser's own purchase, send and delete confirmations stay on either way.",
+          "kind": "confirm",
+          "optional": true,
+          "default": true,
+          "permissions": [
+            "mcp__browser",
+            "mcp__browser-docker"
+          ]
+        },
+        {
+          "id": "docker",
+          "title": "Container browser (runs Edge in a throwaway Docker container; needs Docker Desktop, about 300 MB)",
+          "kind": "run",
+          "optional": true,
+          "default": false,
+          "prereqs": [
+            "docker"
+          ],
+          "argv": [
+            "docker",
+            "build",
+            "--pull",
+            "--no-cache",
+            "-t",
+            "signal-browser:latest",
+            "tools/browser/docker"
+          ],
+          "mcp": [
+            "browser-docker"
+          ]
+        },
+        {
+          "id": "docker-config",
+          "title": "Copy the container browser's config",
+          "kind": "copy",
+          "optional": true,
+          "default": false,
+          "src": "tools/browser/browser.example.toml",
+          "dst": "tools/browser/browser-docker.toml"
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/browser",
+        "--frozen",
+        "--no-sync",
+        "python",
+        "-c",
+        "import browser_tool"
+      ]
+    },
+    {
+      "id": "vault",
+      "name": "Password vault",
+      "description": "Lets the browser log in to your accounts without any password reaching the model. Unlocks with Windows Hello.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/vault",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "init",
+          "title": "Create the vault (Windows Hello asks three times)",
+          "kind": "run",
+          "terminal": true,
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/vault",
+            "--frozen",
+            "--no-sync",
+            "vault",
+            "init"
+          ]
+        },
+        {
+          "id": "add",
+          "title": "Add logins",
+          "kind": "manual",
+          "optional": true,
+          "default": false,
+          "text": "In your own terminal (never through Claude), add each login, for example:\n  uv run --project tools/vault vault add github --name GitHub --origin https://github.com\nIt asks for the username and password itself.",
+          "doc": "tools/vault/README.md"
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/vault",
+        "--frozen",
+        "--no-sync",
+        "python",
+        "-c",
+        "import vault"
+      ]
+    },
+    {
+      "id": "mail",
+      "name": "Gmail",
+      "description": "Search, read and draft mail in your Gmail accounts. Sending needs you to click Allow on your PC.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "mcp": [
+        "mail"
+      ],
+      "permissions": [
+        "mcp__mail__mail_accounts",
+        "mcp__mail__mail_search",
+        "mcp__mail__mail_read",
+        "mcp__mail__mail_thread",
+        "mcp__mail__mail_draft"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/mail",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "google-project",
+          "title": "Create the Google Cloud project and download the sign-in client (about 15 minutes, in your browser)",
+          "kind": "manual",
+          "text": "Follow steps 1 to 3 of tools/mail/SETUP.md. They end with the client file saved at tools/mail/.state/google_client.json.",
+          "doc": "tools/mail/SETUP.md"
+        },
+        {
+          "id": "email",
+          "title": "Your Gmail address",
+          "kind": "email",
+          "edits": [
+            {
+              "file": "tools/mail/src/mail_tool/service/self_send.py",
+              "name": "SELF_ADDRESS"
+            },
+            {
+              "file": "tools/calendar/src/calendar_tool/paths.py",
+              "name": "OWNER_EMAIL"
+            }
+          ]
+        },
+        {
+          "id": "signin",
+          "title": "Sign in (opens your browser)",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/mail",
+            "--frozen",
+            "--no-sync",
+            "mail",
+            "add",
+            "personal",
+            "--email",
+            "{email}"
+          ]
+        },
+        {
+          "id": "more-accounts",
+          "title": "More accounts",
+          "kind": "manual",
+          "optional": true,
+          "default": false,
+          "text": "Add each extra account with its own alias, for example:\n  uv run --project tools/mail mail add school --email you@school.example.edu",
+          "doc": "tools/mail/SETUP.md"
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/mail",
+        "--frozen",
+        "--no-sync",
+        "mail",
+        "accounts"
+      ]
+    },
+    {
+      "id": "calendar",
+      "name": "Google Calendar (read-only)",
+      "description": "Reads your calendars for the agenda and the idle whiteboard. It can't change anything.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "needs": [
+        "mail"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/calendar",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "google-api",
+          "title": "Turn on the Calendar API and its two read-only scopes",
+          "kind": "manual",
+          "text": "Follow steps 1 and 2 of tools/calendar/SETUP.md (it reuses the mail tool's Google project).",
+          "doc": "tools/calendar/SETUP.md"
+        },
+        {
+          "id": "signin",
+          "title": "Sign in (opens your browser)",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/calendar",
+            "--frozen",
+            "--no-sync",
+            "calendar",
+            "add",
+            "--email",
+            "{email}"
+          ]
+        },
+        {
+          "id": "settings",
+          "title": "Choose how often the agenda cache refreshes",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "schedule",
+          "title": "Refresh the agenda every 10 minutes (a Windows scheduled task)",
+          "kind": "run",
+          "optional": true,
+          "default": true,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/calendar/schedule/register.ps1",
+            "-RunNow"
+          ]
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/calendar",
+        "--frozen",
+        "--no-sync",
+        "calendar",
+        "agenda",
+        "--days",
+        "1"
+      ]
+    },
+    {
+      "id": "mail-digest",
+      "name": "Daily mail digest",
+      "description": "Every morning, reads new mail, speaks what matters and emails you a short digest.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "claude"
+      ],
+      "needs": [
+        "mail",
+        "audiohub"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/mail-digest",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "settings",
+          "title": "Choose when the digest runs each day",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "schedule",
+          "title": "Run it every morning at 07:00 (a Windows scheduled task)",
+          "kind": "run",
+          "optional": true,
+          "default": true,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/mail-digest/register.ps1"
+          ]
+        },
+        {
+          "id": "checker",
+          "title": "Assignment checker: your school's LMS/SSO",
+          "kind": "settings",
+          "optional": true,
+          "default": false,
+          "group": "checker"
+        },
+        {
+          "id": "checker-signin",
+          "title": "Assignment checker: test the sign-in (needs the browser tool and a vault credential for your SSO host)",
+          "kind": "run",
+          "optional": true,
+          "default": false,
+          "terminal": true,
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/mail-digest",
+            "--frozen",
+            "--no-sync",
+            "assignment-check",
+            "--sign-in-test"
+          ]
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/mail-digest",
+        "--frozen",
+        "--no-sync",
+        "python",
+        "-c",
+        "import mail_digest"
+      ]
+    },
+    {
+      "id": "sessions",
+      "name": "Background Claude sessions",
+      "description": "Starts and drives headless Claude Code sessions in your other git repos, and lists past sessions to resume.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "claude"
+      ],
+      "mcp": [
+        "sessions"
+      ],
+      "permissions": [
+        "mcp__sessions__list_sessions",
+        "mcp__sessions__list_managed_sessions",
+        "mcp__sessions__list_repos",
+        "mcp__sessions__session_status"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/sessions",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "repo-roots",
+          "title": "Folders that hold your git repos (';'-separated, default C:\\src)",
+          "kind": "env",
+          "key": "SESSIONS_REPO_ROOTS",
+          "optional": true,
+          "default": false
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/sessions",
+        "--frozen",
+        "--no-sync",
+        "sessions",
+        "--help"
+      ]
+    },
+    {
+      "id": "whiteboard",
+      "name": "Projector whiteboard",
+      "description": "A projector and webcam turn a physical whiteboard into one Claude can see and draw on.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "edge"
+      ],
+      "mcp": [
+        "whiteboard"
+      ],
+      "permissions": [
+        "mcp__whiteboard"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/whiteboard",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "config",
+          "title": "Create tools/whiteboard/whiteboard.toml and choose its settings (projector, camera, morning run time)",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "displays",
+          "title": "List displays (set [display] name_match to your projector's name)",
+          "kind": "run",
+          "optional": true,
+          "default": true,
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/whiteboard",
+            "--frozen",
+            "--no-sync",
+            "whiteboard",
+            "displays"
+          ]
+        },
+        {
+          "id": "cameras",
+          "title": "List cameras (set [camera] index if yours isn't 0)",
+          "kind": "run",
+          "optional": true,
+          "default": true,
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/whiteboard",
+            "--frozen",
+            "--no-sync",
+            "whiteboard",
+            "cameras"
+          ]
+        },
+        {
+          "id": "calibrate",
+          "title": "Align the projector to the board",
+          "kind": "manual",
+          "optional": true,
+          "default": false,
+          "text": "Point the webcam at the whole board, stand clear, then run:\n  uv run --project tools/whiteboard whiteboard calibrate\nor ask Claude to 'calibrate the board'.",
+          "doc": "tools/whiteboard/README.md"
+        },
+        {
+          "id": "schedule",
+          "title": "Morning keynotes and TODO refresh at 06:00 (a Windows scheduled task; uses the optional life/ folder)",
+          "kind": "run",
+          "optional": true,
+          "default": false,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/whiteboard/schedule/register.ps1"
+          ]
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/whiteboard",
+        "--frozen",
+        "--no-sync",
+        "whiteboard",
+        "--help"
+      ]
+    },
+    {
+      "id": "sleepmode",
+      "name": "Sleep mode",
+      "description": "Darkens every screen and turns RGB lights off while the PC and agents keep running.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "mcp": [
+        "sleepmode"
+      ],
+      "permissions": [
+        "mcp__sleepmode"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/sleepmode",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "config",
+          "title": "Create tools/sleepmode/sleepmode.toml and choose its settings (RGB lighting)",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "openrgb",
+          "title": "RGB lights through OpenRGB",
+          "kind": "manual",
+          "optional": true,
+          "default": false,
+          "text": "Install OpenRGB (portable) at %LOCALAPPDATA%\\Programs\\OpenRGB\\OpenRGB.exe and save your daytime look as an OpenRGB profile named 'day'. Without it, lights are left alone.",
+          "doc": "tools/sleepmode/README.md"
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/sleepmode",
+        "--frozen",
+        "--no-sync",
+        "sleepmode",
+        "status"
+      ]
+    },
+    {
+      "id": "jobhunt",
+      "name": "Job-application runner",
+      "description": "A scheduled headless Claude run that finds jobs matching your profile and applies through the browser tool, following your runbook.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "claude"
+      ],
+      "needs": [
+        "browser"
+      ],
+      "steps": [
+        {
+          "id": "settings",
+          "title": "Create your runbook and profile in life/areas/job-search/ and fill in the main answers",
+          "kind": "settings"
+        },
+        {
+          "id": "fill-profile",
+          "title": "Finish your profile and add your resume",
+          "kind": "manual",
+          "text": "Check every line of life/areas/job-search/profile.md (account creation on job sites stays off unless you turn it on there; list companies to never apply to), and put your resume PDF in life/areas/job-search/resume/.",
+          "doc": "tools/jobhunt/README.md"
+        },
+        {
+          "id": "schedule",
+          "title": "Register the scheduled run (a Windows scheduled task)",
+          "kind": "run",
+          "optional": true,
+          "default": false,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/jobhunt/install-schedule.ps1"
+          ]
+        },
+        {
+          "id": "seed-profile",
+          "title": "Copy the main browser profile's sign-ins to the jobs profile",
+          "kind": "run",
+          "optional": true,
+          "default": false,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/jobhunt/seed-profile.ps1"
+          ]
+        }
+      ],
+      "verify": [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "tools/jobhunt/run.ps1",
+        "-DryRun"
+      ]
+    }
+  ]
+}

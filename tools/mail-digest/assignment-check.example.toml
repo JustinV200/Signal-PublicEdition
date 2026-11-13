@@ -1,0 +1,20 @@
+# The assignment checker's sites and courses. `setup mail-digest` copies this to
+# assignment-check.toml (gitignored) and asks you for every value; nothing here is
+# real, and the checker isn't marked set up while a placeholder is left.
+
+[moodle]
+# Your school's Moodle address, https and no trailing slash.
+base = "https://lms.example.edu"
+# One "tag:id" per Moodle course: the course's tag in life/ (e.g. chem-120) and its
+# Moodle course id (the number after ?id= on the course page).
+courses = ["YOUR-COURSE-TAG:YOUR_MOODLE_COURSE_ID"]
+
+[classroom]
+# Google Classroom for your school account. /u/N is that account's slot in the
+# checker's browser (0 if it's the only Google account signed in there).
+base = "https://classroom.google.com/u/0"
+# The school Google account every Classroom page must show.
+account = "you@school.example.edu"
+# One "tag:id:class name" per Classroom class: its life/ tag, the class id from its
+# URL, and the class name exactly as Classroom shows it. [] if you don't use Classroom.
+courses = []

@@ -1,0 +1,48 @@
+[project]
+name = "mail-digest"
+version = "0.1.0"
+description = "Locked-down headless Claude Code runs that keep life/ current: the mail digest and the assignment checker."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+# Standard library, plus signal-untrusted (packages/untrusted, itself stdlib only),
+# the shared frame the assignment checker puts page text in before a model reads it.
+dependencies = [
+    "signal-untrusted",
+]
+
+[project.scripts]
+mail-digest = "mail_digest.digest:main"
+# On-demand course-site check (refdocs/research/checker-v2.md). Only the owner starts it.
+assignment-check = "mail_digest.assignment_check:main"
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "mail_digest"
+
+[tool.uv.sources]
+signal-untrusted = { path = "../../packages/untrusted", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames with other projects' tests
+# without needing __init__.py files in tests/.
+addopts = ["--import-mode=importlib"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

@@ -1,0 +1,218 @@
+# browser-tool example config.
+#
+# Copy this file to browser.toml (same folder; gitignored) and edit what you need.
+# Every key is optional. Leave a key or a whole [section] out to keep its default.
+# The values below ARE the defaults. Unknown keys or wrong types are an error.
+# Pass a different file with `browser-tool --config PATH`.
+#
+# The docker browser (`browser-tool --backend docker`, the browser-docker MCP
+# server) reads its own copy: copy this file to browser-docker.toml too
+# (gitignored). Its [policy] applies only to container jobs, so allow_all can
+# be on there while the desktop browser keeps its allowlist. Container jobs
+# always refuse this PC, Docker's host alias, localhost and private or
+# link-local addresses, whatever [policy] says. profile_dir, channel, headless
+# and use_system_proxy don't apply to container jobs.
+
+[browser]
+# Playwright channel: "msedge" uses the installed Microsoft Edge (no download).
+channel = "msedge"
+# Show the window. Keep false so you can watch, log in, and solve CAPTCHAs.
+headless = false
+# Dedicated persistent profile (cookies, logins). Relative to tools/browser.
+# It holds live session cookies: treat the folder as a secret. Gitignored.
+# Sign-ins survive restarts through persistent cookies; session cookies (a
+# site's "log out when the browser closes" kind) through cookie_file below.
+# Sites still expire sessions themselves; nothing keeps them alive.
+profile_dir = ".profile"
+# The desktop browser saves its cookies here on a clean close, encrypted with
+# DPAPI for your Windows login and readable by your account only, and adds its
+# session cookies (for allowed hosts) back at the next launch. Visit mode (the
+# checker) borrows the ones its own allowlist allows. Docker jobs never use it.
+# Treat it as a secret, like the profile. Relative to tools/browser. Gitignored.
+cookie_file = ".state/cookies.bin"
+# Where screenshot() saves PNGs. Relative to tools/browser. Gitignored.
+screenshot_dir = ".screenshots"
+# Seconds to wait for a page load, and for an element action.
+navigation_timeout_s = 30
+action_timeout_s = 10
+# Snapshots come in pages of at most this many characters, cut at line boundaries
+# (snapshot(page=N) reads the next ones).
+max_snapshot_chars = 40000
+# Off: Edge ignores the system proxy and connects directly. Behind a proxy the
+# proxy resolves host names, so the DNS-level redirect block below wouldn't work.
+# Turn on only if you can't browse without the proxy.
+use_system_proxy = false
+# Docker backend only: end a container job after this many minutes with no tool
+# call. The next call starts a fresh container (nothing carries over).
+idle_close_min = 15
+
+[policy]
+# Host patterns: "example.com" matches exactly that host; "*.example.com" matches
+# its subdomains (not example.com itself). List both to allow both.
+# Only listed hosts load. The EMPTY DEFAULT BLOCKS EVERY SITE until you add some.
+# Every other host is blocked, including redirects and the sites' CDNs, so add
+# the asset hosts a site needs. For example:
+#
+# allow = [
+#     "example.com",
+#     "github.com", "*.github.com", "*.githubassets.com", "*.githubusercontent.com",
+#     "amazon.com", "*.amazon.com", "*.media-amazon.com", "*.ssl-images-amazon.com",
+# ]
+allow = []
+# Always blocked, even if also allowed.
+deny = []
+# true = allow every host not denied (ignores `allow`); navigations are logged.
+# For the desktop browser keep it false. In browser-docker.toml, true suits
+# public-web jobs: the container block above still applies.
+allow_all = false
+
+[gates]
+# What still waits for your Allow in a dialog on screen. Everything else runs on
+# its own: new sites (when [policy] lets them load), ordinary clicks, typing,
+# dropdowns and keys. Each one that used to ask gets a log line instead (tool,
+# ref or key, site and why; never page text or what was typed). Pick any of:
+#   "purchase"         buy, purchase, pay, checkout, place or confirm an order,
+#                      subscribe, donate, transfer, withdraw
+#   "send"             send, post, reply, comment, publish, submit, unsubmit,
+#                      turn in, hand in, mark as done, share, upload, merge,
+#                      commit, close issue or pull request, close as,
+#                      request (edit) access, unsubscribe; a submit button in
+#                      a form that isn't a search form or a method="get" form,
+#                      or Enter that submits one, unless it is a sign-in
+#                      button ("Sign in", "Next" and the like, in a form with
+#                      a visible password field and few other fields) or
+#                      "Save draft"; Control+Enter outside a search box; Enter
+#                      in a message box
+#   "delete"           delete, remove, trash; the Delete key
+# Signing in and OAuth consent ("Allow", "Authorize") don't ask. The old
+# "password_submit" and "grant_access" names are ignored with a warning.
+# Words match whole words, any case, in the names and text of the target and of
+# what a click on it bubbles up to. [] asks for nothing. Either way the vault
+# still asks before every login fill, the Duo lockout stays on, and every action
+# re-checks [policy] right before it runs. Only this file sets these; nothing a
+# page or Claude does can change them.
+always_confirm = ["purchase", "send", "delete"]
+# Your own extra case-insensitive regexes. A click, key press or dropdown choice
+# whose target text matches one always asks, e.g. ['\bcancel\b'].
+patterns = []
+# Seconds before an unanswered confirmation dialog closes and counts as "No".
+confirm_timeout_s = 120
+# Origins where Enter in a message box doesn't ask, for chat sites you trust to
+# send on Enter, e.g. ["https://chat.example.com"]. The word, form, Control+Enter
+# and Delete key rules still apply there.
+no_confirm_origins = []
+# true lets type_text type into password and one-time-code fields. It is ONLY for
+# the job runner's dedicated job-site accounts (browser-jobs.toml), whose
+# passwords tools/jobhunt/account.ps1 makes up. Keep it false here in
+# browser.toml: your real logins go through the vault and fill_login only. The
+# docker browser refuses to start with it on.
+# Typed values are still never logged, and stay redacted and scrubbed from
+# snapshots and results. fill_login, the vault and the Duo lockout don't change.
+allow_secret_fields = false
+
+[duo]
+# Duo two-factor prompts are owner-only. While the current tab shows one (any
+# page or frame on duosecurity.com or a subdomain), click, type_text,
+# select_option, press_key and fill_login are refused, and the first tool result
+# after a new prompt tells Claude to wait and to push a notification to your
+# phone. The lockout and that notice are always on. The keys below control the
+# spoken heads-up through the audiohub voice hub ("Duo push for <site>, approve
+# on your phone."), when a return to Duo counts as a new prompt, and reading
+# Duo's verification code out to you (off until you list sites).
+# Duo logins only load if the policy allows Duo: "*.duosecurity.com" in
+# [policy] allow, or allow_all = true.
+voice_heads_up = true
+# The audiohub kernel's notification server (tools/audiohub, [ipc] port).
+# Must be a loopback IP: the hub's token is sent with every note.
+hub_host = "127.0.0.1"
+hub_port = 8765
+# Where audiohub publishes its kernel's token. Relative to tools/browser.
+# No file means the hub isn't running: the heads-up is skipped and logged.
+hub_token_file = "../audiohub/.cache/ipc-token"
+# A tab that leaves Duo and comes back within this many seconds is still the
+# same prompt; after that, a new prompt gets a new notice and heads-up.
+same_prompt_window_s = 10
+# At most one spoken heads-up per this many seconds, across all tabs, so a page
+# that keeps embedding a Duo frame can't keep telling you to approve a push.
+# Claude's notice and the lockout are not limited by this. Code notes (below)
+# are limited to one per site per this many seconds instead.
+min_heads_up_interval_s = 60
+# Duo "Verified Push" shows a short number that you type into Duo Mobile before
+# approving. For sites listed here, the tool reads that number from the Duo
+# frame (read only: Claude still never clicks or types in Duo), says it once
+# per prompt and at most once per site per min_heads_up_interval_s ("Duo code
+# for <site>: 4 8 2. Type it in Duo Mobile and approve."), and gives it to
+# Claude for its phone push.
+# <site> is the page you were logging in to (the tab's last non-Duo page). Only
+# a top-level Duo page (the Universal Prompt) is read, never a Duo frame inside
+# a page, and not when the way to Duo passed through another host or history,
+# or wasn't started by the site's own page.
+# Host patterns as in [policy] allow. The EMPTY DEFAULT relays nothing.
+# List only login pages you use yourself: someone who has your password could
+# start a real Duo login and embed the real Duo prompt on their own page, and
+# hearing that code read out would prime you to approve them. Prefer exact
+# login hosts: a wildcard like "*.example.edu" trusts every subdomain. For example:
+#
+# code_relay_sites = ["sso.example.edu"]
+code_relay_sites = []
+# After a prompt appears, look for its code every code_poll_interval_s seconds,
+# for up to code_relay_timeout_s seconds, while the tab stays in that prompt.
+code_relay_timeout_s = 45
+code_poll_interval_s = 1
+# Names to say instead of a login page's hostname, in the spoken heads-up
+# ("Duo push for the school login, approve on your phone."), Claude's notice and
+# the signed-out note. Keys are exact hostnames (no wildcards). Names are
+# letters, digits, spaces, dots and hyphens, at most 40 characters. A host not
+# listed is said as its hostname. For example:
+#
+# site_names = { "sso.example.edu" = "the school login" }
+site_names = {}
+
+[downloads]
+# Desktop browser only: the docker browser always refuses downloads.
+# On: a download (navigate to a download URL, or a click or key that starts one)
+# is saved here and the tool result names the file, its size and its original
+# name. It must come from a host [policy] allows (a blob: or data: download from
+# an allowed page). Nothing is ever opened, run or unpacked. Off: every download
+# is refused.
+enabled = true
+# Where downloads are saved. Relative to tools/browser. Gitignored. The page's
+# file name is made safe (no folders, no Windows device names) and a clash gets
+# " (1)", " (2)"... added, so nothing here is overwritten.
+folder = ".downloads"
+# A download bigger than this many megabytes is cancelled and deleted.
+max_mb = 200
+
+[uploads]
+# Desktop browser only: the docker browser always refuses uploads.
+# upload_file sends one local file through a page's file input or picker, and
+# always waits for the owner's approval as a send (when send is in
+# [gates] always_confirm). The file must resolve, with no symlink or junction
+# on the way, to a regular file inside one of these folders (relative to
+# tools/browser). The vault, .profile*, .env and key files (.pem, .key, .pfx,
+# .p12, .kdbx, .ppk, id_rsa...) are always refused.
+roots = ["../../life", ".downloads"]
+# A file bigger than this many megabytes is refused.
+max_mb = 25.0
+
+[visit]
+# Visit mode only (`browser-tool-visit`, used by checker v2's browser-checker-*.toml
+# configs); the MCP server ignores this table. Every key is off by default.
+#
+# The SSO login host a visit may fill on, the vault credential it fills, and the
+# hosts a fill may come from: the target's host and the host in the login URL's
+# `service` parameter must both be listed. Set all three or none; with none, the
+# launch never fills. For example:
+#
+# login_host = "sso.example.edu"
+# login_from_hosts = ["lms.example.edu"]
+# login_credential = "school"
+#
+# Hosts where landing means a Google sign-in is needed (nothing is filled there):
+#
+# signin_hosts = ["accounts.google.com"]
+#
+# After the fill, wait this long for the tab to leave the login host and Duo.
+login_wait_s = 150
+# After each navigation, wait up to this long for the network to go quiet.
+settle_s = 8

@@ -1,0 +1,7 @@
+# views/boards
+
+The boards buffer. `BoardsView` shows what is on the projector in words (`the to-do list`, `the idle board`, `your board` or `nothing`: the whiteboard reports `todo`, `idle` or `items`, never which save is loaded), a hint, a list of `BoardRow`s (to-do list, idle board, then each save with `saved <relative>`; a bold "Showing" tag on the to-do or idle row while its view is up) and a `BoardPreview` of the selected row: name, description, save time and the one "Send to projector" button, captioned that it replaces what is showing. A row click, focus or Up/Down (on the list or from the input line) only selects; the `▸` cursor lives in the store and focus follows it. The button is pending ("Working…") while the console runs the load, and disabled with a reason for the to-do list and idle board only when the whiteboard is on but reports no view (an older build). When the whiteboard is off it lists no saves and a note says that sending the to-do list or idle board turns it on. The preview is text only until the whiteboard offers thumbnails.
+
+The header also has `Realign board` (`board.realign`, no confirm) and `Full calibrate` (`board.calibrate`, through the y/n confirm line), both disabled with a reason under the night view. The preview adds `Update` (`board.update`) on rows that can be redrawn from live data: a save with a `refresher`, and the to-do list.
+
+Public API: `index.ts`. Depends on `state`, `time`, `ui`, `input` (focus helper).

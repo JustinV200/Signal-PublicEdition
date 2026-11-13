@@ -1,0 +1,96 @@
+/* Chat stream rows: a 14ch gutter (HH:MM  role) then the body. */
+.view {
+  padding: 14px 0 18px;
+}
+
+.msg {
+  display: grid;
+  grid-template-columns: 14ch 1fr;
+  padding: 5px 0;
+}
+
+.gutter {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+  line-height: var(--row);
+  white-space: pre;
+}
+
+.you {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* Console notice: the label text, its weight and the bold body all mark it,
+   so the amber is a third cue rather than the only one. */
+.note {
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.noteBody {
+  font-weight: 600;
+}
+
+.body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  transition: opacity 120ms linear;
+}
+
+.plain {
+  white-space: pre-wrap;
+}
+
+.muted {
+  color: var(--fg-2);
+}
+
+.sending {
+  opacity: 0.6;
+}
+
+/* Where an action's request has got to, after its text. */
+.progress {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+}
+
+.failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  color: var(--error);
+  font-size: var(--font-small);
+  margin-top: 4px;
+}
+
+.working {
+  color: var(--fg-2);
+}
+
+.clock {
+  color: var(--fg-3);
+}
+
+.divider {
+  text-align: center;
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding: 10px 0 4px;
+}
+
+.empty {
+  color: var(--fg-3);
+}
+
+/* Narrow: the gutter becomes a line above the body. */
+@media (max-width: 720px) {
+  .msg {
+    grid-template-columns: 1fr;
+  }
+  .gutter {
+    line-height: 18px;
+  }
+}

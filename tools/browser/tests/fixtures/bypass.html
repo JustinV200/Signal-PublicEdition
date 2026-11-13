@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head><title>Bypass fixture</title></head>
+<body>
+  <p id="status">idle</p>
+  <script>function setStatus(text) { document.getElementById('status').textContent = text; }</script>
+  <div role="menu" aria-label="Chat menu">
+    <div role="menuitem" onclick="setStatus('conversation deleted')">Delete conversation <img alt="menu icon" src="/pixel.png" width="16" height="16"></div>
+  </div>
+  <div onclick="setStatus('sent')">Send now <img alt="send icon" src="/pixel.png" width="16" height="16"></div>
+  <div role="toolbar" aria-label="Tools" style="display: inline-flex">
+    <button aria-label="Bold" style="width: 40px">B</button>
+    <button aria-label="Delete message" style="width: 40px" onclick="setStatus('message deleted')">X</button>
+    <button aria-label="Italic" style="width: 40px">I</button>
+  </div>
+  <a href="#" aria-label="Delete item" onclick="setStatus('item deleted'); return false;"><span role="button">Go</span></a>
+  <project-delete aria-label="Delete project"></project-delete>
+  <input type="password" id="mixed" value="mix: é'&quot;77"><button aria-labelledby="mixed">y</button>
+  <textarea aria-label="Chat" onkeydown="if (event.key === 'Enter') { event.preventDefault(); document.getElementById('status').textContent = 'chat sent'; }"></textarea>
+  <label>Password <input id="password" type="password"></label>
+  <form id="tiedform" onsubmit="event.preventDefault(); document.getElementById('status').textContent = 'submitted'">
+    <input aria-label="Note">
+  </form>
+  <button form="tiedform">Continue</button>
+  <button id="go" form="tiedform" aria-label="Proceed">&rarr;</button>
+  <label for="go" style="display: block">Go ahead</label>
+  <label style="cursor: pointer">Account action
+    <select onchange="document.getElementById('status').textContent = this.value">
+      <option value="keep">Keep account</option>
+      <option value="x1">Delete account</option>
+    </select>
+  </label>
+  <label style="cursor: pointer">Delete data on exit
+    <select onchange="document.getElementById('status').textContent = this.value">
+      <option value="no">No</option>
+      <option value="yes">Yes</option>
+    </select>
+  </label>
+  <input type="password" id="named" value="named-secret-88">
+  <button aria-labelledby="named">x</button>
+  <label><input type="checkbox"> Remember <input type="password" value="label-secret-99"></label>
+  <input type="password" role="button" value="pw-as-button-1">
+  <input type="password" role="generic" value="pw-as-generic-2">
+  <input type="password" role="slider" value="pw-as-slider-3">
+  <input type="password" role="generic" style="pointer-events: none" value="pw-generic-inert-4">
+  <shadow-delete></shadow-delete>
+  <script>
+    customElements.define('project-delete', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({mode: 'open'});
+        root.innerHTML = '<button>Run</button>';
+        root.querySelector('button').onclick = () => setStatus('project deleted');
+      }
+    });
+    customElements.define('shadow-delete', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({mode: 'open'});
+        root.innerHTML = '<button>Delete everything</button>';
+        root.querySelector('button').onclick = () => {
+          document.getElementById('status').textContent = 'deleted';
+        };
+      }
+    });
+  </script>
+</body>
+</html>

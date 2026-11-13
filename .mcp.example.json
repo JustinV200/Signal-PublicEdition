@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "audiohub": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/audiohub", "--frozen", "audiohub", "mcp"]
+    },
+    "sessions": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/sessions", "--frozen", "sessions", "mcp"]
+    },
+    "browser": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/browser", "--frozen", "browser-tool"]
+    },
+    "whiteboard": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/whiteboard", "--frozen", "whiteboard", "mcp"]
+    },
+    "mail": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/mail", "--frozen", "mail", "mcp"]
+    },
+    "sleepmode": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/sleepmode", "--frozen", "sleepmode", "mcp"]
+    },
+    "browser-docker": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/browser", "--frozen", "browser-tool", "--backend", "docker", "--config", "tools/browser/browser-docker.toml"]
+    },
+    "brief": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/brief", "--frozen", "brief", "mcp"]
+    }
+  }
+}

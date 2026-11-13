@@ -1,0 +1,79 @@
+/* The console button: a bordered box that reads as clickable at a glance.
+   Hover fills it, press darkens it, focus draws the accent ring; disabled
+   goes faint with a dashed border and the reason beside it. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+  height: var(--control-height);
+  padding: 0 1.2ch;
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 1px solid var(--fg-3);
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 80ms linear,
+    border-color 80ms linear;
+}
+
+.btn:hover {
+  background: var(--bg-3);
+  border-color: var(--fg-2);
+  color: var(--fg);
+}
+
+.btn:active {
+  background: var(--bg);
+  border-color: var(--fg);
+}
+
+.primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.primary:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+  box-shadow: 0 0 8px var(--glow);
+}
+
+.btn:disabled {
+  color: var(--fg-3);
+  background: none;
+  border-color: var(--rule);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+/* Pending keeps the solid border and mid-grey text: on its way, not off. */
+.btn.pending:disabled {
+  color: var(--fg-2);
+  border-style: solid;
+  border-color: var(--fg-3);
+  cursor: progress;
+}
+
+.hint {
+  font: inherit;
+  font-size: var(--font-small);
+  color: var(--fg-3);
+}
+
+.btn:hover .hint {
+  color: var(--fg-2);
+}
+
+.reason {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+}

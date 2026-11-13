@@ -1,0 +1,51 @@
+[project]
+name = "sleepmode"
+version = "0.1.0"
+description = "Sleep mode: dark screens and a night sky on the projector while the PC keeps running."
+authors = [
+    { email = "owner@example.com" }
+]
+requires-python = "==3.12.*"
+license = "PolyForm-Noncommercial-1.0.0"
+dependencies = [
+    # The sleep_mode_* MCP tools. Same pin as tools/audiohub, sessions and whiteboard.
+    "mcp==2.3.0",
+    # The client for OpenRGB's SDK server, which turns the RGB lights off and back on.
+    # GPL-3.0, a separate dependency installed from PyPI, not bundled; Signal itself is PolyForm Noncommercial 1.0.0.
+    "openrgb-python==0.3.8",
+    # Monitor listing and projector pick, shared with the whiteboard's rules (stdlib only).
+    "signal-displays",
+]
+
+[project.scripts]
+sleepmode = "sleepmode.cli:main"
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+signal-displays = { path = "../../packages/displays", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames across the mirrored folders
+# without needing __init__.py files in tests/. `support` holds shared fakes.
+addopts = ["--import-mode=importlib"]
+pythonpath = ["tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

@@ -1,0 +1,58 @@
+{
+  "files": [
+    {
+      "path": "tools/browser/browser.toml",
+      "example": "tools/browser/browser.example.toml"
+    }
+  ],
+  "settings": [
+    {
+      "key": "policy.allow",
+      "file": "tools/browser/browser.toml",
+      "type": "list",
+      "level": "basic",
+      "description": "Sites the browser may open",
+      "hint": "hosts, comma-separated, e.g. github.com, *.wikipedia.org; none for none"
+    },
+    {
+      "key": "downloads.enabled",
+      "file": "tools/browser/browser.toml",
+      "type": "bool",
+      "level": "basic",
+      "description": "Save downloads to the tool's downloads folder",
+      "hint": "yes or no"
+    },
+    {
+      "key": "gates.always_confirm",
+      "file": "tools/browser/browser.toml",
+      "type": "list",
+      "level": "advanced",
+      "description": "Actions that always wait for your approval",
+      "hint": "purchase, send, delete"
+    },
+    {
+      "key": "gates.no_confirm_origins",
+      "file": "tools/browser/browser.toml",
+      "type": "list",
+      "level": "advanced",
+      "description": "Origins whose actions never ask",
+      "hint": "e.g. https://localhost:3000; none for none"
+    },
+    {
+      "key": "uploads.roots",
+      "file": "tools/browser/browser.toml",
+      "type": "list",
+      "level": "advanced",
+      "description": "Folders uploads may come from",
+      "hint": "paths relative to tools/browser"
+    },
+    {
+      "key": "browser.headless",
+      "file": "tools/browser/browser.toml",
+      "type": "bool",
+      "level": "advanced",
+      "description": "Run without a visible window",
+      "hint": "yes or no"
+    }
+  ]
+}

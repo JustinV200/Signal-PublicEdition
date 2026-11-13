@@ -1,0 +1,194 @@
+/*
+ * The TODO view (todo.js). Light on black, thin lines, and no filled areas, because the
+ * page is projected onto a real whiteboard and fills would wash out the owner's ink.
+ * Boxes come from the daemon (todo/view/layout.py); #todo's font-size is the row font,
+ * and the em ratios here match that file's.
+ */
+
+#todo {
+  color: #ffffff;
+  font-family: var(--board-font);
+  line-height: 1.25;
+}
+
+#todo > div {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.todo-header {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding-top: 4px;
+  border-bottom: 1.5px solid rgba(0, 229, 255, 0.6);
+}
+
+.todo-title {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #ffea00;
+}
+
+.todo-date {
+  margin-left: auto;
+  font-size: 26px;
+}
+
+.todo-updated {
+  font-size: 15px;
+  color: #90a4ae;
+}
+
+/* Group headings sit at the bottom of their line, close to the items they head. */
+.todo-heading {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 0.1em;
+  font-size: 0.62em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.todo-row > div {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* A thin outlined box; a done row gets a check mark drawn in its tag colour. */
+.todo-check {
+  left: 0;
+}
+
+.todo-check::before {
+  content: "";
+  width: 0.58em;
+  height: 0.58em;
+  box-sizing: border-box;
+  border: 2px solid var(--tag-color);
+  border-radius: 3px;
+}
+
+.todo-row.done .todo-check::after {
+  content: "\2713";
+  position: absolute;
+  left: 0.06em;
+  top: 50%;
+  transform: translateY(-58%);
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--tag-color);
+}
+
+.todo-tag-chip {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.04em 0.45em 0.1em;
+  border: 1.5px solid var(--tag-color);
+  border-radius: 0.4em;
+  color: var(--tag-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The cross-out is a thin background line under the text, so it follows the text's width.
+   Done rows show it whole; a row that just turned done draws it left to right, then dims. */
+.todo-label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(var(--tag-color), var(--tag-color)) no-repeat 0 58% / 0 0.11em;
+}
+
+.todo-row.done .todo-label {
+  background-size: 100% 0.11em;
+}
+
+.todo-row.done {
+  opacity: 0.38;
+}
+
+.todo-row.just-done .todo-label {
+  animation: todo-strike 750ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+
+.todo-row.just-done {
+  animation: todo-dim 450ms ease-out 800ms both;
+}
+
+@keyframes todo-strike {
+  from { background-size: 0 0.11em; }
+  to { background-size: 100% 0.11em; }
+}
+
+@keyframes todo-dim {
+  from { opacity: 1; }
+  to { opacity: 0.38; }
+}
+
+.todo-due {
+  right: 0;
+  color: #cfd8dc;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-row.overdue .todo-due {
+  color: #ff8a80;
+}
+
+/* "done?": a cross-out the daemon wasn't sure about. Dashed and pulsing, like the
+   "Claude is thinking" box (loading-pulse is in board.css). */
+.todo-hint .todo-due-label {
+  padding: 0 0.3em;
+  border: 1.5px dashed #ffea00;
+  border-radius: 0.3em;
+  color: #ffea00;
+  animation: loading-pulse 1.6s ease-in-out infinite alternate;
+}
+
+/* Keynotes: a small heading like the group headings, then plain lines behind a thin
+   left rule. Line height matches layout.py's KEYNOTE_LINE_EM. */
+.todo-keynotes {
+  display: flex;
+  flex-direction: column;
+  padding-left: 14px;
+  border-left: 2px solid rgba(0, 229, 255, 0.6);
+  line-height: 1.35;
+}
+
+.todo-keynotes-label {
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #00e5ff;
+}
+
+.todo-keynote {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.todo-more {
+  display: flex;
+  align-items: center;
+  font-size: 0.8em;
+  color: #90a4ae;
+}
+
+.todo-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #90a4ae;
+}

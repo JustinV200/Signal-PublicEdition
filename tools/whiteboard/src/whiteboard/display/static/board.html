@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+  The board page. Edge shows it fullscreen on the projector. It draws the scene the
+  daemon pushes over /ws onto a black stage. Black means no light, so the owner's
+  marker ink stays visible. All libraries are vendored under /static/vendor/;
+  nothing loads from the network.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Only this daemon's own scripts, styles, fonts, images and WebSocket. Inline styles
+       are allowed because mermaid and KaTeX generate them; inline scripts are not. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:*">
+  <title>Signal whiteboard</title>
+  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/static/board.css">
+  <link rel="stylesheet" href="/static/todo.css">
+  <link rel="stylesheet" href="/static/idle/idle.css">
+  <link rel="stylesheet" href="/static/idle/top.css">
+  <link rel="stylesheet" href="/static/idle/ticker.css">
+  <script src="/static/vendor/mermaid/mermaid.min.js"></script>
+  <script src="/static/vendor/roughjs/rough.js"></script>
+  <script src="/static/vendor/katex/katex.min.js"></script>
+  <script src="/static/vendor/marked/marked.umd.js"></script>
+  <script src="/static/vendor/dompurify/purify.min.js"></script>
+  <script type="module" src="/static/board.js"></script>
+</head>
+<body data-mode="normal" data-view="items">
+  <!-- #screen is the projector in projector pixels, scaled to the window. -->
+  <div id="screen">
+    <!-- #stage is the logical board, warped onto the board quad when a fit is set. -->
+    <div id="stage">
+      <!-- The idle view (idle/idle.js), the default when nothing is drawn; shown when the
+           view is "idle". Under #items, so the "thinking" box still shows over it. -->
+      <div id="idle"></div>
+      <div id="items"></div>
+      <!-- The TODO view (todo.js); shown instead of #items when the view is "todo". -->
+      <div id="todo"></div>
+      <div id="highlights"></div>
+      <!-- The night view's sky (night/night.js), warped onto the board quad with the rest
+           of the stage so it stays on the board; shown instead of everything else when
+           the view is "night" (sleep mode). -->
+      <div id="night"></div>
+    </div>
+    <svg id="fit-outline" xmlns="http://www.w3.org/2000/svg"><polygon id="fit-polygon"/></svg>
+    <div id="pattern"></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,290 @@
+/* Setup wizard (and the health list the Tools page shares): the view header,
+   the numbered step strip, one screen at a time, step rows with a status
+   word and mark, forms, and the live output log. State is always in words
+   and marks; colour only repeats it. */
+.view {
+  padding: 14px 0 18px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 3ch;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.hint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+  padding: 8px 0 12px;
+}
+
+.problem {
+  color: var(--warn);
+  padding: 4px 0;
+}
+
+.note {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+  overflow-wrap: anywhere;
+}
+
+/* The numbered strip of screens: real buttons, the current one bold with ▸. */
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 1ch;
+  padding-bottom: 10px;
+  font-size: var(--font-small);
+}
+
+.stripItem {
+  padding: 2px 0.8ch;
+  color: var(--fg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  transition:
+    background-color 80ms linear,
+    border-color 80ms linear;
+}
+
+.stripItem:hover {
+  background: var(--bg-3);
+  border-color: var(--fg-2);
+}
+
+.stripCurrent {
+  color: var(--accent);
+  font-weight: 600;
+  border-color: var(--accent);
+  background: var(--bg-3);
+}
+
+.screenTitle,
+.subhead {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 0 6px;
+}
+
+.subhead {
+  font-size: var(--font-body);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prose {
+  max-width: 80ch;
+}
+
+.desc {
+  display: block;
+  color: var(--fg);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1ch;
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 1ch;
+}
+
+.list,
+.steps {
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.row,
+.step,
+.healthRow {
+  padding: 6px 1ch;
+  border-bottom: 1px solid var(--rule);
+}
+
+.row:last-child,
+.step:last-child,
+.healthRow:last-child {
+  border-bottom: 0;
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: 3ch 1fr;
+  gap: 0 0.5ch;
+  cursor: pointer;
+}
+
+.pick span {
+  display: block;
+}
+
+.stepTitle {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.stepHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 1.5ch;
+}
+
+.status {
+  min-width: 11ch;
+  font-weight: 600;
+}
+
+/* Second cue only: the word and mark before it say the same. */
+.status_done,
+.health_active {
+  color: var(--ok);
+}
+
+.status_failed,
+.health_down {
+  color: var(--error);
+}
+
+.status_todo,
+.status_skipped,
+.health_not_set_up {
+  color: var(--fg-3);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 4px 12ch;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fieldLabel {
+  color: var(--fg);
+}
+
+.flag {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.fieldHint {
+  color: var(--fg-3);
+  font-size: var(--font-small);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.input,
+.area {
+  max-width: 60ch;
+  padding: 2px 1ch;
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 1px solid var(--fg-3);
+  border-radius: 3px;
+}
+
+.input {
+  height: var(--control-height);
+}
+
+.area {
+  width: 100%;
+  resize: vertical;
+}
+
+.summary {
+  list-style: none;
+  font-size: var(--font-small);
+}
+
+.output {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outputHead {
+  font-weight: 600;
+}
+
+.log {
+  max-height: 16em;
+  overflow: auto;
+  padding: 8px 1ch;
+  font-size: var(--font-small);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.healthRow {
+  display: grid;
+  grid-template-columns: 2ch 26ch minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1ch;
+}
+
+.mark {
+  text-align: center;
+}
+
+.healthWords {
+  min-width: 0;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.healthWords strong {
+  color: var(--fg);
+}
+
+@media (max-width: 720px) {
+  .stepBody {
+    padding-left: 0;
+  }
+  .healthRow {
+    grid-template-columns: 2ch minmax(0, 1fr);
+  }
+  .healthWords,
+  .healthRow > .controls {
+    grid-column: 2;
+  }
+}

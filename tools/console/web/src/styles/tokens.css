@@ -1,0 +1,67 @@
+/* Design tokens from DESIGN.md section 4: a dark radar scope with one
+   phosphor hue (cyan) for the accent, glow and running state, amber for
+   warnings and pink for failures. Those three stay apart under red-green
+   colourblindness, and colour never carries meaning alone. Dark is the
+   default whatever the OS says; light is opted into with data-theme="light"
+   on <html> and drops the glow. */
+:root {
+  /* Pins the UA scrollbar and form controls to the page theme, not the OS one. */
+  color-scheme: dark;
+  --bg: #070b0d;
+  --bg-2: #0b1214;
+  --bg-3: #122022;
+  --fg: #d3e6e4;
+  --fg-2: #8ea8a5;
+  --fg-3: #56716e;
+  --rule: #173230;
+  --accent: #62e4da;
+  --ok: #62e4da;
+  --warn: #e5b04a;
+  --error: #ee8fc0;
+  --selection: #15433f;
+  /* Phosphor glow behind titles, the active tab and the primary button. */
+  --glow: rgba(98, 228, 218, 0.45);
+  /* The faint HUD grid behind the views. */
+  --grid: rgba(98, 228, 218, 0.045);
+  --grid-size: 48px;
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --col: 96ch;
+  --gutter: 24px;
+  /* The status line's title row; the tab row below it sizes to its tabs. */
+  --status-height: 36px;
+  /* Buttons and tabs: one row of small type inside a 1px border. */
+  --control-height: 26px;
+  --font-body: 14px;
+  --font-small: 13px;
+  --line-body: 1.55;
+  /* One text row of the stream and the input: body size x line height, rounded. */
+  --row: 22px;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f7f6;
+  --bg-2: #e9efee;
+  --bg-3: #d9e4e2;
+  --fg: #15201f;
+  --fg-2: #4e6462;
+  --fg-3: #7d918f;
+  --rule: #c9d8d5;
+  --accent: #0a8f86;
+  --ok: #0a8f86;
+  --warn: #9a6600;
+  --error: #b8407a;
+  --selection: #bfe5e1;
+  --glow: rgba(0, 0, 0, 0);
+  --grid: rgba(10, 143, 134, 0.06);
+}
+
+/* 4K: larger type, same 96ch column (about 920px). */
+@media (min-width: 2200px) {
+  :root {
+    --font-body: 16px;
+    --row: 25px;
+  }
+}

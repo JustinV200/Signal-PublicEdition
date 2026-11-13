@@ -1,0 +1,5 @@
+# status
+
+The status line. `StatusLine` reads the store and renders the app name plus the connection in words ("Connected to Claude · working 0:42", "Not connected · retrying in 3s"; the claimed session's label sits in the tooltip, never beside the name), seven `Tab`s (Scope, Chat, Voice with the phase, Boards with what is showing, Tasks with the active and needs-you counts, Devices, Models; each a bordered button with its Ctrl+1 to 7 hint, the active one filled, bold and glowing), the Help button, and `Freshness`: `updated 3s ago` (when the server last sent anything, keepalives included; in `--warn` past 20 s) and a labelled `Refresh` button that re-reads everything now. `PhaseDot` is the voice dot (filled or hollow, pulsing while thinking, bars while speaking); the phase word beside it carries the meaning. `turnWords(turn, now)` puts the orchestrator's turn state in words (`working 0:42 · 5 agents`, `waiting on 5 agents`, `idle`, `no word from Claude for 12 min (interrupted?)`, `status unknown until Claude's next turn`); the status line and the scope both use it.
+
+Public API: `index.ts`. Depends on `api`, `state`, `time` and `ui`.
