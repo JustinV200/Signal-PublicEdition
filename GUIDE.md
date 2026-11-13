@@ -11,8 +11,12 @@ The tools give that session hands: a browser, your mail and calendar, a voice, a
 ## How tools plug in
 
 - **MCP servers** (browser, mail, brief, sessions, audiohub, whiteboard, sleepmode) give Claude tools it calls by name. Setup lists them in `.mcp.json`.
-- **Hooks** run small scripts on Claude Code events: the brief reads new prompts, the console follows turns, usage counts subagents.
+- **Hooks** run small scripts on Claude Code events: the brief reads new prompts, the console follows turns, usage counts subagents, and the context meter tells each agent how full its context is.
 - **Command-line tools and scheduled tasks** (mail digest, calendar cache, jobhunt, the whiteboard's morning run) work without a session open.
+
+## Context meter
+
+After each tool call, every agent and subagent is told how much of its context window it has used, from 40% up, and told firmly to hand off once it passes the AGENTS.md threshold (`setup config agents`). If you run the standard 200k models rather than the 1M ones, set your window with `setup config contextmeter`.
 
 ## Task console
 

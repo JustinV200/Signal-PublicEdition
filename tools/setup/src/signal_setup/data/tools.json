@@ -129,6 +129,59 @@
       ]
     },
     {
+      "id": "contextmeter",
+      "name": "Context meter",
+      "description": "Tells every agent, subagents included, how full its context window is, and to hand off at the AGENTS.md threshold.",
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "prereqs": [
+        "uv"
+      ],
+      "hooks": [
+        {
+          "event": "PostToolUse",
+          "module": "contextmeter.hook",
+          "isolated": true,
+          "timeout": 5
+        }
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/contextmeter",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "settings",
+          "title": "Create tools/contextmeter/contextmeter.toml and set your context window size (200k or 1M)",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/contextmeter",
+        "--frozen",
+        "--no-sync",
+        "python",
+        "-I",
+        "-c",
+        "import contextmeter.hook"
+      ]
+    },
+    {
       "id": "copytone",
       "name": "Writing in your voice (copytone)",
       "description": "Writes in your own style from your samples: Claude learns your voice from your own writing and drafts outbound text (emails, posts) in it.",

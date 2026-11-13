@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "tools/contextmeter/contextmeter.toml",
+      "example": "tools/contextmeter/contextmeter.example.toml"
+    }
+  ],
+  "settings": [
+    {
+      "key": "window_tokens",
+      "file": "tools/contextmeter/contextmeter.toml",
+      "type": "int",
+      "level": "basic",
+      "min": 0,
+      "max": 10000000,
+      "description": "Your models' context window, in tokens",
+      "hint": "0 (default) uses the built-in table, which assumes the 1M [1m] variants of Opus 5, Opus 4.8, Sonnet 5 and Fable 5 and 200k for other models. On the standard 200k models, set 200000, or the meter warns too late."
+    }
+  ]
+}

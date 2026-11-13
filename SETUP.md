@@ -82,4 +82,4 @@ Never type a password, token, code or client secret into the chat. Steps that ne
 
 ## Linux
 
-Only usage tracking and copytone are listed for Linux, and neither is tested there. Scheduled-task steps are skipped. Use `./setup.sh`.
+Only usage tracking, the context meter and copytone are listed for Linux, and none is tested there. Scheduled-task steps are skipped. Use `./setup.sh`.

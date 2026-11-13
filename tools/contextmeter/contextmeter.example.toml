@@ -1,0 +1,11 @@
+# contextmeter example config.
+#
+# Copy this file to contextmeter.toml (same folder; gitignored), or let
+# `setup config contextmeter` do it. Read on every hook run, so an edit applies at once.
+
+# Your models' context window, in tokens. 0 uses the built-in table in
+# src/contextmeter/window.py, which gives Opus 5, Opus 4.8, Sonnet 5 and Fable 5 the
+# 1M window of their [1m] variants and every other model 200k. If you run the standard
+# 200k variants, set 200000, or the meter under-reports and warns too late.
+# The CONTEXTMETER_WINDOW_TOKENS environment variable, if set, wins over this.
+window_tokens = 0

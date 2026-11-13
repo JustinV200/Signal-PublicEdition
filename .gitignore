@@ -90,6 +90,7 @@ tools/browser/browser-jobs.toml
 tools/browser/browser-checker-classroom.toml
 tools/browser/browser-checker-moodle.toml
 tools/mail-digest/assignment-check.toml
+tools/contextmeter/contextmeter.toml
 
 # Credentials, cookies, keys and OAuth files anywhere
 *.pem
