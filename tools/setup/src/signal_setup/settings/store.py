@@ -33,17 +33,31 @@ def ensure_files(root: Path, schema: Schema, group: str) -> list[str]:
     return copied
 
 
+def _typed(setting: Setting, value: Any) -> Any:
+    """A Markdown bool reads back as text ("yes"/"no"); give bool settings a real bool."""
+    if setting.type == "bool" and isinstance(value, str):
+        try:
+            return parse("bool", value)
+        except ValueError:
+            return value  # not yes/no (e.g. a placeholder): show it as it is
+    return value
+
+
 def current(root: Path, setting: Setting) -> Any:
     """The setting's value in its config file, or None (file or key missing)."""
     path = root / setting.file
-    return for_path(path).read(_read(path)[0], setting.key) if path.exists() else None
+    if not path.exists():
+        return None
+    return _typed(setting, for_path(path).read(_read(path)[0], setting.key))
 
 
 def default(root: Path, schema: Schema, setting: Setting) -> Any:
     """The setting's value in the shipped example, or None for a tracked file."""
     example = next((f.example for f in schema.files if f.path == setting.file), "")
+    if not example:
+        return None
     path = root / example
-    return for_path(path).read(_read(path)[0], setting.key) if example else None
+    return _typed(setting, for_path(path).read(_read(path)[0], setting.key))
 
 
 def set_value(root: Path, setting: Setting, text: str) -> Any:

@@ -9,9 +9,13 @@ Setup copies this file to `life/areas/job-search/profile.md` (gitignored, never 
 - Phone: TODO(owner)
 - Mailing address: TODO(owner)
 - City for "current location" fields: TODO(owner)
-- Website / portfolio: TODO(owner) (or "none")
+- Website / portfolio: TODO(owner) (or "none"; separate several with commas)
 - LinkedIn: TODO(owner) (or "none")
 - GitHub: TODO(owner) (or "none")
+
+## Resume
+Put your resume PDF in `resume/`; runs upload it. Resume tailoring (the runbook's `Tailor resume` setting, Windows only) also needs the Word (.docx) file it was made from, in `resume/` too: give its file name below, or "none". Tailoring reads your website(s), GitHub and LinkedIn above for real facts to use.
+- Resume Word file: none
 
 ## Education
 - School, degree, major: TODO(owner)

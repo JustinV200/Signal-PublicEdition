@@ -55,6 +55,38 @@
       "hint": "a whole number"
     },
     {
+      "key": "Tailor resume",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "bool",
+      "level": "basic",
+      "description": "Tailor your resume to each posting (Windows only: needs Microsoft Word, and your profile's Resume Word file)",
+      "hint": "yes or no. A read-only subagent edits a copy of your resume from your resume, websites, GitHub and LinkedIn; a reviewer blocks anything invented; any failure uploads your base resume"
+    },
+    {
+      "key": "Tailor model",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "str",
+      "level": "advanced",
+      "description": "The model the resume tailor runs on",
+      "hint": "fable, opus, sonnet or haiku (default fable)"
+    },
+    {
+      "key": "Tailor effort",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "str",
+      "level": "advanced",
+      "description": "The reasoning effort the resume tailor runs at",
+      "hint": "low, medium, high, xhigh or max (default high)"
+    },
+    {
+      "key": "Resume Word file",
+      "file": "life/areas/job-search/profile.md",
+      "type": "str",
+      "level": "basic",
+      "description": "The .docx your resume PDF was made from, in life/areas/job-search/resume/ (for resume tailoring)",
+      "hint": "a file name such as resume.docx, or none"
+    },
+    {
       "key": "Name",
       "file": "life/areas/job-search/profile.md",
       "type": "str",

@@ -31,5 +31,7 @@ def entries(text: str) -> list[tuple[str, Any]]:
 
 
 def literal(value: Any) -> str:
-    """Plain text; a list is comma-separated."""
+    """Plain text; a list is comma-separated and a bool is yes or no (prose-friendly)."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
     return ", ".join(map(str, value)) if isinstance(value, list) else str(value)

@@ -206,3 +206,18 @@ def test_context_handoff_threshold_rewrites_agents_md(tmp_path: Path) -> None:
     text = (tmp_path / "AGENTS.md").read_text("utf-8")
     assert "-->60<!-- /setting -->% of your context window" in text
     assert text.count("<!-- setting:") == 1  # nothing else in the file changed shape
+
+
+def test_markdown_bool_setting_is_written_as_yes_or_no(tmp_path: Path) -> None:
+    """The runbook is prose the run reads: a bool is written yes/no and read back as a bool."""
+    runbook = tmp_path / "life/areas/job-search/runbook.md"
+    runbook.parent.mkdir(parents=True)
+    shutil.copyfile(REPO / "tools/jobhunt/templates/runbook.example.md", runbook)
+    setting = settings.find(tmp_path, settings.load("jobhunt"), "Tailor resume")
+
+    settings.set_value(tmp_path, setting, "yes")
+    assert "- Tailor resume: yes\n" in runbook.read_text("utf-8")
+    assert settings.current(tmp_path, setting) is True  # read back as a bool, not "yes"
+    settings.set_value(tmp_path, setting, "n")
+    assert "- Tailor resume: no\n" in runbook.read_text("utf-8")
+    assert settings.current(tmp_path, setting) is False

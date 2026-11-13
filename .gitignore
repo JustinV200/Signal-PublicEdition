@@ -65,7 +65,8 @@ tools/console/web/dist/
 tools/console/.state/
 
 # jobhunt local state: run logs, the run lock, DPAPI-encrypted dedicated account passwords
-# (the template runbook and profile are copied into life/, which is gitignored)
+# (the template runbook and profile are copied into life/, which is gitignored, and so are
+# the tailored resumes in life/areas/job-search/resume/tailored/; .logs/ holds the sources and edits)
 tools/jobhunt/.logs/
 tools/jobhunt/.state/
 

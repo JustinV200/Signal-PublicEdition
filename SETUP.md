@@ -54,7 +54,7 @@ Change settings any time:
 ```
 setup config                 # every chosen tool, interactively
 setup config whiteboard      # one tool
-setup config jobhunt --list  # as JSON
+setup config jobhunt --list  # as JSON (incl. `Tailor resume`, Windows only)
 setup config mail-digest --set RunTimes=07:00,18:00
 ```
 

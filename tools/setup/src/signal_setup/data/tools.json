@@ -1065,7 +1065,7 @@
           "id": "fill-profile",
           "title": "Finish your profile and add your resume",
           "kind": "manual",
-          "text": "Check every line of life/areas/job-search/profile.md (account creation on job sites stays off unless you turn it on there; list companies to never apply to), and put your resume PDF in life/areas/job-search/resume/.",
+          "text": "Check every line of life/areas/job-search/profile.md (account creation on job sites stays off unless you turn it on there; list companies to never apply to), and put your resume PDF in life/areas/job-search/resume/. For resume tailoring (Windows only, needs Microsoft Word), also put the .docx it was made from there.",
           "doc": "tools/jobhunt/README.md"
         },
         {

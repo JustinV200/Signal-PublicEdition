@@ -64,7 +64,7 @@ A projector and webcam turn a physical whiteboard into one Claude can see and dr
 
 ## Job applications
 
-An optional scheduled run that finds roles matching your profile and applies through the browser, using only facts from your profile and resume. `setup jobhunt` fills in the profile and run settings; `life/areas/job-search/runbook.md` holds the rules it follows. It never solves CAPTCHAs, skips sites that forbid automation, and creates job-site accounts only if your profile says so.
+An optional scheduled run that finds roles matching your profile and applies through the browser, using only facts from your profile and resume. `setup jobhunt` fills in the profile and run settings; `life/areas/job-search/runbook.md` holds the rules it follows. It never solves CAPTCHAs, skips sites that forbid automation, and creates job-site accounts only if your profile says so. Optional, Windows only (needs Microsoft Word): the `Tailor resume` setting has a read-only subagent tailor a copy of your resume to each posting from your resume, websites, GitHub and LinkedIn; a fresh reviewer blocks anything invented, and any failure uploads your base resume.
 
 ## Writing in your voice
 
