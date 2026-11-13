@@ -1,6 +1,6 @@
 """Routine step 5 in code: which plan todos to announce now, with stable keys.
 
-The runner reads this week's plan (last week's if the owner hasn't rolled over yet)
+The runner reads this week's plan (last week's if the week hasn't rolled over yet)
 and next week's (for a todo due early Monday), and picks every open todo due within
 DUE_SOON_HOURS (kind `due`) and every open todo under `## Overdue` (kind `overdue`).
 The key is the kind plus a slug of the todo's tag and name, which leaves out its due
@@ -33,10 +33,10 @@ DAYS_PER_WEEK = 7
 def pick_announcements(life_dir: Path, now: datetime) -> list[Announcement]:
     """The due and overdue items of this week's and next week's plans, each key once.
 
-    Rollover is done by hand, so until this week's plan exists, last week's stands in
-    for it (a Monday-morning todo is still on it). now is timezone-aware local time. A
-    plan that can't be read is logged and skipped, so the run's own alerts are still
-    spoken.
+    Each run rolls the week over first (steps.roll_week), but if that failed or the
+    week falls between terms, last week's plan stands in until this week's exists.
+    now is timezone-aware local time. A plan that can't be read is logged and
+    skipped, so the run's own alerts are still spoken.
     """
     picks: dict[str, Announcement] = {}
     week = timedelta(days=DAYS_PER_WEEK)

@@ -5,15 +5,18 @@
   asleep then. Duo-capable steps belong to on-demand runs only (see README).
 - `mail-digest --now`: start that run in the background and return at once.
 - `mail-digest --dry-run`: log the command and run context only.
+- `mail-digest rollover [...]`: roll life/ over to this week by hand (rollover_cli.py).
 
 Logs go to the gitignored log file (and to stderr when there is a console).
 """
 
 import argparse
 import logging
+import sys
 from collections.abc import Sequence
 
 from mail_digest.digest.deps import default_deps
+from mail_digest.digest.rollover_cli import main as rollover_main
 from mail_digest.digest.run import run_once
 from mail_digest.memory import LockHeldError, run_lock
 from mail_digest.settings import LOCK_PATH, LOG_PATH
@@ -21,9 +24,15 @@ from mail_digest.steps import setup_logging, start_background_run
 
 log = logging.getLogger(__name__)
 
+# The one subcommand; everything else is the digest run and its flags.
+ROLLOVER_COMMAND = "rollover"
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command. Returns 0 on success, 1 on any failure (logged)."""
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == [ROLLOVER_COMMAND]:
+        return rollover_main(argv[1:])
     args = _parse_args(argv)
     if args.now:
         return start_background_run(LOCK_PATH)

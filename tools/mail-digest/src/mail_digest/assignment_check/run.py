@@ -4,6 +4,7 @@ run_check takes its outside world (paths, the visit launches, the two claudes, n
 the mail sender, the board, the clock, git) as CheckDeps, so tests run it with fakes.
 The caller holds the run lock the mail digest uses too.
 
+0. steps.roll_week: start the new week in life/ if it hasn't been (code, no model).
 1. gather.py: both visits, then one reader per site. A busy or failed launch, or a
    failed reader, stops the check before the writer, with its reason spoken.
 2. findings/: the runner's own checks of what the readers said (pure).
@@ -48,7 +49,14 @@ from mail_digest.digest_email import DigestEmail, RunEdits, email_digest, run_ch
 from mail_digest.kb import GuardReport, find_targets, is_reviewed
 from mail_digest.memory import DigestState, load_state, save_state
 from mail_digest.settings import MAX_ANNOUNCED_KEYS
-from mail_digest.steps import EditJob, announce_once, email_alert, kb_alerts, run_guarded_edit
+from mail_digest.steps import (
+    EditJob,
+    announce_once,
+    email_alert,
+    kb_alerts,
+    roll_week,
+    run_guarded_edit,
+)
 
 log = logging.getLogger(__name__)
 
@@ -117,17 +125,21 @@ def _run(deps: CheckDeps) -> CheckOutcome:
     """A real check. Raises on anything unexpected (run_check catches it)."""
     now = deps.now()
     run_start = int(now.timestamp())
+    # First, so the writer's targets and the email see this week's plan.
+    rolled = roll_week(deps.life_dir, now.date())
+    # A failed or between-terms rollover is spoken with every outcome's announcements.
+    rollover_notices = [rolled.notice] if rolled.notice else []
     state = load_state(deps.state_path, MAX_ANNOUNCED_KEYS)
     claude = _find_claude(deps)
     gathered = gather(GatherDeps(deps.config, deps.visit, deps.read, reader_command(claude)), now)
     if gathered.stopped:
-        notices = kb_alerts(GuardReport(), state, run_start, CHECK_NAME)
+        notices = [*rollover_notices, *kb_alerts(GuardReport(), state, run_start, CHECK_NAME)]
         _announce(deps, state, notices, run_start, gathered.stopped)
         return CheckOutcome(1, (gathered.stopped,))
     findings = check_findings(list(gathered.sites), now)
     write_last_check(deps.last_check_path, findings, now)
     written = _write(deps, state, findings, now, claude)
-    notices = problem_notices(findings.problems, run_start)
+    notices = [*rollover_notices, *problem_notices(findings.problems, run_start)]
     notices += kb_alerts(written.guard, written.state, run_start, CHECK_NAME)
     if not written.is_ok:
         _announce(deps, written.state, notices, run_start, stopped_line("the writer failed"))

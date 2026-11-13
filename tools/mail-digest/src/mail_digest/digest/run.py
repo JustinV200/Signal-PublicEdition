@@ -1,4 +1,4 @@
-"""One digest run, start to finish: plan, run claude, guard the KB, update state, announce.
+"""One digest run, start to finish: roll the week over, plan, run claude, guard, announce.
 
 Planning (plan.py) searches the mail itself (mailbox/) and the model gets the
 messages in its run context; after the guard, the runner picks what to announce from
@@ -30,7 +30,14 @@ from mail_digest.digest_email import RunEdits, email_digest
 from mail_digest.kb import expire_notes
 from mail_digest.memory import advance_windows, record_failure, save_state
 from mail_digest.settings import ACCOUNT_ALIASES
-from mail_digest.steps import EditJob, announce_once, email_alert, record_crash, run_guarded_edit
+from mail_digest.steps import (
+    EditJob,
+    announce_once,
+    email_alert,
+    record_crash,
+    roll_week,
+    run_guarded_edit,
+)
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +51,7 @@ def run_once(deps: RunDeps, dry_run: bool = False) -> int:
     OSError only if a crash can't be recorded in the state file.
     """
     if dry_run:
+        roll_week(deps.life_dir, deps.now().date(), dry_run=True)
         plan = plan_run(deps, dry_run=True)
         log.info(
             "dry run, not starting claude.\ncommand: %s\ncontext:\n%s", plan.argv, plan.context
@@ -59,6 +67,8 @@ def run_once(deps: RunDeps, dry_run: bool = False) -> int:
 
 def _run(deps: RunDeps) -> int:
     """A real run, start to finish. Raises on anything unexpected (run_once counts it)."""
+    # First, so the plan's targets, the due picks and the email all see the new week.
+    rolled = roll_week(deps.life_dir, deps.now().date())
     plan = plan_run(deps)
     # Before the snapshot, so the guard doesn't count the deletions as the model's edits.
     _expire_notes(deps, plan)
@@ -81,6 +91,8 @@ def _run(deps: RunDeps) -> int:
     state = replace(state, needs_review=edit.needs_review)
     # Due items come from the plans by code, so a failed claude step still speaks them.
     notices = [*run_notices(plan, result, guard, state), *due_items(deps.life_dir, plan, guard)]
+    # A failed or between-terms rollover is spoken first (once a week, by its key).
+    notices = [*([rolled.notice] if rolled.notice else []), *notices]
     # A run whose edit the guard undid may have been steered, so it sends no email. A
     # failed send never fails the run: its alert is spoken with the other announcements.
     edits = RunEdits(deps.life_dir, plan.today, plan.targets.editable, edit.before)

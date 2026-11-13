@@ -44,7 +44,7 @@ Holds the logins the browser may fill. Add them in your own terminal: `uv run --
 
 ## Mail digest
 
-Every morning (`setup config mail-digest` sets the time) it reads new mail, speaks what matters and emails you a short digest at your own address. `mail-digest --now` runs it on demand.
+Every morning (`setup config mail-digest` sets the time) it reads new mail, speaks what matters and emails you a short digest at your own address. `mail-digest --now` runs it on demand. If you keep weekly plans in `life/`, each run also starts the new week for you (the first one too, once `life/inbox.md` exists), carrying over open todos. Give each term's README a `Term dates:` line so it knows when the term ends ([life/README.md](life/README.md#weeks)).
 
 ## Assignment checker
 

@@ -21,6 +21,7 @@ The voice brain runs the `--now` form when the owner asks to check the owner's a
 
 ## What a check does
 
+0. **Rollover** (`steps.roll_week`): starts the new week in `life/` if it hasn't been, as the digest does, so the writer and the email see this week's plan.
 1. **Visit** (`visit.py`, `courses.py`): `browser-tool-visit` twice under the shared run lock, Classroom then Moodle, each with its own config in `tools/browser` and its plan and out files in `.state/assignment-check/`. Each launch is killed after `VISIT_TIMEOUT_S` (15 min). A stale out file is deleted first, and a missing or malformed one is an error. A busy launch (the checker's browser is open) or a failed one stops the check before any claude runs.
 2. **Read** (`reader/`): one `claude -p` per site with ok pages, Moodle first, with `--tools ""`, no MCP servers, `--restricted` in the empty `.state/assignment-check/reader/`, a $1.00 budget and a 10-minute kill. Its init event must list exactly `StructuredOutput`. Its context is capped at `MAX_READER_CHARS` by whole pages. A failed reader stops the check.
 3. **Check** (`findings/`, pure): page, name, ref, class, account, kind, due, status and caps, all against the visit's own page text. A course with any page problem is left out of the check.

@@ -4,7 +4,7 @@ Step 5 of the mail digest routine, done by the runner instead of the model: pick
 
 ## Public API (`from mail_digest.deadlines import ...`)
 
-- `pick_announcements(life_dir, now)`: the picks of this week's plan, or last week's until the owner rolls over (rollover is by hand, so on a Monday morning last week's plan still has the Monday todos), and next week's (it catches a todo due early Monday), each key once. A plan that can't be read is logged and skipped.
+- `pick_announcements(life_dir, now)`: the picks of this week's plan, or last week's while this week has no plan (each run rolls the week over first, so that's only after a failed or between-terms rollover), and next week's (it catches a todo due early Monday), each key once. A plan that can't be read is logged and skipped.
 - `select_announcements(plan_text, now)`: the picks of one plan.
   - Only open `- [ ]` todos count; ticked `- [x]` ones never do.
   - Every open todo under `## Overdue` is kind `overdue`.

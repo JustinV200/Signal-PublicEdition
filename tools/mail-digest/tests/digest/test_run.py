@@ -296,3 +296,39 @@ def test_run_removes_expired_watch_for_notes_before_claude_starts(tmp_path):
     )
     assert run_once(world.deps()) == 0
     assert course.read_text(encoding="utf-8") == "# x\nWatch for (until 2026-10-19): kept\n"
+
+
+def _last_weeks_plan_only(world):
+    """Swap this week's plan for last week's (one open todo); no templates, so the defaults."""
+    (world.life / PLAN).unlink()
+    old_plan = world.life / "terms/2026-fall/weeks/2026-10-12-to-10-18/plan.md"
+    old_plan.parent.mkdir(parents=True)
+    old_plan.write_text("# x\n## Overdue\n- [ ] [hist-205] Lab 1 (was due 2026-10-09)\n", "utf-8")
+
+
+def test_the_run_rolls_the_week_over_before_the_guard_and_the_email(tmp_path):
+    world = FakeWorld(tmp_path)
+    _last_weeks_plan_only(world)
+    assert run_once(world.deps()) == 0
+    plan = (world.life / PLAN).read_text(encoding="utf-8")
+    assert "- [ ] [hist-205] Lab 1 (was due 2026-10-09; carried from 10-12)" in plan
+    # The model may edit the new plan, and the guard doesn't take the rollover's files
+    # for the model's edits or someone else's.
+    assert f"Edit(/{PLAN})" in world.launches[0]
+    assert not any("undid" in text or "changed while" in text for text in world.spoken)
+    body = world.emails[0].body
+    assert "carried from 10-12" in body.split("Added or changed by this run:")[0]
+    assert body.endswith("Added or changed by this run:\n(none)\n")
+
+
+def test_a_failed_rollover_is_spoken_once_a_week(tmp_path):
+    world = FakeWorld(tmp_path)
+    _last_weeks_plan_only(world)
+    broken = world.life / "templates/week-log.md"  # a <date> after no weekday
+    broken.parent.mkdir()
+    broken.write_text("# Week log (<date>)\n", "utf-8")
+    assert run_once(world.deps()) == 0
+    assert "week rollover couldn't start" in world.spoken[0]
+    assert not (world.life / PLAN).exists()
+    run_once(replace(world.deps(), now=lambda: NOW + timedelta(days=1)))
+    assert all("rollover" not in text for text in world.spoken[1:])
