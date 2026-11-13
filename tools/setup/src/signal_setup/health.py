@@ -29,7 +29,7 @@ def classify(setup_status: str, check: tuple[bool, str] | None) -> tuple[str, st
         detail = {
             progress.SKIPPED: "skipped",
             "": "never set up",
-            "started": "setup started, not finished",
+            progress.STARTED: "setup started, not finished",
             progress.FAILED: "a setup step failed",
         }.get(setup_status, setup_status)
         return NOT_SET_UP, detail

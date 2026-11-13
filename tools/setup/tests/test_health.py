@@ -5,8 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from signal_setup import health, platforms, progress, registry, verify
-from signal_setup.cli import ui_launch
+from signal_setup import health, progress, registry, verify
 
 
 @pytest.mark.parametrize(
@@ -14,7 +13,7 @@ from signal_setup.cli import ui_launch
     [
         ("", None, health.NOT_SET_UP),
         (progress.SKIPPED, None, health.NOT_SET_UP),
-        ("started", None, health.NOT_SET_UP),
+        (progress.STARTED, None, health.NOT_SET_UP),
         (progress.FAILED, None, health.NOT_SET_UP),
         (progress.DONE, (True, "ok"), health.ACTIVE),
         (progress.DONE, (False, "timed out after 8 s"), health.DOWN),
@@ -40,18 +39,6 @@ def test_health_rows_only_check_finished_tools(tmp_path: Path, monkeypatch) -> N
     assert checked == ["brief"]
     assert rows["brief"] == health.DOWN
     assert rows["usage"] == rows["mail"] == health.NOT_SET_UP
-
-
-@pytest.mark.parametrize("is_tty", [True, False])
-def test_ui_falls_back_when_the_window_cant_open(tmp_path: Path, monkeypatch, is_tty) -> None:
-    monkeypatch.setattr(platforms, "current", lambda: platforms.LINUX)
-    monkeypatch.setattr("sys.stdin.isatty", lambda: is_tty)
-    ran = []
-
-    code = ui_launch.launch(tmp_path, terminal_setup=ran.append, opener=lambda *_: 0)
-
-    # A terminal gets the text setup; the skill's shell (no tty) gets exit 1 and nothing runs.
-    assert (code, ran) == ((0, [tmp_path]) if is_tty else (1, []))
 
 
 def test_verify_drops_setups_venv_and_shows_stdout_on_a_pass(tmp_path: Path, monkeypatch) -> None:

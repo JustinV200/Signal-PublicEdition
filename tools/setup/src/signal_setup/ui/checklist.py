@@ -11,7 +11,7 @@ from signal_setup.terminal import DIM, style
 
 STATUS_WORDS = {
     "": "not set up",
-    "started": "half done",
+    progress.STARTED: "half done",
     progress.DONE: "done",
     progress.SKIPPED: "skipped",
     progress.FAILED: "failed",

@@ -12,7 +12,7 @@ from typing import Any
 from signal_setup.registry import Step, Tool
 
 PROGRESS_FILE = Path(".setup") / "progress.json"
-DONE, SKIPPED, FAILED = "done", "skipped", "failed"
+DONE, SKIPPED, FAILED, STARTED = "done", "skipped", "failed", "started"
 
 
 def load(root: Path) -> dict[str, Any]:
@@ -82,4 +82,4 @@ def tool_status(data: dict[str, Any], tool: Tool, platform: str) -> str:
     ]
     if all(st == DONE for st in required):
         return DONE
-    return FAILED if FAILED in required else "started"
+    return FAILED if FAILED in required else STARTED

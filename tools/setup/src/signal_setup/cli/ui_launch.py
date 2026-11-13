@@ -56,21 +56,23 @@ def _bootstrap(root: Path) -> str:
     return ""
 
 
-def _fallback(root: Path, why: str, terminal_setup: Callable[[Path], None]) -> int:
+def _fallback(
+    root: Path, why: str, terminal_setup: Callable[..., None], tool_id: str | None = None
+) -> int:
     """Say why, then run the terminal setup, or exit 1 when there's no terminal to prompt in."""
     print(why)
     if not sys.stdin.isatty():
         print("No terminal to prompt in: carry on in chat, or run `setup --no-ui` yourself.")
         return 1
     print("Carrying on in the terminal instead.")
-    terminal_setup(root)
+    terminal_setup(root, tool_id)
     return 0
 
 
 def launch(
     root: Path,
     tool_id: str | None = None,
-    terminal_setup: Callable[[Path], None] = run_setup,
+    terminal_setup: Callable[..., None] = run_setup,
     opener: Callable[[list[str], Path], int] | None = None,
 ) -> int:
     """Open the wizard (at `tool_id`'s steps when given). Returns the exit code.
@@ -85,10 +87,10 @@ def launch(
         registry.by_id(tool_id)  # KeyError for an unknown id, before anything is installed
     why = _bootstrap(root)
     if why:
-        return _fallback(root, why, terminal_setup)
+        return _fallback(root, why, terminal_setup, tool_id)
     command = [*OPEN_COMMAND, *(["--tool", tool_id] if tool_id else [])]
     run = opener or (lambda argv, cwd: subprocess.run(argv, cwd=cwd).returncode)
     if run(command, root) != 0:
-        return _fallback(root, "The console didn't open.", terminal_setup)
+        return _fallback(root, "The console didn't open.", terminal_setup, tool_id)
     print("The setup window is open. Progress saves as you go; close it any time.")
     return 0
