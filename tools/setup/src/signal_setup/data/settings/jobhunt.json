@@ -79,6 +79,14 @@
       "hint": "low, medium, high, xhigh or max (default high)"
     },
     {
+      "key": "Locations in priority order",
+      "file": "life/areas/job-search/runbook.md",
+      "type": "list",
+      "level": "basic",
+      "description": "Where runs look for jobs, most wanted first (the board scan and searches use this order)",
+      "hint": "comma-separated, most wanted first; each is a case-insensitive pattern with | between alternatives and no commas, e.g. New York|NYC|Brooklyn, Washington\\W*DC|D\\.C\\., Remote (plain Remote also matches non-US remote jobs; US-only: Remote(?!\\W+(?!US\\b|USA\\b|United States)[a-z])); the last can be a whole country, e.g. United States|USA"
+    },
+    {
       "key": "Resume Word file",
       "file": "life/areas/job-search/profile.md",
       "type": "str",
