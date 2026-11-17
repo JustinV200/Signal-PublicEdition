@@ -1,23 +1,33 @@
 """Wiring: turn finished tools into Claude Code config (MCP servers, permissions, hooks).
 
-Public API: build_plan, apply_plan, summary_lines, and the small edits setup makes.
+Public API: build_plan, apply_plan, summary_lines, WiringError, check_object, and the small
+edits setup makes.
 """
 
 from pathlib import Path
 
 from signal_setup.registry import Tool
 from signal_setup.wiring.edits import EMAIL_PATTERN, set_constant, set_env_value
+from signal_setup.wiring.json_file import WiringError, check_object
 from signal_setup.wiring.plan import Plan
 from signal_setup.wiring.plan import build as build_plan
-from signal_setup.wiring.writers import write_mcp, write_settings, write_statusline
+from signal_setup.wiring.writers import (
+    MCP_FILE,
+    SETTINGS_FILE,
+    write_mcp,
+    write_settings,
+    write_statusline,
+)
 
 USER_SETTINGS = Path.home() / ".claude" / "settings.json"
 
 __all__ = [
     "EMAIL_PATTERN",
     "Plan",
+    "WiringError",
     "apply_plan",
     "build_plan",
+    "check_object",
     "set_constant",
     "set_env_value",
     "summary_lines",
@@ -41,7 +51,15 @@ def summary_lines(plan: Plan) -> list[str]:
 
 
 def apply_plan(root: Path, tools: tuple[Tool, ...], plan: Plan, platform: str) -> list[str]:
-    """Write the plan. Returns notes for the user (e.g. a status line that was kept)."""
+    """Write the plan. Returns notes for the user (e.g. a status line that was kept).
+
+    Raises WiringError, with one sentence for the user, when a file can't be safely
+    rewritten; that file is left as it was. A file that isn't a JSON object is refused
+    before any file is written, so that refusal changes nothing.
+    """
+    targets = [root / MCP_FILE, root / SETTINGS_FILE, *([USER_SETTINGS] if plan.statusline else [])]
+    for path in targets:
+        check_object(path)
     write_mcp(root, tools, plan)
     write_settings(root, tools, plan, platform)
     notes = []

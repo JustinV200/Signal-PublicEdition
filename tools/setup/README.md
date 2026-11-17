@@ -24,9 +24,10 @@ Signal's first-run setup. Standalone uv project, stdlib only (setup runs before 
 ## What it writes
 
 - `.setup/progress.json`: chosen tools and each step's status (gitignored).
-- `.mcp.json`: the chosen tools' servers, copied from `.mcp.example.json`, plus any servers you added yourself.
+- `.mcp.json`: the chosen tools' servers, copied from `.mcp.example.json`, plus any servers and other keys you added yourself.
 - `.claude/settings.local.json`: the chosen tools' allow rules, `enabledMcpjsonServers` and hooks, merged with your own entries. It never sets a permission mode.
 - `~/.claude/settings.json` `statusLine`, only if you accept usage's status line and have no other one.
+- `.setup/backups/` (`mcp.json`, `settings.local.json`, `user-settings.json`): each of those three files as it was before setup's last change to it. If any of them isn't a JSON object, setup refuses before writing any (one line, exit 1, all three untouched). It writes nothing when the merge changes nothing. Otherwise it writes the new file to a temp file, re-reads the old one, and only if it's unchanged since the first read backs it up and replaces it in one step, so a crash can't leave half a file; if it changed (or Windows says another program has it open), setup starts over once, then refuses (`wiring/json_file.py`).
 - `.env` from `.env.example` when missing, and the mail and calendar address constants (`SELF_ADDRESS`, `OWNER_EMAIL`), which stay source constants so nothing at runtime can redirect self-sends.
 - copytone samples in `.claude/skills/copytone/samples/` (gitignored).
 - Each tool's settings (see below): the gitignored config copied from its example, or a tracked file such as a `schedule.psd1`, edited a line at a time so your comments stay.
@@ -43,10 +44,10 @@ The examples ship placeholder values (reserved `example.edu`/`.com`/`.org` hosts
 
 - `settings/`: schemas, the TOML/psd1/Markdown line writers (`formats/`), typed values, the placeholder scan, and the store.
 - `registry.py`, `platforms.py`, `progress.py`, `prereqs.py`, `verify.py`, `health.py` (the Tools page's states), `intro.py`, `terminal.py` (prompts)
-- `steps/`: runs one step (`settings_step.py` is the settings prompts). `wiring/`: plan, merge and write Claude Code config, plus the small file edits.
+- `steps/`: runs one step (`settings_step.py` is the settings prompts). `wiring/`: plan, merge and write Claude Code config (`json_file.py` is the safe read-merge-write), plus the small file edits.
 - `samples/`: copytone sample import (files, paste, sent mail). `ui/`: checklist, the interactive flow, the tour.
 - `cli/`: `main.py` (entry point), `agent.py` (the skill's and the window's commands), `config.py` (`setup config`), `ui_launch.py` (`setup ui`).
 
 ## Tests
 
-`uv run --project tools/setup --frozen pytest -q`: wiring only includes finished tools and keeps your own settings, browser auto-approve follows its step, progress resume/skip, the address edit, sent-mail quote stripping, the README intro, the settings line writers, the placeholder scan and gating, that every schema key exists in its example, the AGENTS.md handoff threshold rewrite, tool health states, and the window's terminal fallback.
+`uv run --project tools/setup --frozen pytest -q`: wiring only includes finished tools and keeps your own settings, backs each file up, changes nothing on a second run, and leaves alone a file that isn't a JSON object or changes mid-write, browser auto-approve follows its step, progress resume/skip, the address edit, sent-mail quote stripping, the README intro, the settings line writers, the placeholder scan and gating, that every schema key exists in its example, the AGENTS.md handoff threshold rewrite, tool health states, and the window's terminal fallback.

@@ -2,7 +2,9 @@
 
 Each writer merges: entries the user added themselves are kept, entries setup owns are
 replaced by the current plan, so a tool skipped on a re-run loses its wiring. Setup never
-writes a permission mode (and never bypassPermissions).
+writes a permission mode (and never bypassPermissions). Every file goes through
+json_file.update_json_file, which refuses a file that isn't a JSON object, backs the old
+one up to .setup/backups/ and replaces it atomically.
 """
 
 import json
@@ -12,35 +14,37 @@ from typing import Any
 from signal_setup.platforms import venv_python
 from signal_setup.registry import Tool
 from signal_setup.wiring.edits import ensure_env_file
+from signal_setup.wiring.json_file import update_json_file
 from signal_setup.wiring.plan import Plan, hook_entry, owned
 
 MCP_EXAMPLE = Path(".mcp.example.json")
 MCP_FILE = Path(".mcp.json")
 SETTINGS_FILE = Path(".claude") / "settings.local.json"
 STATUSLINE_MODULE = "usage.statusline"
-
-
-def _load_json(path: Path) -> dict[str, Any]:
-    """The JSON object in `path`, or {} if the file doesn't exist."""
-    return json.loads(path.read_text("utf-8")) if path.exists() else {}
-
-
-def _dump_json(path: Path, data: dict[str, Any]) -> None:
-    """Write `data` as indented JSON, creating the folder."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", "utf-8")
+# Each file's copy from before setup's last write to it (gitignored with the rest of .setup/).
+BACKUP_DIR = Path(".setup") / "backups"
+MCP_BACKUP = "mcp.json"
+SETTINGS_BACKUP = "settings.local.json"
+USER_SETTINGS_BACKUP = "user-settings.json"
 
 
 def write_mcp(root: Path, tools: tuple[Tool, ...], plan: Plan) -> None:
-    """Write .mcp.json: the plan's servers (from .mcp.example.json) plus the user's own."""
-    example = _load_json(root / MCP_EXAMPLE)["mcpServers"]
+    """Write .mcp.json: the plan's servers (from .mcp.example.json) plus the user's own.
+
+    Raises WiringError (see update_json_file) when .mcp.json can't be safely rewritten.
+    """
+    example = json.loads((root / MCP_EXAMPLE).read_text("utf-8"))["mcpServers"]
     owned_servers = owned(tools)[0]
-    current = _load_json(root / MCP_FILE).get("mcpServers", {})
-    servers = {k: v for k, v in current.items() if k not in owned_servers}
-    servers.update({name: example[name] for name in plan.mcp_servers})
+
+    def merge(config: dict[str, Any]) -> dict[str, Any]:
+        current = config.get("mcpServers", {})
+        servers = {k: v for k, v in current.items() if k not in owned_servers}
+        servers.update({name: example[name] for name in plan.mcp_servers})
+        return {**config, "mcpServers": servers}  # other top-level keys stay
+
     if plan.mcp_servers:
         ensure_env_file(root)  # every server runs `uv run --env-file .env`
-    _dump_json(root / MCP_FILE, {"mcpServers": servers})
+    update_json_file(root / MCP_FILE, root / BACKUP_DIR / MCP_BACKUP, merge)
 
 
 def _is_owned_group(group: dict[str, Any], modules: set[str]) -> bool:
@@ -80,21 +84,35 @@ def merge_settings(
 
 
 def write_settings(root: Path, tools: tuple[Tool, ...], plan: Plan, platform: str) -> None:
-    """Merge the plan into .claude/settings.local.json."""
-    path = root / SETTINGS_FILE
-    _dump_json(path, merge_settings(_load_json(path), root, tools, plan, platform))
+    """Merge the plan into .claude/settings.local.json.
+
+    Raises WiringError (see update_json_file) when the file can't be safely rewritten.
+    """
+    update_json_file(
+        root / SETTINGS_FILE,
+        root / BACKUP_DIR / SETTINGS_BACKUP,
+        lambda settings: merge_settings(settings, root, tools, plan, platform),
+    )
+
+
+def _with_statusline(settings: dict[str, Any], command: str) -> dict[str, Any]:
+    """`settings` pointing at usage's status line, unless it names a different one."""
+    existing = settings.get("statusLine", {}).get("command", "")
+    if not existing or STATUSLINE_MODULE in existing:
+        settings["statusLine"] = {"type": "command", "command": command, "refreshInterval": 30}
+    return settings
 
 
 def write_statusline(root: Path, user_settings: Path, platform: str) -> bool:
     """Point the user's status line at usage's, unless they already have a different one.
 
     Returns True if written (or already ours), False if another status line was kept.
+    Raises WiringError (see update_json_file) when the file can't be safely rewritten.
     """
     command = f"{venv_python(root, 'usage', platform)} -I -m {STATUSLINE_MODULE}"
-    settings = _load_json(user_settings)
-    existing = settings.get("statusLine", {}).get("command", "")
-    if existing and STATUSLINE_MODULE not in existing:
-        return False
-    settings["statusLine"] = {"type": "command", "command": command, "refreshInterval": 30}
-    _dump_json(user_settings, settings)
-    return True
+    saved = update_json_file(
+        user_settings,
+        root / BACKUP_DIR / USER_SETTINGS_BACKUP,
+        lambda settings: _with_statusline(settings, command),
+    )
+    return saved.get("statusLine", {}).get("command") == command

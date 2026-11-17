@@ -25,6 +25,7 @@ from signal_setup.intro import intro_text
 from signal_setup.ui import run_setup
 from signal_setup.ui.tour import run as run_tour
 from signal_setup.ui.tour import sections as tour_sections
+from signal_setup.wiring import WiringError
 
 NO_UI_FLAG = "--no-ui"
 
@@ -133,7 +134,10 @@ def _dispatch(root: Path, args: argparse.Namespace) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run `setup`. Returns the exit code (2 for a bad command or unknown tool/step)."""
+    """Run `setup`. Returns the exit code.
+
+    2 for a bad command or unknown tool/step, 1 when wiring left a config file alone.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     tool_ids = {t.id for t in registry.load()}
     try:
@@ -147,6 +151,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     except KeyError as error:
         print(f"setup: error: {error.args[0]}", file=sys.stderr)
         return 2
+    except WiringError as error:  # a config file setup won't overwrite: one sentence, no trace
+        print(error, file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
         print("\nStopped. Progress is saved; run setup again to carry on.")
         return 130
