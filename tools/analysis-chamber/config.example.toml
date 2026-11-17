@@ -1,0 +1,31 @@
+# analysis-chamber settings. Copy to config.toml (gitignored) and change what you need;
+# missing keys keep these defaults. A test checks this file matches the code defaults.
+# Paths may use %VAR% environment variables; relative paths resolve against the Signal repo root.
+
+# Most runs active at once. More approved runs wait in the queue.
+max_parallel_runs = 3
+# Most critic review/fix rounds per run.
+critic_rounds_max = 2
+
+# Model per agent role.
+lead_model = "claude-opus-5-5"
+critic_model = "claude-opus-5-5"
+qa_model = "claude-opus-5-5"
+# The tool-less sub-agent that reads raw pages and personal free text.
+fetch_model = "claude-sonnet-5-5"
+
+# Non-personal runs (inside the repo, committable outputs).
+analyses_root = 'life/analyses'
+# Personal runs and unapproved plans (outside the repo, never published).
+private_root = '%USERPROFILE%\analysis-chamber-private'
+# The one mailbox (address) the signup agent may read for verification mails. Empty turns
+# the API-key signup tool off.
+signup_mail_account = ""
+# The shared analysis kit venv (pandas, CUDA torch, ...). Per-run venvs layer on it.
+kit_venv = '%LOCALAPPDATA%\analysis-chamber\kit'
+# The daemon's rotating log.
+log_dir = '%LOCALAPPDATA%\analysis-chamber'
+# Daemon state: daemon.json (port, token, pid) and gpu.lock.
+state_dir = 'tools/analysis-chamber/.state'
+# The methods playbook skill the lead follows.
+playbook_path = 'tools/analysis-chamber/skills/playbook'

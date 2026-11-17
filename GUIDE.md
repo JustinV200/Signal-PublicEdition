@@ -54,6 +54,10 @@ On demand, say "check my assignments". It opens your school's Moodle and Google 
 
 "Start a session in my website repo to fix the footer" starts a headless Claude Code session there and reports back when it finishes. "What sessions are running?" lists them.
 
+## Analysis chamber
+
+"Analyse how rent changed in my city since 2020" drafts a plan for you to check, then collects data, analyses it, has a fresh critic review the work and leaves a report and an agent you can ask follow-up questions. Runs happen in a local daemon, which can start at every login (setup's optional startup step). Runs that touch personal data stay in a folder outside the repo (`private_root` in `setup config analysis-chamber`); the rest go in `life/analyses/`. See [tools/analysis-chamber/README.md](tools/analysis-chamber/README.md).
+
 ## Whiteboard
 
 A projector and webcam turn a physical whiteboard into one Claude can see and draw on. "Look at the board", "draw a sequence diagram of the login flow", "show my TODO list". Calibrate once with "calibrate the board". When idle it shows the time, weather and news.

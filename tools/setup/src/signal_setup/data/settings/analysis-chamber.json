@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "path": "tools/analysis-chamber/config.toml",
+      "example": "tools/analysis-chamber/config.example.toml"
+    }
+  ],
+  "settings": [
+    {
+      "key": "private_root",
+      "file": "tools/analysis-chamber/config.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "Folder for personal runs and unapproved plans",
+      "hint": "outside the repo, never published; %VAR% environment variables work"
+    },
+    {
+      "key": "signup_mail_account",
+      "file": "tools/analysis-chamber/config.toml",
+      "type": "str",
+      "level": "basic",
+      "description": "The one mailbox (address) the signup agent may read for verification mails",
+      "hint": "leave empty to turn the API-key signup tool off"
+    },
+    {
+      "key": "max_parallel_runs",
+      "file": "tools/analysis-chamber/config.toml",
+      "type": "int",
+      "level": "advanced",
+      "description": "Most runs active at once",
+      "hint": "more approved runs wait in the queue",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "analyses_root",
+      "file": "tools/analysis-chamber/config.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Folder for non-personal runs",
+      "hint": "relative paths resolve against the Signal repo root"
+    },
+    {
+      "key": "kit_venv",
+      "file": "tools/analysis-chamber/config.toml",
+      "type": "str",
+      "level": "advanced",
+      "description": "Where the shared analysis kit venv lives",
+      "hint": "changing it later means building the kit again"
+    }
+  ]
+}

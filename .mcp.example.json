@@ -31,6 +31,10 @@
     "brief": {
       "command": "uv",
       "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/brief", "--frozen", "brief", "mcp"]
+    },
+    "analysis-chamber": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/analysis-chamber", "--frozen", "analysis-chamber", "mcp"]
     }
   }
 }

@@ -1,0 +1,60 @@
+[project]
+name = "analysis-chamber"
+version = "0.1.0"
+description = "Signal's analysis chamber: plan, collect, analyse, critique and report on a question with Agent SDK runs."
+requires-python = "==3.12.*"
+dependencies = [
+    # Lead, critic, fetch and Q&A agents. Same pin as tools/sessions, audiohub and whiteboard.
+    "claude-agent-sdk==0.2.168",
+    # The chamber MCP tools and the lead's in-process `chamber` server. Same pin as the other tools.
+    "mcp==2.3.0",
+    # Brief entry when a run is done (packages/brief, stdlib only).
+    "signal-brief",
+    # Voice hub ping when a run is done (packages/hubnotify, stdlib only).
+    "signal-hub-notify",
+    # Atomic manifest writes (packages/jsonstate, stdlib only).
+    "signal-jsonstate",
+    # Data frames around untrusted extracts (packages/untrusted, stdlib only).
+    "signal-untrusted",
+]
+
+[project.scripts]
+analysis-chamber = "analysis_chamber.cli:main"
+
+[build-system]
+requires = ["uv_build==0.12.15"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "analysis_chamber"
+
+[tool.uv.sources]
+signal-brief = { path = "../../packages/brief", editable = true }
+signal-hub-notify = { path = "../../packages/hubnotify", editable = true }
+signal-jsonstate = { path = "../../packages/jsonstate", editable = true }
+signal-untrusted = { path = "../../packages/untrusted", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# importlib mode lets test files share basenames across the mirrored folders
+# without needing __init__.py files in tests/. `support` holds shared fakes.
+addopts = ["--import-mode=importlib"]
+pythonpath = ["tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# The playbook skill is prose for the lead agent, not tool code (ruff would format its snippets).
+extend-exclude = ["skills"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

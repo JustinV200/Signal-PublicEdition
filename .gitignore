@@ -130,3 +130,12 @@ node_modules/
 .claude/skills/copytone/samples/*
 !.claude/skills/copytone/samples/README.md
 .claude/skills/copytone/voice-profile.md
+
+# analysis-chamber local state (daemon.json token, gpu.lock) and per-machine config overrides
+tools/analysis-chamber/.state/
+tools/analysis-chamber/config.toml
+# analysis-chamber runs: raw data, models and run venvs never get committed (each run also carries its own .gitignore)
+life/analyses/**/data/raw/
+life/analyses/**/data/clean/
+life/analyses/**/models/
+life/analyses/**/.venv/

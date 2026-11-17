@@ -986,6 +986,90 @@
       ]
     },
     {
+      "id": "analysis-chamber",
+      "name": "Analysis chamber",
+      "description": "Takes a question, drafts a plan for you to check, then collects data, analyses it, has a fresh critic review the work and leaves a report and an agent for follow-up questions.",
+      "platforms": [
+        "windows"
+      ],
+      "prereqs": [
+        "uv",
+        "claude"
+      ],
+      "mcp": [
+        "analysis-chamber"
+      ],
+      "permissions": [
+        "mcp__analysis-chamber__chamber_start",
+        "mcp__analysis-chamber__chamber_status",
+        "mcp__analysis-chamber__chamber_list",
+        "mcp__analysis-chamber__chamber_ask"
+      ],
+      "steps": [
+        {
+          "id": "install",
+          "title": "Install",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "sync",
+            "--project",
+            "tools/analysis-chamber",
+            "--frozen"
+          ]
+        },
+        {
+          "id": "config",
+          "title": "Create tools/analysis-chamber/config.toml and choose its settings (where personal runs are kept, the one mailbox for signup mails)",
+          "kind": "settings",
+          "optional": true,
+          "default": true
+        },
+        {
+          "id": "kit",
+          "title": "Build the analysis kit (pandas, CUDA torch and more; slow the first time)",
+          "kind": "run",
+          "argv": [
+            "uv",
+            "run",
+            "--project",
+            "tools/analysis-chamber",
+            "--frozen",
+            "--no-sync",
+            "analysis-chamber",
+            "kit",
+            "build"
+          ]
+        },
+        {
+          "id": "startup",
+          "title": "Start the chamber's daemon at every login (registers a Windows scheduled task; without it, runs start only after you start `analysis-chamber serve` yourself)",
+          "kind": "run",
+          "optional": true,
+          "default": true,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/analysis-chamber/register.ps1",
+            "-TaskOnly"
+          ]
+        }
+      ],
+      "verify": [
+        "uv",
+        "run",
+        "--project",
+        "tools/analysis-chamber",
+        "--frozen",
+        "--no-sync",
+        "analysis-chamber",
+        "--help"
+      ]
+    },
+    {
       "id": "sleepmode",
       "name": "Sleep mode",
       "description": "Darkens every screen and turns RGB lights off while the PC and agents keep running.",
