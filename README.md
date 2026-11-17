@@ -4,10 +4,10 @@ Signal is a personal assistant system for Claude Code that runs on your own PC, 
 
 ## Quick start
 
-You need [uv](https://docs.astral.sh/uv/) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Then, from the repo root:
+You need [uv](https://docs.astral.sh/uv/), [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and, for the setup window, [Node.js LTS](https://nodejs.org) and Edge. Then, from the repo root:
 
 ```
-.\setup.ps1        # Windows
+.\setup.cmd        # Windows (or double-click setup.cmd)
 ./setup.sh         # Linux
 ```
 
