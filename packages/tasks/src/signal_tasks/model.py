@@ -9,8 +9,8 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
-# The board's status numbers (the whiteboard-task-grid layout); the owner is
-# colourblind, so every display shows the number and the word, not a colour.
+# The board's status numbers (the whiteboard-task-grid layout). Every display shows
+# the number and the word, not a colour, so it also works for colourblind users.
 STATUS_NUMBERS: dict[str, int] = {
     "review": 1,
     "building": 2,

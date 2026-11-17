@@ -2,7 +2,7 @@
 // column (condition, high and low, rain chance, and the place, or "as of" when the
 // reading is an older cached one). Glyphs are thin outlines in a 48-unit box, built
 // with createElementNS (no markup strings); the condition word always shows beside
-// them, since the owner is colourblind, so a glyph is only a second cue.
+// them, so it also works for colourblind users; a glyph is only a second cue.
 
 import { LAYOUT } from "./layout.js";
 import { div, region, span, svgElement } from "./parts.js";

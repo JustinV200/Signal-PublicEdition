@@ -50,7 +50,7 @@ Line heights: rows are fixed (40 / 34 / 32 px), text vertically centred.
 
 ## 4. Colour roles
 
-Each colour has a non-colour cue, because the owner is colourblind; the colour is always the second signal.
+Each colour has a non-colour cue, so the board also works for colourblind users; the colour is always the second signal.
 
 | Colour | Used for | The other cue |
 |---|---|---|

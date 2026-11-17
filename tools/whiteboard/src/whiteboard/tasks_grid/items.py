@@ -1,9 +1,9 @@
 """The task grid as board items: outlines, one text per box, the status numbers, header and usage.
 
 Colours follow the whiteboard-task-grid layout (cyan review, yellow building,
-pink needs you, white queued, lime done), but the owner is colourblind, so every
-box also carries its bold white status number top-right, the header gives the
-number key, and a box that needs the owner says "YOU:". Task text goes in text
+pink needs you, white queued, lime done). So it also works for colourblind users,
+every box also carries its bold white status number top-right, the header gives
+the number key, and a box that needs the owner says "YOU:". Task text goes in text
 items, which the board page renders as plain text, never markup; the one SVG
 item holds only the numbers.
 """

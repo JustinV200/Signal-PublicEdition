@@ -73,7 +73,7 @@ Notes:
   - `life/` names no city. the example location is Springfield, IL (39.7817, -89.6501); set your own in `[idle]`.
   - Put it in `whiteboard.toml` `[idle] lat/lon` as the default. Don't geocode by name: Open-Meteo ranks Springfield, Tennessee first.
   - Upgrade: read `life/me/location.md` once the brief's `set_location` (brief-me §8) lands.
-  - Show the current °F, a condition word from a fixed WMO `weather_code` table (with an icon and always a word, since the owner is colourblind), today's high and low, and the rain chance as a percentage.
+  - Show the current °F, a condition word from a fixed WMO `weather_code` table (with an icon and always a word, so it also works for colourblind users), today's high and low, and the rain chance as a percentage.
 - **Weekly-plan todos:** `## Overdue` items that are already `[x]` are excluded (open items only). This matches "today/overdue".
 - **Calendar access today:**
   - The mail tool's OAuth has only `gmail.readonly` and `gmail.compose`, with no calendar scope.

@@ -101,7 +101,7 @@ def _row(place: RowPlace, done_ids: Collection[str], hint_ids: Collection[str]) 
         "id": entry.id,
         "tag": entry.tag,
         "text": place.row.title,
-        # A done row says so in words too, not only by its dimming (the owner is colourblind).
+        # A done row says so in words too, not only by its dimming, for colourblind users.
         "due_label": DONE_LABEL if is_done else place.row.due_label,
         "color": tag_color(entry.tag),
         "done": is_done,

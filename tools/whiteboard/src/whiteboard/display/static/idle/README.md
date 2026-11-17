@@ -11,4 +11,4 @@ The idle view's page side: draws the daemon's idle payload (see `whiteboard/idle
 - `layout.js`: the grid, slots and colour roles. Course chip names and colours come in the payload.
 - `idle.css` (variables and regions), `top.css` (the dial, clock, date and weather) and `ticker.css` (the news ticker): every rule scoped to `.idle-board`.
 
-Every string goes in with `textContent`. Nothing is filled: the page is projected, and black is no light. Colours always come with a word or number (the owner is colourblind).
+Every string goes in with `textContent`. Nothing is filled: the page is projected, and black is no light. Colours always come with a word or number, so the board also works for colourblind users.

@@ -2,8 +2,8 @@
 
 The words are the idle board's (refdocs/research/idle-board/design.md section 5): each
 is under 14 characters so it fits the board's words column. Clear and partly cloudy
-read differently by day and night. The owner is colourblind, so the board always shows
-this word next to the glyph; the glyph is only a second cue.
+read differently by day and night. The board always shows this word next to the glyph,
+so it also works for colourblind users; the glyph is only a second cue.
 """
 
 # (day word, night word) for the codes whose word depends on daylight.

@@ -29,7 +29,7 @@ export const LAYOUT = {
 export const SLOTS = { today: 6, notes: 3, keynotes: 4, agents: 4, upcoming: 5 };
 
 // The task grid's numbers and colours (tasks_grid/items.py). The number and the word
-// carry the meaning (the owner is colourblind); the colour is a second cue.
+// carry the meaning, so it also works for colourblind users; the colour is a second cue.
 export const STATUS = {
   review: { number: 1, word: "review", color: "#00e5ff" },
   building: { number: 2, word: "building", color: "#ffea00" },
