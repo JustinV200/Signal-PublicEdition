@@ -50,9 +50,28 @@ def check_text(name: str, value: object, max_chars: int, allow_newlines: bool = 
     for char in value:
         if allow_newlines and char == "\n":
             continue
-        if unicodedata.category(char) in FORBIDDEN_CATEGORIES or INVISIBLE.match(char):
+        if _is_forbidden(char):
             raise ValueError(f"{name} has a control or invisible character (U+{ord(char):04X})")
     return value
+
+
+def strip_forbidden(text: str) -> str:
+    """`text` without the characters check_text rejects, for producers cleaning outside text.
+
+    Line breaks are forbidden characters too, so a caller that wants them kept as
+    spaces replaces them first.
+
+    Args:
+        text: Any text.
+
+    Returns:
+        The text with every forbidden-category and INVISIBLE character removed.
+    """
+    return "".join(char for char in text if not _is_forbidden(char))
+
+
+def _is_forbidden(char: str) -> bool:
+    return unicodedata.category(char) in FORBIDDEN_CATEGORIES or bool(INVISIBLE.match(char))
 
 
 def check_key(key: str) -> str:

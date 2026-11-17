@@ -38,7 +38,7 @@ from signal_brief.log import (
 from signal_brief.paths import BriefPaths
 from signal_brief.presence import idle_ms
 from signal_brief.store import BriefLogError
-from signal_brief.text import ERROR_QUOTE_CHARS
+from signal_brief.text import ERROR_QUOTE_CHARS, strip_forbidden
 from signal_brief.times import local_now, to_iso
 from signal_brief.triggers import Interaction, on_interaction, one_liner_text
 
@@ -81,5 +81,6 @@ __all__ = [
     "render_model",
     "render_text",
     "resolve_entry",
+    "strip_forbidden",
     "to_iso",
 ]
