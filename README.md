@@ -17,7 +17,7 @@ On Windows this opens the setup window: a wizard inside the Signal console that 
 
 | Folder | What it holds |
 |---|---|
-| `tools/` | One standalone project per tool (browser, mail, calendar, mail-digest, vault, brief, sessions, console, audiohub, whiteboard, sleepmode, usage, contextmeter, jobhunt) plus `setup`. Each has its own README. |
+| `tools/` | One standalone project per tool (browser, mail, calendar, mail-digest, vault, brief, sessions, console, audiohub, whiteboard, sleepmode, analysis-chamber, usage, contextmeter, jobhunt) plus `setup`. Each has its own README. |
 | `packages/` | Small shared Python packages the tools build on (untrusted-content frames, JSON state, Google sign-in, and so on). |
 | `.claude/skills/` | `setup` (setup and the tour), `copytone` (writes in your own style from your samples), `ponytail` (keeps code small). |
 | `.claude/agents/` | Read-only subagents the job runner uses to tailor a resume and review it (`resume-tailor`, `resume-reviewer`). |
