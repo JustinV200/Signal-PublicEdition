@@ -3,7 +3,7 @@
 Every other send goes through SendGate's dialog, because a draft's recipients come
 from the model. This path skips it because nothing about the recipient comes from
 input: To is SELF_ADDRESS, a constant, and the sending account is the saved account
-whose email is that same address (the `alt` alias today). So the mail can only go
+whose email is that same address. So the mail can only go
 from the owner's mailbox to itself. No argument, env var or config key can change
 either, and a mail.toml key for one is refused like any unknown key (settings.py).
 

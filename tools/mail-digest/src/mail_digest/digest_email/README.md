@@ -14,4 +14,4 @@ The email the owner gets after each successful run: this week's and next week's 
 
 ## Dependencies
 
-`mail_digest.kb` (plan lookup, the diff, case folding), `mail_digest.child_env`, `mail_digest.settings`. Standard library only. At run time it needs the mail tool's venv and its `alt` sign-in (`owner.alt@example.com`).
+`mail_digest.kb` (plan lookup, the diff, case folding), `mail_digest.child_env`, `mail_digest.settings`. Standard library only. At run time it needs the mail tool's venv and the sign-in for the mail tool's `SELF_ADDRESS` (setup adds it as `personal`).

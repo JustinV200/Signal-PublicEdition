@@ -10,7 +10,7 @@ mail remove ALIAS                   forget the saved sign-in
 mail search ACCOUNT QUERY [--max N] Gmail query syntax; JSON summaries
 mail read ACCOUNT ID                one message as JSON
 mail send-self --subject S --body-file F
-                                    email the UTF-8 file to owner.alt@example.com, no dialog
+                                    email the UTF-8 file to SELF_ADDRESS, no dialog
 mail mcp                            the stdio MCP server
 ```
 

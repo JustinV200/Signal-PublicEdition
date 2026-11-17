@@ -48,7 +48,7 @@ mail search ACCOUNT QUERY [--max N] | read ACCOUNT ID | mcp
 mail send-self --subject SUBJECT --body-file FILE
 ```
 
-`send-self` emails a UTF-8 text file to `owner.alt@example.com` from that same account (alias `alt`), with no dialog. It prints `Sent to ... (message <id>).` and exits 0, or prints `mail: error: ...` and exits 2 (no saved account for that address, a refused subject or body, Gmail or network trouble). mail-digest's runner calls it after each run.
+`send-self` emails a UTF-8 text file to `SELF_ADDRESS` (your Gmail address, which setup writes into `service/self_send.py`) from the saved account with that same address, whatever its alias, with no dialog. It prints `Sent to ... (message <id>).` and exits 0, or prints `mail: error: ...` and exits 2 (no saved account for that address, a refused subject or body, Gmail or network trouble). mail-digest's runner calls it after each run.
 
 ## Security
 
@@ -68,10 +68,10 @@ mail send-self --subject SUBJECT --body-file FILE
   - Set `send.confirm = false` in `.state/mail.toml` to turn this off (not recommended).
   - Like every `signal_confirm` gate, this is a human gate, not a sandbox: a process running as the owner can click Allow or edit `mail.toml`.
 - **Self-only send** (`mail send-self`, `service/self_send.py`): the one send with no dialog, and it stays that way because nobody else can receive it.
-  - The recipient is the constant `SELF_ADDRESS` (`owner.alt@example.com`), and the sending account is the saved account with that same address. There's no recipient argument, and no env var or config key is read for one; a `mail.toml` key for one is refused like any unknown key. So the mail only ever goes from that mailbox to itself.
+  - The recipient is the constant `SELF_ADDRESS` (the placeholder `owner.alt@example.com` until setup writes your Gmail address there), and the sending account is the saved account with that same address. There's no recipient argument, and no env var or config key is read for one; a `mail.toml` key for one is refused like any unknown key. So the mail only ever goes from that mailbox to itself.
   - The message is one `text/plain` part with no attachments. The subject is at most 200 chars and the body at most 100,000. Neither may have a control character, except line breaks and tabs in the body. Nothing is stripped or escaped: anything else is refused before Gmail is called.
   - It's CLI-only, not an MCP tool, so the model can't call it. Its caller is trusted code (mail-digest's runner).
-  - It needs the `alt` sign-in. Without it, it fails with "No mail account" and sends nothing.
+  - It needs that address signed in (setup signs it in as `personal`). Without it, it fails with "No mail account" and sends nothing.
 - **Sign-in listener**: `mail add` uses google-auth-oauthlib's one-shot redirect server. It binds `127.0.0.1` on a random port, serves one request, and is protected by OAuth `state` and PKCE rather than a token file (see `auth/browser_flow.py`). It runs only while the owner is signing in.
 
 ## Layout

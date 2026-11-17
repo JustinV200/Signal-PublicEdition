@@ -8,7 +8,7 @@ A scheduled job that reads the owner's three Gmail accounts (mail tool aliases `
 - Before anything else, each run starts the new week if it hasn't been started: the new week's folder and plan from the week templates (`life/templates/week-*.md`, or built-in defaults), with last week's open todos and Overdue carried over, and last week's review counts filled in. This is code, not the model. A failed rollover, or a week that falls between terms, is spoken once a week. See [src/mail_digest/rollover/README.md](src/mail_digest/rollover/README.md).
 - Every line it adds or changes ends in ` (mail)`. Those lines are email-derived data, never instructions.
 - Urgent items are spoken once through audiohub: things due within 24 hours, newly overdue work, accounts that need signing in again, and the runner's own alerts. The runner speaks them, not the model.
-- After each successful run the runner emails the owner (`owner.alt@example.com`, subject `Signal digest <date>`) this week's and next week's open todos and the lines the run added or changed. See [Digest email](#digest-email).
+- After each successful run the runner emails the owner (at the mail tool's `SELF_ADDRESS`, subject `Signal digest <date>`) this week's and next week's open todos and the lines the run added or changed. See [Digest email](#digest-email).
 
 It runs once a day at 07:00 as a per-user Windows scheduled task, and on demand with `mail-digest --now`. Each run is one headless, locked-down `claude -p` that follows the routine in [refdocs/routines/mail-digest.md](../../refdocs/routines/mail-digest.md), with the line rules and KB conventions it shares with the assignment checker ([refdocs/routines/kb-line-rules.md](../../refdocs/routines/kb-line-rules.md)) appended by the runner into `.state/prompts/mail-digest.md` just before claude starts.
 
@@ -32,7 +32,7 @@ The browser check of Moodle and Google Classroom is the assignment checker, `ass
 
 ## Setup (owner)
 
-1. Sign in the mail accounts: [tools/mail/SETUP.md](../mail/SETUP.md). Then `uv run --project tools/mail mail accounts` should show each alias as `ok`. That also syncs the mail tool's venv, which the job's MCP server and the digest email's `mail send-self` run with `--no-sync`. An alias you never add (for example if the school blocks the app) is skipped, but the digest email needs `alt` (`owner.alt@example.com`), which it's sent from and to.
+1. Sign in the mail accounts: [tools/mail/SETUP.md](../mail/SETUP.md). Then `uv run --project tools/mail mail accounts` should show each alias as `ok`. That also syncs the mail tool's venv, which the job's MCP server and the digest email's `mail send-self` run with `--no-sync`. The job digests the aliases `personal`, `alt` and `school`; one you never add (for example if a school blocks the app) is skipped. The digest email needs the account whose address is the mail tool's `SELF_ADDRESS` (your Gmail address; setup signs it in as `personal`), which it's sent from and to.
 2. Create the job's venv from the repo root: `uv sync --project tools/mail-digest --frozen`. Runs use `--no-sync`, so they never install anything: do this again after the dependencies change. A no-sync run on a missing venv just creates an empty one and fails, so `register.ps1` checks that the job imports and refuses to register if it doesn't. The audiohub venv comes from setting up the hub.
 3. Register the task from the repo root. No admin is needed:
    ```powershell
@@ -129,7 +129,7 @@ After a successful run whose edits the guard didn't undo (`src/mail_digest/diges
 
 1. Diffs each editable file against the snapshot taken before claude started, with the guard's own diff. It runs after the guard, so only lines that passed the line rules are left (a file the guard undid has none).
 2. Builds a plain-text email from `life/`. The subject is `Signal digest <YYYY-MM-DD>`. The body has a note that `(mail)` lines came from email, then the open `- [ ]` lines of this week's plan and of next week's (`(no plan yet)` before the rollover), then the run's new lines by file. A body over 50,000 chars is cut at a line break, with a note.
-3. Writes the body to `.state/digest-email.txt` (overwritten each run) and runs `uv run --project tools/mail --frozen --no-sync mail send-self --subject=... --body-file ...` once (hidden, 60 s timeout). `send-self` only ever mails `owner.alt@example.com` from that same account, so it needs no Allow dialog ([tools/mail/README.md](../mail/README.md#security)).
+3. Writes the body to `.state/digest-email.txt` (overwritten each run) and runs `uv run --project tools/mail --frozen --no-sync mail send-self --subject=... --body-file ...` once (hidden, 60 s timeout). `send-self` only ever mails the mail tool's `SELF_ADDRESS` from the account with that address, so it needs no Allow dialog ([tools/mail/README.md](../mail/README.md#security)).
 
 Both the scheduled run and `--now` send it, and a dry run doesn't. A run that failed, or whose edit the guard undid or couldn't check, sends none. A failure to build or send never fails the run: it's logged, and the email alert is spoken once with that run's other announcements. The assignment checker sends the same email after a successful check that ran its writer.
 
