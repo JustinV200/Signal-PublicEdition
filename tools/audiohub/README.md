@@ -57,6 +57,7 @@ All commands accept `--config PATH`, `--input-device DEVICE` and `--output-devic
 | `phone-link` | Prints the token links for the phone page of a running `run --phone`. |
 | `notify TEXT [--source S] [--priority P]` | Sends a message to the running hub to be spoken. Priority is `urgent`, `high`, `normal` (default) or `low`. Exits 1 if it wasn't delivered, including when the hub drops it because you're asleep or away. |
 | `mcp` | Runs the stdio MCP server (`notify` and `music_*` tools). Claude Code starts it from the repo's `.mcp.json`. |
+| `check` | The setup health check: prints one JSON summary line, `Voice hub is running` or `Installed, but the voice hub isn't running` (with a start command). Read-only, starts nothing; running means the IPC token file exists and the IPC port accepts a connect, so it can't tell a stuck hub from a healthy one. Always exits 0. |
 | `music ACTION` | `login`, `status`, `play`, `pause`, `toggle`, `next`, `prev`, `volume N`, `play-search QUERY [--kind track\|album\|playlist\|artist]`, `queue QUERY`. |
 
 ## Spotify setup

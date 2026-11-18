@@ -102,6 +102,7 @@ sessions list                          managed sessions, newest first
 sessions serve [--port N]              run the daemon in the foreground
 sessions mcp                           the stdio MCP server
 sessions shutdown                      stop all sessions and the daemon
+sessions check                         health check for setup: repos found, daemon running (never starts it)
 ```
 
 `REPO` is a path, or a repo name or unique part of one.

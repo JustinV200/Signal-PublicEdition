@@ -54,6 +54,7 @@ uv run --project tools/mail-digest --frozen --no-sync mail-digest             # 
 uv run --project tools/mail-digest --frozen --no-sync mail-digest --dry-run   # print the command and run context only
 uv run --project tools/mail-digest --frozen --no-sync mail-digest rollover --dry-run   # show what starting this week would write
 uv run --project tools/mail-digest --frozen --no-sync mail-digest rollover             # start this week now (takes the run lock)
+uv run --project tools/mail-digest --frozen --no-sync mail-digest status               # did the last run work? (reads the state file only)
 ```
 
 `--now` is the one for a voice session or another agent: it starts `pythonw -m mail_digest` detached and returns. Only one run can go at a time (a lock in `.state/run.lock`, released by the OS even if a run crashes), so `--now` refuses while the scheduled run is going, and a second run started by hand exits with an error.

@@ -25,9 +25,13 @@ It stays quiet below 40%. From there it speaks once per new 10% band (40, 50, ..
 
 Pick it in setup (`setup contextmeter`). Setup runs `uv sync`, offers the window setting, and `setup wire` registers the hook in `.claude/settings.local.json` with the venv's Python for your OS (`.venv/Scripts/python.exe` on Windows, `.venv/bin/python` elsewhere), run as `python -I -m contextmeter.hook`. `-I` keeps the session's cwd off `sys.path`, so a stray `json.py` there can't shadow the stdlib.
 
+## Health check
+
+`uv run --project tools/contextmeter --frozen --no-sync python -I -m contextmeter.check` is the setup tool's check. It reads files only (AGENTS.md and `.state/`) and prints one JSON line, e.g. `{"words": "ready, hands off at 75%; has run", ...}`, or "hasn't run yet" before the first tool call with the hook added. Its `fix` points at `.state/errors.log` when the hook has logged errors; the log is kept until you delete it (cut back only past 64 KiB), so delete it once the cause is fixed.
+
 ## Layout
 
-`src/contextmeter/`: `hook.py` is the entry point; `transcript.py` finds and reads the transcript; `window.py` is the window table; `threshold.py` reads AGENTS.md; `config.py` reads `contextmeter.toml`; `announce.py` decides when and what to say; `state.py` keeps the levels file.
+`src/contextmeter/`: `hook.py` is the entry point; `check.py` is the health check; `transcript.py` finds and reads the transcript; `window.py` is the window table; `threshold.py` reads AGENTS.md; `config.py` reads `contextmeter.toml`; `announce.py` decides when and what to say; `state.py` keeps the levels file.
 
 ## Tests
 

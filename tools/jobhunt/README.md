@@ -14,6 +14,7 @@ Ground rules built into the template runbook: every answer must be true and come
 
 ## Files
 - `run.ps1`: one run. Finds `claude` (PATH, `%APPDATA%\npm`, `~\.local\bin`, newest VS Code extension binary), takes a lock (`.logs/run.lock`; a second run exits with code 2), stops a run after 165 min by killing claude's whole process tree (code 124), kills any Edge left on `.profile-jobs` before and after, runs `claude -p ... --mcp-config tools/jobhunt/mcp-jobs.json --permission-mode bypassPermissions --model opus` from the repo root (the run, its one-per-application subagents and their reviewer subagents are all Opus; `bypassPermissions` lets it spawn them, and they inherit its MCP servers; the resume tailor uses the runbook's `Tailor model`), logs to `.logs/<timestamp>.log`. `-DryRun` logs the command without running it.
+- `status.ps1`: the setup tool's health check. Reads the newest real run's log in `.logs/` (dry runs and lock-held starts are passed over) and prints one JSON line `{words, fix, command}`: `last run finished (<date time>)`, `a run is going`, `set up, no run yet`, or exit 1 when the last run ended with a nonzero code, couldn't start, or has had no end line for over 4 h. Read-only: no lock, no log, no run. `-LogDir <dir>` reads another folder. Tests: `powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-Pester tools\jobhunt\status.Tests.ps1"` (Pester 3, fixture logs in TestDrive; also checks that `run.ps1` still writes the lines it reads).
 - `mcp-jobs.json`: adds the `browser-jobs` MCP server (the browser tool with `tools/browser/browser-jobs.toml`). The project's `.mcp.json` servers still load.
 - `browser-jobs.example.toml`: that browser config. Own profile (`.profile-jobs`) and cookie file, `allow_all`, and only purchase and delete ask, so submits and uploads don't wait for an on-screen Allow. Uploads only from `life/areas/job-search/resume/`. `[gates] allow_secret_fields = true` lets `type_text` type the dedicated accounts' passwords and emailed codes (off in the main `browser.toml`).
 - `install-schedule.ps1`: registers the Task Scheduler task "Signal job applications" (current user, only when logged on, no elevation, starts missed runs when available, no window via `conhost --headless`, 3 h limit). Copies the example config to `tools/browser/browser-jobs.toml` if missing. `-Uninstall` removes the task.
@@ -28,6 +29,8 @@ Ground rules built into the template runbook: every answer must be true and come
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\jobhunt\install-schedule.ps1        # register
 Enable-ScheduledTask -TaskName 'Signal job applications'                                       # (if disabled)
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\jobhunt\run.ps1 -DryRun              # check setup
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\jobhunt\status.ps1                   # did the last run work?
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-Pester tools\jobhunt\status.Tests.ps1"   # its tests
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\jobhunt\run.ps1                      # one real run now
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\jobhunt\install-schedule.ps1 -Uninstall
 ```
