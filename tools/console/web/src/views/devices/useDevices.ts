@@ -1,6 +1,7 @@
-// Polls GET /api/devices while the Devices view is open and the page is
-// visible, and re-reads at once on the Refresh button: a read like the status line's, so it never reaches Claude. A 401
-// signs the page out like every other call.
+// Polls GET /api/devices while System is open (only SystemView mounts this
+// hook) and the page is visible, and re-reads at once on the Refresh button:
+// a read like the status line's, so it never reaches Claude. A 401 signs the
+// page out like every other call.
 import { useCallback, useEffect, useState } from "react";
 import { getDevices, UnauthorizedError } from "../../api";
 import type { AwayInfo, DevicesPayload } from "../../api";

@@ -2,12 +2,14 @@
 // files or folders on this PC (.docx, .pdf, .txt, .md, code), or by picking
 // from your sent mail once the mail tool is set up. Each goes through
 // `setup samples ...`, which saves the samples and prints the running count.
+// Pasted text and typed paths are kept in the store until they're added.
 import { useState } from "react";
 import { jsonDocs, parseSampleCount } from "../../../api";
 import type { SampleKind, SetupRequest, SetupStep } from "../../../api";
 import { Button } from "../../../ui";
 import { OutputLog, useSetupRun } from "../run";
 import styles from "../setup.module.css";
+import { useSetupDraft } from "../useSetupDraft";
 import { MailPicker } from "./MailPicker";
 
 const KINDS: readonly SampleKind[] = ["email", "writing", "message", "code"];
@@ -23,12 +25,13 @@ interface SamplesPanelProps {
 export function SamplesPanel({ toolId, step, onDone }: SamplesPanelProps) {
   const runner = useSetupRun();
   const [kind, setKind] = useState<SampleKind>("writing");
-  const [pasted, setPasted] = useState("");
-  const [paths, setPaths] = useState("");
+  // The typed text is in the store, so it outlasts leaving Setup.
+  const [pasted, setPasted] = useSetupDraft(`samples/${toolId}/paste`);
+  const [paths, setPaths] = useSetupDraft(`samples/${toolId}/paths`);
   const [count, setCount] = useState<string | null>(null);
 
-  const send = async (request: SetupRequest) => {
-    const result = await runner.run(request);
+  const send = async (request: SetupRequest, button: string) => {
+    const result = await runner.run(request, button);
     const last = result ? jsonDocs(result.lines).at(-1) : undefined;
     if (last === undefined) return false;
     const { samples, target } = parseSampleCount(last);
@@ -36,22 +39,22 @@ export function SamplesPanel({ toolId, step, onDone }: SamplesPanelProps) {
     return result?.exit === 0;
   };
   const savePaste = async () => {
-    if (await send({ command: "samples", action: "paste", kind, text: pasted })) setPasted("");
+    const request: SetupRequest = { command: "samples", action: "paste", kind, text: pasted };
+    if (await send(request, "paste")) setPasted(null);
   };
   const addFiles = async () => {
     const list = paths
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
-    if (await send({ command: "samples", action: "files", kind, paths: list })) setPaths("");
+    if (await send({ command: "samples", action: "files", kind, paths: list }, "files"))
+      setPaths(null);
   };
   const finish = async () => {
-    const result = await runner.run({
-      command: "mark",
-      tool: toolId,
-      step: step.id,
-      status: "done",
-    });
+    const result = await runner.run(
+      { command: "mark", tool: toolId, step: step.id, status: "done" },
+      "finish",
+    );
     if (result?.exit === 0) onDone();
   };
 
@@ -61,7 +64,12 @@ export function SamplesPanel({ toolId, step, onDone }: SamplesPanelProps) {
         <span className={styles.note}>
           {count ?? "aim for 5 to 15 samples of your own writing"}
         </span>
-        <Button onClick={() => void send({ command: "samples", action: "count" })}>Count</Button>
+        <Button
+          onClick={() => void send({ command: "samples", action: "count" }, "count")}
+          {...runner.button("count")}
+        >
+          Count
+        </Button>
         <label className={styles.check}>
           kind{" "}
           <select
@@ -88,7 +96,7 @@ export function SamplesPanel({ toolId, step, onDone }: SamplesPanelProps) {
       <div className={styles.controls}>
         <Button
           onClick={() => void savePaste()}
-          pending={runner.running}
+          {...runner.button("paste")}
           disabledReason={pasted.trim() ? undefined : "paste some text first"}
         >
           Save pasted text
@@ -107,7 +115,7 @@ export function SamplesPanel({ toolId, step, onDone }: SamplesPanelProps) {
       <div className={styles.controls}>
         <Button
           onClick={() => void addFiles()}
-          pending={runner.running}
+          {...runner.button("files")}
           disabledReason={paths.trim() ? undefined : "give a path first"}
         >
           Add files
@@ -115,7 +123,7 @@ export function SamplesPanel({ toolId, step, onDone }: SamplesPanelProps) {
       </div>
       <MailPicker onKept={(words) => setCount(words)} />
       <div className={styles.controls}>
-        <Button primary onClick={() => void finish()} pending={runner.running}>
+        <Button primary onClick={() => void finish()} {...runner.button("finish")}>
           Done adding samples
         </Button>
       </div>

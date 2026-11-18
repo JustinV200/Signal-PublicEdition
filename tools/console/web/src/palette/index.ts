@@ -2,4 +2,5 @@
 export { buildCommands } from "./commands";
 export type { Command, CommandContext } from "./commands";
 export { filterCommands } from "./filter";
-export { Palette } from "./Palette";
+export { Palette, PALETTE_LIST_ID, paletteOptionId } from "./Palette";
+export { useCommands } from "./useCommands";

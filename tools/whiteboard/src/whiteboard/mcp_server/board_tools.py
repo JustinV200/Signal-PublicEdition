@@ -190,9 +190,9 @@ class BoardTools:
         except StateFileError as error:
             raise ToolError(f"can't read the task list: {error}") from error
 
-    async def night_show(self, sky: bool = True) -> str:
-        """Show sleep mode's night view (tonight's sky, or black); returns the daemon's reply."""
-        return json.dumps(await self._call(lambda api: api.night("show", sky)))
+    async def night_show(self) -> str:
+        """Show sleep mode's night view (tonight's sky); returns the daemon's reply."""
+        return json.dumps(await self._call(lambda api: api.night("show")))
 
     async def night_hide(self) -> str:
         """Leave the night view for the view it hid; returns the view now showing."""

@@ -4,7 +4,7 @@ How Signal fits together and how to use each tool. `setup tour` shows this one s
 
 ## The big picture
 
-You talk to one main Claude Code session, the orchestrator. Following [AGENTS.md](AGENTS.md), it plans the work and hands each task to an implementer subagent. A fresh reviewer, with no shared context and a model at least as strong, checks every result against the task and the coding rules before anything is committed. Findings go back to an implementer until the review passes.
+You talk to one main Claude Code session. Following [AGENTS.md](AGENTS.md), it plans the work and hands each task to an implementer subagent. A fresh reviewer, with no shared context and a model at least as strong, checks every result against the task and the coding rules before anything is committed. Findings go back to an implementer until the review passes.
 
 The tools give that session hands: a browser, your mail and calendar, a voice, a whiteboard and more. Each tool is a standalone project in `tools/`, installed and wired only if you picked it.
 
@@ -20,13 +20,13 @@ After each tool call, every agent and subagent is told how much of its context w
 
 ## Task console
 
-A terminal-style window onto your main session, with a Tasks page showing what each agent is doing. Open it with `uv run --project tools/console --frozen --no-sync console open`. The orchestrator reports its tasks there as it spawns, reviews and finishes them. Its Tools tab shows every tool as Active, Down or Not set up, with a button that opens setup at that tool; its Setup tab is the setup wizard, which `setup` and `/setup` open.
+A terminal-style window onto your main session, with a Tasks page showing what each agent is doing. Open it with `uv run --project tools/console --frozen --no-sync console open`. Your main session reports its tasks there as it spawns, reviews and finishes them. Its System tab's Tools list shows every tool as Active, Down or Not set up, with a button that opens setup at that tool. Its Setup tab is the setup wizard, which `setup` and `/setup` open; that tab shows only while a picked tool is unfinished or Setup is open, and `Open setup` in System reaches it any time.
 
 ## Brief and away mode
 
 Sessions log what you should hear about. Say "brief me" for a ranked catch-up of what happened while you were away. "Away mode on" tells sessions to keep working without waiting for you; each choice they make for you is logged in the brief with how to undo it.
 
-## Voice hub and music
+## Voice and music
 
 Agents' notifications are spoken aloud in order, so two sessions never talk over each other. Say "play some jazz", "pause the music" or "turn it down". Spotify search and queue need Spotify Premium and a Spotify app (setup walks you through it); without one, play and pause work with any app in the Windows media controls.
 
@@ -80,7 +80,7 @@ copytone writes in your own style from your samples (files, pasted text or your 
 - The browser gates purchases, sends and deletes behind your approval, and its vault keeps passwords away from the model.
 - Duo prompts are owner-only: actions on a tab showing one are refused.
 - Mail sending needs your click. The digest only goes to your own address, a source constant nothing at runtime can change.
-- In away mode, every choice a session makes for you is logged in the brief with its undo.
+- While you're away, every choice a session makes for you is logged in the brief with its undo.
 
 ## Where things live
 

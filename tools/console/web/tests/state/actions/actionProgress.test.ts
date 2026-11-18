@@ -12,7 +12,7 @@ function actionRow(partial: Partial<LocalMessage> = {}): LocalMessage {
     id: "a1",
     role: "you",
     kind: "action",
-    text: "Start the voice hub",
+    text: "Start voice",
     at: NOW - 1000,
     delivery: "running",
     origin: { kind: "action", action: "voice.start" },

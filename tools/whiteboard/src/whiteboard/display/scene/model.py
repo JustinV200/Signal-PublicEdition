@@ -93,12 +93,10 @@ class NightView:
 
     Attributes:
         seed: Picks the sky; tools/sleepmode sends YYYYMMDD of the evening the night began.
-        sky: True for the dim night sky, False for a plain black page.
         previous_view: The view underneath (one of DAY_VIEWS), shown again when it ends.
     """
 
     seed: int
-    sky: bool
     previous_view: str
 
 
@@ -134,7 +132,7 @@ def scene_to_dict(scene: Scene) -> dict[str, Any]:
 
     Returns:
         `{"items": [...], "board_quad": [[x, y], ...] | None, "view": one of VIEWS,
-        "night": {"seed", "sky", "previous_view"} | None}`.
+        "night": {"seed", "previous_view"} | None}`.
     """
     quad = [list(point) for point in scene.board_quad] if scene.board_quad is not None else None
     items = [item_to_dict(item) for item in scene.items]

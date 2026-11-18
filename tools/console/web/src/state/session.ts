@@ -21,8 +21,11 @@ export interface SessionApi {
   getState: () => Promise<ServerState>;
 }
 
+/** `out` carries the server's reason (an expired key reads differently) and its command line. */
 export type SessionOutcome =
-  { kind: "in"; state: ServerState } | { kind: "out" } | { kind: "down"; error: unknown };
+  | { kind: "in"; state: ServerState }
+  | { kind: "out"; reason: string; openCommand: string | null }
+  | { kind: "down"; error: unknown };
 
 /** The key, view and tool from a `#k=<key>&v=<view>&t=<tool>` hash (each null if absent). */
 export function readHashLink(hash: string): HashLink {
@@ -51,7 +54,8 @@ export function takeHashKey(): string | null {
 
 /**
  * Logs in with `hashKey` when there is one, then loads the state. `out`
- * means a 401 anywhere; `down` means the server could not be reached.
+ * means a 401 anywhere (with the server's reason); `down` means the server
+ * could not be reached.
  */
 export async function startSession(
   hashKey: string | null,
@@ -61,7 +65,8 @@ export async function startSession(
     if (hashKey) await api.login(hashKey);
     return { kind: "in", state: await api.getState() };
   } catch (error) {
-    if (error instanceof UnauthorizedError) return { kind: "out" };
+    if (error instanceof UnauthorizedError)
+      return { kind: "out", reason: error.message, openCommand: error.openCommand };
     return { kind: "down", error };
   }
 }

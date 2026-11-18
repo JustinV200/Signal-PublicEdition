@@ -8,6 +8,7 @@ The `whiteboard` command (`whiteboard.cli.main:main`). `python -m whiteboard.cli
 |---------|--------------|
 | `serve` | Run the daemon in this terminal until Ctrl+C. |
 | `stop` | Stop a running daemon cleanly. |
+| `status` | Say whether a daemon answers, never starting one: the last line is one JSON object `{words, fix, command}` (the setup tool's health check). Not running passes; exit 1 only when a daemon answers with an error (a stale token) or hangs. |
 | `mcp` | Stdio MCP server (for `.mcp.json`). |
 | `calibrate` | Marker calibration, then auto-fit the board outline. |
 | `fit [auto\|show\|clear] [--quad X1,Y1,...,X4,Y4]` | Re-detect, show or clear the board fit, or set corners by hand. |
@@ -24,7 +25,7 @@ The `whiteboard` command (`whiteboard.cli.main:main`). `python -m whiteboard.cli
 | `todo done\|undone ITEM` | Tick or untick an item (id or a unique piece of its text) in its week plan. |
 | `keynotes` | Ask Claude (Sonnet) for today's 2-4 keynote lines from the week plans, save them to `.state/keynotes.json`, print them, and refresh a running daemon (never starts one). The 06:00 scheduled task runs it first. |
 | `idle show\|hide\|sync` | The idle view (clock, tasks, weather, agents, upcoming, a headline): show it now, back to the items (on an empty board it returns after `[idle] empty_s`), or re-read every source now. Prints the view and counts. |
-| `night show [--no-sky]` / `night hide` | Sleep mode's night view: tonight's dim sky (or black with `--no-sky`), and back to the view it hid. Sleep mode calls the daemon itself; this is for trying it by hand. |
+| `night show` / `night hide` | Sleep mode's night view: tonight's dim sky, and back to the view it hid. Sleep mode calls the daemon itself; this is for trying it by hand. |
 | `camera view` | Watch the webcam live (raw, about 5 fps) in a window, to aim it. q, Esc or closing the window ends it. Uses the daemon's stream, so the daemon can keep the camera. |
 | `displays` | List monitors and mark the projector. |
 | `cameras` | List webcams. Stop the daemon first, because it holds the camera. |

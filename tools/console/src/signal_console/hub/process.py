@@ -13,6 +13,7 @@ everything else the hub started.
 
 import asyncio
 import contextlib
+import logging
 import os
 import shutil
 import time
@@ -22,6 +23,7 @@ from pathlib import Path
 
 import psutil
 
+from signal_console.hub.log_reason import last_log_reason
 from signal_console.hub.shutdown import (
     GRACEFUL_EXIT_TIMEOUT_S,
     request_hub_shutdown,
@@ -59,6 +61,10 @@ HUB_ENCODING_ENV = {"PYTHONIOENCODING": "utf-8"}
 READY_TIMEOUT_S = 60.0
 READY_POLL_S = 0.5
 
+# HubError messages reach the owner's Chat as plain words (what failed, what to
+# do); the pids and log paths behind them go to this log instead.
+log = logging.getLogger(__name__)
+
 
 class HubError(RuntimeError):
     """The hub can't be started (already running, uv missing, exited at once) or stopped."""
@@ -85,10 +91,10 @@ def start_hub(state_dir: Path) -> HubRecord:
         OSError: The process couldn't be started.
     """
     if find_console_hub(state_dir) is not None or asyncio.run(is_hub_listening()):
-        raise HubError("a voice hub is already running")
+        raise HubError("Voice is already running. Use Stop voice first to restart it.")
     uv = shutil.which("uv")
     if uv is None:
-        raise HubError("uv isn't on PATH")
+        raise HubError("Voice can't start: uv isn't on PATH. Install uv, then try again.")
     ensure_state_dir(state_dir)
     env = clean_env(os.environ) | HUB_ENCODING_ENV
     # Forget the old hub before its log is truncated: the server only tails the log while
@@ -104,7 +110,8 @@ def start_hub(state_dir: Path) -> HubRecord:
     try:
         record = HubRecord(process.pid, psutil.Process(process.pid).create_time())
     except psutil.NoSuchProcess as error:
-        raise HubError(f"the hub exited at once; see {state_dir / HUB_LOG_FILE}") from error
+        log.warning("voice hub exited at once; its output is in %s", state_dir / HUB_LOG_FILE)
+        raise HubError("Voice quit as soon as it started. Try Start voice again.") from error
     write_json(state_dir / HUB_FILE, {"pid": record.pid, "createTime": record.create_time})
     return record
 
@@ -121,22 +128,11 @@ def wait_for_hub(state_dir: Path, record: HubRecord, timeout_s: float = READY_TI
     deadline = time.monotonic() + timeout_s
     while not asyncio.run(is_hub_listening()):
         if find_recorded_process(record.pid, record.create_time) is None:
-            raise HubError(f"the voice hub exited while starting: {_last_log_line(state_dir)}")
+            raise HubError(f"Voice quit while starting{last_log_reason(state_dir)}")
         if time.monotonic() >= deadline:
             return False
         time.sleep(READY_POLL_S)
     return True
-
-
-def _last_log_line(state_dir: Path) -> str:
-    # The exception line of a traceback is the log's last line.
-    log_path = state_dir / HUB_LOG_FILE
-    try:
-        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
-    except OSError:
-        lines = []
-    last = next((line.strip() for line in reversed(lines) if line.strip()), None)
-    return last or f"no output; see {log_path}"
 
 
 def read_hub_record(state_dir: Path) -> HubRecord | None:
@@ -215,14 +211,16 @@ def stop_hub(
     try:
         has_exited = request_shutdown() and wait_for_exit(process, GRACEFUL_EXIT_TIMEOUT_S)
     except psutil.Error as error:  # e.g. AccessDenied waiting on the hub
-        raise HubError(f"couldn't wait for the voice hub (pid {process.pid}): {error}") from error
+        log.warning("couldn't wait for the voice hub (pid %s): %s", process.pid, error)
+        raise HubError("Couldn't tell whether Voice stopped. Try Stop voice again.") from error
     if has_exited:
         (state_dir / HUB_FILE).unlink(missing_ok=True)
         return True
     try:
         was_running = _kill_tree(process)
     except psutil.Error as error:
-        raise HubError(f"couldn't stop the voice hub (pid {process.pid}): {error}") from error
+        log.warning("couldn't kill the voice hub (pid %s): %s", process.pid, error)
+        raise HubError("Couldn't stop Voice. Try Stop voice again.") from error
     (state_dir / HUB_FILE).unlink(missing_ok=True)
     return was_running
 
@@ -248,8 +246,8 @@ def _kill_tree(process: psutil.Process) -> bool:
         return False
     alive = kill_processes(tree)
     if alive:
-        pids = ", ".join(str(pid) for pid in alive)
-        raise HubError(f"voice hub processes still running after the kill: {pids}")
+        log.warning("voice hub processes still running after the kill: %s", alive)
+        raise HubError("Part of Voice is still running after Stop. Try Stop voice again.")
     return True
 
 

@@ -7,13 +7,12 @@ The night view's renderer: a dim, seeded night sky the projector shows while sle
 ```js
 import { startNight, buildSky, buildScene, renderFrame } from "/static/night/night.js";
 
-const night = startNight(container, { seed: 20261019, sky: true });
+const night = startNight(container, { seed: 20261019 });
 night.stop();   // removes the canvas and every listener; safe to call twice
 ```
 
 - `container`: a positioned block element (`position: relative` or `absolute`). The canvas fills it.
-- `seed` (integer): the night, `YYYYMMDD` of the evening it began (nights run noon to noon). `TypeError` otherwise, whatever `sky` is.
-- `sky` (bool, default true): `false` is plain black. Nothing is added to the page and no timer runs; `stop()` is then a no-op.
+- `seed` (integer): the night, `YYYYMMDD` of the evening it began (nights run noon to noon). `TypeError` otherwise.
 - Starting again in a container that already shows a sky stops the old one first.
 - `buildSky(seed)` is the pure sky (pivot, band, nebulae, stars); `buildScene(seed)` adds the moon, the night's effects and the meteor schedule; `renderFrame(context, scene, t, width, height)` draws it at sky time `t`. For tests and previews.
 
@@ -42,16 +41,16 @@ The page test (`tests/display/static/test_night_effects.py`) draws a frame with 
 
 ## Cost
 
-One canvas, redrawn at most 20 times a second from `requestAnimationFrame`; the loop is cancelled while `document.hidden` and nothing runs for `sky: false`. A frame at 1920x1080 takes about 10.5 ms on a real night, and 16 ms with every effect in the pool on at once, with a software canvas (all stars are placed with four multiplies each and only those in view are drawn). The backing store follows `devicePixelRatio` (capped at 2), so the projector's 1280x720 CSS pixels at 150% draw at 1920x1080. Size changes come through a `ResizeObserver`. Under `prefers-reduced-motion: reduce` the sky is drawn once and only redrawn on resize: no twinkle, no meteors, no turning, no effects moving.
+One canvas, redrawn at most 20 times a second from `requestAnimationFrame`; the loop is cancelled while `document.hidden`. A frame at 1920x1080 takes about 10.5 ms on a real night, and 16 ms with every effect in the pool on at once, with a software canvas (all stars are placed with four multiplies each and only those in view are drawn). The backing store follows `devicePixelRatio` (capped at 2), so the projector's 1280x720 CSS pixels at 150% draw at 1920x1080. Size changes come through a `ResizeObserver`. Under `prefers-reduced-motion: reduce` the sky is drawn once and only redrawn on resize: no twinkle, no meteors, no turning, no effects moving.
 
 ## How it's wired in
 
 The contract is in `tools/sleepmode/README.md` ("The whiteboard contract"); the whiteboard README's "The night view" covers what it does to the board.
 
-- **Routes:** `POST /api/night/show {seed?, sky?}` and `POST /api/night/hide` in `display/server/api_routes.py`, behind the daemon's token guard like every `/api/*` route.
-- **The view:** the scene's `view` becomes `"night"`, and `Scene.night` keeps `{seed, sky, previous_view}` (`display/scene`: `show_night`, `hide_night`), saved in `scene.json`.
+- **Routes:** `POST /api/night/show {seed?}` and `POST /api/night/hide` in `display/server/api_routes.py`, behind the daemon's token guard like every `/api/*` route.
+- **The view:** the scene's `view` becomes `"night"`, and `Scene.night` keeps `{seed, previous_view}` (`display/scene`: `show_night`, `hide_night`), saved in `scene.json`.
 - **Pausing:** `BoardController` refuses flashes and highlights while it shows, and its `page_changed_s()` is `math.inf`, which pauses the change watcher (and so the board agent and the cross-out check) and the drift monitor.
-- **The page:** `board.html` has a `#night` layer in `#stage`, sized like the other views (`stage.js`), so the sky is warped onto the board quad and clipped to it like the items, with the wall left black. `board.css` hides every other layer under `body[data-view="night"]`. `board.js` calls `startNight(layer, night)` only when a scene message brings a new `{seed, sky}` (each call rebuilds the sky), and `stop()` once the view is anything else, since `visibility: hidden` alone would keep the loop running. A daemon restart, or `show` twice in one night, starts the same sky at the same point of its turn.
+- **The page:** `board.html` has a `#night` layer in `#stage`, sized like the other views (`stage.js`), so the sky is warped onto the board quad and clipped to it like the items, with the wall left black. `board.css` hides every other layer under `body[data-view="night"]`. `board.js` calls `startNight(layer, night)` only when a scene message brings a new `seed` (each call rebuilds the sky), and `stop()` once the view is anything else, since `visibility: hidden` alone would keep the loop running. A daemon restart, or `show` twice in one night, starts the same sky at the same point of its turn.
 
 ## Files
 

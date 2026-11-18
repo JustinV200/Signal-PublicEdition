@@ -1,14 +1,17 @@
 // HTTP client for the console backend: login, state, send, action, devices,
-// away and model picks. Every request is same-origin JSON with the X-Console-Token header; a
-// 401 clears the token and becomes UnauthorizedError so callers can show the
-// "run console open" state.
-import { parseIdReply, parseServerState, parseToken } from "./parse";
+// away, the console's health checks and model picks. Every request is same-origin JSON with the X-Console-Token header; a
+// 401 clears the token and becomes UnauthorizedError (with the server's reason and its
+// `console open` command line) so callers can show the signed-out page. A request that
+// never reaches the server fails with plain words, not the browser's "Failed to fetch".
+import { parseConsoleHealth, parseIdReply, parseServerState, parseToken } from "./parse";
 import { parseAway, parseDevicesPayload } from "./parseDevices";
+import { isDict, stringOr } from "./parseFields";
 import { authHeaders, setToken } from "./token";
 import type {
   ActionArgs,
   ActionName,
   AwayInfo,
+  ConsoleCheck,
   DevicesPayload,
   ModelField,
   ModelTarget,
@@ -16,36 +19,73 @@ import type {
 } from "./types";
 
 const HTTP_UNAUTHORIZED = 401;
+/** The guard's reason for a missing or dead token, and the default for a 401 without one. */
+export const NOT_SIGNED_IN = "not signed in";
+/** What a request that never reached the server (fetch's TypeError) fails with. */
+const SERVER_NOT_ANSWERING = "the console server isn't answering";
 
-/** The token is missing, bad, or the server restarted. */
+/** A 401: the token is missing, bad, or older than the newest 8 logins, or a login key failed. */
 export class UnauthorizedError extends Error {
-  constructor() {
-    super("not signed in");
+  /** The server's `console open` command line from the 401 body; null when it sent none. */
+  readonly openCommand: string | null;
+
+  /** `reason` is the server's words (`message`), e.g. "that login key is wrong, used or expired". */
+  constructor(reason: string = NOT_SIGNED_IN, openCommand: string | null = null) {
+    super(reason);
     this.name = "UnauthorizedError";
+    this.openCommand = openCommand;
+  }
+}
+
+/** The JSON body as a dict, or null when it is not a JSON object. */
+async function readBody(response: Response): Promise<Record<string, unknown> | null> {
+  try {
+    const body: unknown = await response.json();
+    return isDict(body) ? body : null;
+  } catch {
+    return null;
   }
 }
 
 // Error replies carry `{error}`; fall back to the status when the body is not JSON.
 export async function errorMessage(path: string, response: Response): Promise<string> {
-  const fallback = `${path}: HTTP ${response.status}`;
-  try {
-    const body: unknown = await response.json();
-    const error = (body as { error?: unknown } | null)?.error;
-    return typeof error === "string" && error ? error : fallback;
-  } catch {
-    return fallback;
-  }
+  const error = stringOr((await readBody(response))?.error, "");
+  return error || `${path}: HTTP ${response.status}`;
 }
 
-/** Shared 401 handling for every /api request (also used by the event stream). */
+/**
+ * 401 handling for the streamed requests (the event stream, the camera, setup runs).
+ * Their 401 is always the guard's "not signed in", so the body isn't read.
+ */
 export function rejectUnauthorized(response: Response): void {
   if (response.status !== HTTP_UNAUTHORIZED) return;
   setToken(null);
   throw new UnauthorizedError();
 }
 
+/** Clears the token and builds the error from a 401's body: the reason and the command. */
+async function signedOutError(response: Response): Promise<UnauthorizedError> {
+  setToken(null);
+  const body = await readBody(response);
+  const reason = stringOr(body?.error, "") || NOT_SIGNED_IN;
+  return new UnauthorizedError(reason, stringOr(body?.openCommand, null));
+}
+
+/**
+ * fetch, with a network failure (a TypeError: server down, connection refused) in plain words.
+ * An abort (an AbortError, not a TypeError) is rethrown as is.
+ */
+export async function fetchOrExplain(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(path, init);
+  } catch (error) {
+    if (error instanceof TypeError) throw new Error(SERVER_NOT_ANSWERING, { cause: error });
+    throw error;
+  }
+}
+
 async function request(path: string, body?: unknown): Promise<unknown> {
-  const response = await fetch(path, {
+  const response = await fetchOrExplain(path, {
     method: body === undefined ? "GET" : "POST",
     credentials: "same-origin",
     headers: {
@@ -54,7 +94,7 @@ async function request(path: string, body?: unknown): Promise<unknown> {
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  rejectUnauthorized(response);
+  if (response.status === HTTP_UNAUTHORIZED) throw await signedOutError(response);
   if (!response.ok) throw new Error(await errorMessage(path, response));
   return response.json();
 }
@@ -82,6 +122,11 @@ export async function sendAction(action: ActionName, args?: ActionArgs): Promise
 /** GET /api/devices: the Connected devices rows and away mode (a read, like /api/state). */
 export async function getDevices(): Promise<DevicesPayload> {
   return parseDevicesPayload(await request("/api/devices"));
+}
+
+/** GET /api/health: the console's own checks (a local read on the server; no socket or token). */
+export async function getHealth(): Promise<ConsoleCheck[]> {
+  return parseConsoleHealth(await request("/api/health"));
 }
 
 /** POST /api/away: the owner's own Away/Here toggle. Resolves with away mode after the change. */

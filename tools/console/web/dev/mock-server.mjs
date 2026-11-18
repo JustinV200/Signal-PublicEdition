@@ -1,19 +1,57 @@
 // Mock console backend for developing the UI without tools/console/src.
 // Speaks the contract in src/api: login key -> token, X-Console-Token on
 // every request, /api/state, SSE with replay (plus a `tasks` event), /api/send
-// and /api/action (run "in the server": running, then done or failed); the Devices page's routes are in
-// mock-pages.mjs. Any login key works except "bad".
+// and /api/action (run "in the server": running, then done or failed; its words
+// are in actions/mock-actions.mjs, a board run's effect in actions/mock-board.mjs).
+// The starting state is in mock-state.mjs, System's devices routes in
+// mock-pages.mjs, its console checks (/api/health) in mock-health.mjs, model
+// picks (/api/models) in mock-models.mjs, and Setup's and System's tools
+// list's in setup/mock-setup.mjs.
+// Any login key works except "bad" (the signed-out page); 401s and
+// `--down-after` are in session/mock-session.mjs.
 //
 //   node dev/mock-server.mjs                 # api only, for `npm run dev`
 //   node dev/mock-server.mjs --static dist   # also serve the build
 //   node dev/mock-server.mjs --old-whiteboard  # daemon up but board.view null, like an older build
 //   node dev/mock-server.mjs --whiteboard-off  # daemon down: no saves, no view, online false
-//   node dev/mock-server.mjs --action-ms 20000  # slower button runs
+//   node dev/mock-server.mjs --empty-board     # `items` view with 0 items: a load asks nothing
+//   node dev/mock-server.mjs --night           # sleep mode's night view: calibration is off,
+//                                               # and boards sent stay hidden under it
+//   node dev/mock-server.mjs --many-saves      # 24 more saves: the list outgrows the view
+//   node dev/mock-server.mjs --action-ms 20000  # slower button runs (a second board
+//                                               # button meanwhile gets the busy refusal)
+//   node dev/mock-server.mjs --setup-fail     # `setup list` and `setup status` fail
+//   node dev/mock-server.mjs --setup-fresh    # first run: no picks, only the console built
+//   node dev/mock-server.mjs --setup-done     # every pick finished: no Setup tab
+//   node dev/mock-server.mjs --setup-all      # every tool picked: the wizard's longest strip
+//   node dev/mock-server.mjs --claude closed  # none | closed | quiet | unknown (see mock-seed)
+//   node dev/mock-server.mjs --away until     # until | default | asleep: start not Here
+//   node dev/mock-server.mjs --health hooks   # port (default) | hooks | ok (see mock-health)
+//   node dev/mock-server.mjs --empty-chat     # no seeded history: Chat and Voice open empty
+//   node dev/mock-server.mjs --empty-lists    # no saved boards and no tasks: their empty states
+//   node dev/mock-server.mjs --news-every 15  # a live unprompted reply or note every 15 s
+//   node dev/mock-server.mjs --news-every 15 --long-news  # each reply taller than the view
+//   node dev/mock-server.mjs --split-replay   # history arrives in two bursts 300 ms apart
+//   node dev/mock-server.mjs --down-after 20  # stop answering 20 s after start, for 60 s
+//   node dev/mock-server.mjs --many-tasks     # nine active tasks, two need you: a crowded scope
+//   node dev/mock-server.mjs --port 8795      # screen checks: 8790 is the real console's port
 //   open http://127.0.0.1:8790/#k=dev
 import http from "node:http";
 import { randomUUID } from "node:crypto";
-import { handlePages, TASKS } from "./mock-pages.mjs";
-import { REPLY, seedHistory } from "./mock-seed.mjs";
+import { actionEcho, BUSY_WORDS, NOT_LINKED } from "./actions/mock-actions.mjs";
+import { runBoardAction } from "./actions/mock-board.mjs";
+import { healthBody } from "./mock-health.mjs";
+import { applyPick } from "./mock-models.mjs";
+import { handlePages, tasksPayload } from "./mock-pages.mjs";
+import { REPLY, seedHistory, startNews, turnState } from "./mock-seed.mjs";
+import { mockSaves, startState } from "./mock-state.mjs";
+import { handleSetup } from "./setup/mock-setup.mjs";
+import {
+  BAD_LOGIN_KEY,
+  downSwitch,
+  NOT_SIGNED_IN,
+  refuseSignedOut,
+} from "./session/mock-session.mjs";
 import { serveStatic } from "./static-files.mjs";
 
 const HOST = "127.0.0.1";
@@ -22,7 +60,7 @@ const TOKEN_HEADER = "x-console-token";
 const MAX_BODY_BYTES = 64 * 1024;
 const REPLAY_LIMIT = 200;
 const HEARTBEAT_MS = 5_000;
-const MS = { minute: 60_000, hour: 3_600_000, day: 86_400_000 };
+const SPLIT_REPLAY_MS = 300;
 
 const args = Object.fromEntries(
   process.argv
@@ -33,79 +71,30 @@ const port = Number(args.port ?? DEFAULT_PORT);
 const staticRoot = typeof args.static === "string" ? args.static : null;
 const oldWhiteboard = Boolean(args["old-whiteboard"]);
 const whiteboardOff = Boolean(args["whiteboard-off"]);
+const emptyBoard = Boolean(args["empty-board"]);
+const night = Boolean(args.night);
+// `--empty-lists`: no saved boards and no tasks (their empty states).
+const emptyLists = Boolean(args["empty-lists"]);
+const saves = emptyLists ? [] : mockSaves(Boolean(args["many-saves"]));
+const setupFail = Boolean(args["setup-fail"]);
+const setupFresh = Boolean(args["setup-fresh"]);
+const setupDone = Boolean(args["setup-done"]);
+const setupAll = Boolean(args["setup-all"]);
 // How long the fake server takes to run a button.
 const DEFAULT_ACTION_MS = 3000;
 const actionMs = Number(args["action-ms"] ?? DEFAULT_ACTION_MS);
 
-const ago = (ms) => new Date(Date.now() - ms).toISOString();
 const now = () => new Date().toISOString();
 
-// The whiteboard's saves. The real console reads them from the daemon, so an
-// off whiteboard lists none; its view is `items` or `todo`, never a save name.
-const SAVES = [
-  {
-    name: "lecture",
-    updatedAt: ago(2 * MS.hour),
-    description: "Week 7 lecture notes: queueing models and the M/M/1 example.",
-  },
-  {
-    name: "agent-task-grid",
-    updatedAt: ago(MS.day),
-    description: "Grid of the agents' tasks and their status, one cell each.",
-    refresher: "tasks",
-  },
-  { name: "hist-205-notes", updatedAt: ago(3 * MS.day), description: null },
-  { name: "club-demo", updatedAt: null, description: "Demo flow for the club meeting." },
-];
-
-const state = {
-  orchestrator: { claimed: true, label: "main", turn: turnState(false) },
-  voice: { running: true, phase: "listening", startedBy: "console" },
-  board: {
-    saves: whiteboardOff ? [] : SAVES,
-    view: whiteboardOff || oldWhiteboard ? null : "items",
-    online: !whiteboardOff,
-  },
-  // The model strip's block (signal_console.models); picks aren't mocked.
-  models: {
-    orchestrator: {
-      now: { model: "claude-opus-5-5", effort: "medium" },
-      next: { model: null, effort: "high" },
-    },
-    voice: { model: null, effort: null },
-    choices: {
-      orchestrator: {
-        model: [
-          null,
-          "default",
-          "best",
-          "fable",
-          "opus",
-          "sonnet",
-          "haiku",
-          "opus[1m]",
-          "sonnet[1m]",
-          "opusplan",
-        ],
-        effort: [null, "low", "medium", "high", "xhigh"],
-      },
-      voice: {
-        model: [
-          "default",
-          "best",
-          "fable",
-          "opus",
-          "sonnet",
-          "haiku",
-          "opus[1m]",
-          "sonnet[1m]",
-          "opusplan",
-        ],
-        effort: ["low", "medium", "high", "xhigh"],
-      },
-    },
-  },
-};
+const state = startState({
+  claude: args.claude,
+  away: args.away,
+  whiteboardOff,
+  oldWhiteboard,
+  emptyBoard,
+  night,
+  saves,
+});
 
 const tokens = new Set();
 const replay = [];
@@ -121,18 +110,6 @@ function emit(event, data) {
 
 function emitDelivery(messageId, status, error) {
   emit("delivery", { id: newId("d"), messageId, status, ...(error ? { error } : {}) });
-}
-
-// The real server derives this from the turn hooks; here a reply ends the turn.
-function turnState(working) {
-  const at = Date.now();
-  return {
-    state: working ? "working" : "idle",
-    startedAt: working ? at : null,
-    lastActivityAt: at,
-    agents: 0,
-    agentsUnsure: false,
-  };
 }
 
 function setBusy(busy) {
@@ -168,9 +145,9 @@ function handleSend(res, text) {
   const id = newId("m");
   emit("message", { id, role: "you", kind: "chat", at: now(), text });
   json(res, 202, { id });
-  // "fail" in the text simulates the orchestrator rejecting the message.
+  // "fail" in the text simulates Claude's inbox rejecting the message.
   if (/fail/i.test(text)) {
-    setTimeout(() => emitDelivery(id, "failed", "no orchestrator claimed"), 300);
+    setTimeout(() => emitDelivery(id, "failed", NOT_LINKED), 300);
     return;
   }
   setTimeout(() => emitDelivery(id, "sent"), 300);
@@ -193,45 +170,32 @@ const busyLocks = new Set();
 // What the fake run changes and says; null result means it fails with `error`.
 function applyAction(action, name) {
   if (action === "voice.start") {
-    if (state.voice.running) return { error: "a voice hub is already running" };
+    if (state.voice.running) return { error: "Voice is already running" };
     state.voice = { running: true, phase: "listening", startedBy: "console" };
-    emit("voice", { id: newId("v"), kind: "note", at: now(), text: "voice hub started" });
-    return { result: "Voice hub starting (pid 4242)." };
+    emit("voice", { id: newId("v"), kind: "note", at: now(), text: "Voice started" });
+    return { result: "Voice is running." };
   }
   if (action === "voice.stop") {
     state.voice = { running: false, phase: "off", startedBy: null };
-    return { result: "Voice hub stopped." };
+    return { result: "Voice stopped." };
   }
-  // A board command starts the whiteboard (the whiteboard CLI does) if it was off.
-  state.board = { ...state.board, online: true, saves: SAVES };
-  // An older build keeps reporting no view, whatever is loaded.
-  if (!oldWhiteboard) state.board.view = ({ "board.todo": "todo", "board.idle": "idle" })[action] ?? "items";
-  if (action === "board.calibrate")
-    return { result: "Calibration finished. calibrated: reprojection error 0.41 px" };
-  return { result: `Done: ${name ? `'${name}'` : action}.` };
+  const { board, result } = runBoardAction(state.board, { action, name, saves, oldWhiteboard });
+  state.board = board;
+  return { result };
 }
 
 function handleAction(res, action, actionArgs) {
   const name = actionArgs?.name;
-  const echoes = {
-    "voice.start": "Start the voice hub",
-    "voice.stop": "Stop the voice hub",
-    "board.load": `Load the board "${name}"`,
-    "board.todo": "Show the to-do list on the board",
-    "board.idle": "Show the idle board on the board",
-    "board.realign": "Realign the board",
-    "board.calibrate": "Fully calibrate the board",
-    "board.update": `Update the board "${name ?? "to-do list"}"`,
-  };
-  if (!echoes[action]) return json(res, 400, { error: "unknown action" });
-  if (action === "board.load" && !SAVES.some((save) => save.name === name)) {
-    return json(res, 400, { error: "board.load needs the name of a current whiteboard save" });
+  const echo = actionEcho(action, name);
+  if (!echo) return json(res, 400, { error: "unknown action" });
+  if (action === "board.load" && !saves.some((save) => save.name === name)) {
+    return json(res, 400, { error: "board.load needs the name of a current saved board" });
   }
   const lock = action.split(".")[0];
-  if (busyLocks.has(lock)) return json(res, 409, { error: "still busy with the last button" });
+  if (busyLocks.has(lock)) return json(res, 409, { error: BUSY_WORDS[lock] });
   busyLocks.add(lock);
   const id = newId("m");
-  emit("message", { id, role: "you", kind: "action", at: now(), text: echoes[action] });
+  emit("message", { id, role: "you", kind: "action", at: now(), text: echo });
   emitDelivery(id, "running");
   json(res, 202, { id });
   setTimeout(() => {
@@ -250,9 +214,17 @@ function handleEvents(req, res) {
     connection: "keep-alive",
   });
   res.write(`event: state\ndata: ${JSON.stringify(state)}\n\n`);
-  res.write(`event: tasks\ndata: ${JSON.stringify(TASKS)}\n\n`);
-  for (const { event, data } of replay)
+  res.write(
+    `event: tasks\ndata: ${JSON.stringify(tasksPayload(Boolean(args["many-tasks"]), emptyLists))}\n\n`,
+  );
+  const write = ({ event, data }) =>
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  // `--split-replay`: the history's second half lands a beat later, as the real
+  // server's one-write-per-event replay can reach the page in several chunks.
+  const cut = args["split-replay"] ? Math.ceil(replay.length / 2) : replay.length;
+  const rest = replay.slice(cut);
+  replay.slice(0, cut).forEach(write);
+  if (rest.length) setTimeout(() => rest.forEach(write), SPLIT_REPLAY_MS);
   clients.add(res);
   const heartbeat = setInterval(() => res.write(": keepalive\n\n"), HEARTBEAT_MS);
   req.on("close", () => {
@@ -271,17 +243,27 @@ async function handleApi(req, res, url) {
     const { key } = await readJson(req);
     // Any key logs in except "bad", which shows the 401 page on purpose.
     if (typeof key !== "string" || !key || key === "bad")
-      return json(res, 401, { error: "bad login key" });
+      return refuseSignedOut(json, res, BAD_LOGIN_KEY);
     const token = randomUUID();
     tokens.add(token);
     return json(res, 200, { token });
   }
-  if (!tokens.has(req.headers[TOKEN_HEADER])) return json(res, 401, { error: "not logged in" });
+  if (!tokens.has(req.headers[TOKEN_HEADER])) return refuseSignedOut(json, res, NOT_SIGNED_IN);
   if (url.pathname === "/api/state") return json(res, 200, state);
+  if (url.pathname === "/api/health")
+    return json(res, 200, healthBody({ variant: args.health, claude: args.claude, whiteboardOff }));
   if (url.pathname === "/api/events") return handleEvents(req, res);
-  if (await handlePages(req, res, url, { json, readJson })) return;
+  if (await handlePages(req, res, url, { json, readJson, state, emit })) return;
+  const setupOptions = { json, readJson, setupFail, setupFresh, setupDone, setupAll };
+  if (await handleSetup(req, res, url, setupOptions)) return;
   if (url.pathname === "/api/send" && req.method === "POST")
     return handleSend(res, (await readJson(req)).text);
+  if (url.pathname === "/api/models" && req.method === "POST") {
+    const refused = applyPick(state.models, await readJson(req));
+    if (refused) return json(res, 400, { error: refused });
+    emit("state", state);
+    return json(res, 200, { ok: true });
+  }
   if (url.pathname === "/api/action" && req.method === "POST") {
     const body = await readJson(req);
     return handleAction(res, body.action, body.args);
@@ -289,9 +271,16 @@ async function handleApi(req, res, url) {
   json(res, 404, { error: "no such route" });
 }
 
-seedHistory(emit, newId);
+if (!args["empty-chat"]) seedHistory(emit, newId);
+if (args["news-every"])
+  startNews(emit, newId, Number(args["news-every"]), { long: Boolean(args["long-news"]), setBusy });
+// A down mock drops every request and open stream, like a stopped server.
+const outage = downSwitch(Number(args["down-after"]), () => {
+  for (const res of clients) res.destroy();
+});
 http
   .createServer(async (req, res) => {
+    if (outage.isDown()) return req.socket.destroy();
     const url = new URL(req.url, `http://${req.headers.host}`);
     try {
       if (url.pathname.startsWith("/api/")) await handleApi(req, res, url);

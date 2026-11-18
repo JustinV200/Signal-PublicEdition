@@ -2,7 +2,7 @@
 // only http(s) links survive, and raw HTML must come out as literal text.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Markdown } from "../../src/markdown";
+import { LinkedText, Markdown } from "../../src/markdown";
 
 const SAMPLE = [
   "[ok](https://example.com/a)",
@@ -26,5 +26,15 @@ describe("Markdown", () => {
     expect(html).not.toContain("<script");
     expect(html).toContain("&lt;b onclick=");
     expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("LinkedText links only bare http(s) URLs, leaving sentence punctuation outside", () => {
+    const text = "get it from (https://nodejs.org/en), not javascript:alert(1) or <b>x</b>.";
+    const html = renderToStaticMarkup(<LinkedText text={text} />);
+    expect(html).toContain('<a href="https://nodejs.org/en" target="_blank"');
+    expect(html).toContain("(<a href=");
+    expect(html).toContain("</a>), not javascript:alert(1)");
+    expect(html).not.toContain('href="javascript');
+    expect(html).toContain("&lt;b&gt;x&lt;/b&gt;.");
   });
 });

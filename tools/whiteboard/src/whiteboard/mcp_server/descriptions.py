@@ -238,16 +238,13 @@ Args:
 {TODO_ITEM_ARG}"""
 
 BOARD_NIGHT_SHOW = """Switch the board to sleep mode's night view: a very dim, seeded night sky
-over the whole projector (tonight's sky), or a plain black page with sky=false. Sleep mode
-(tools/sleepmode) does this itself when it starts; use this only when the owner asks.
+over the whole projector (tonight's sky). Sleep mode (tools/sleepmode) does this itself when it
+starts; use this only when the owner asks.
 
 While it shows, nothing flashes or lights up the board: the change watcher, board agent, drift
 checks and marker flashes pause, and board_highlight, board_calibrate, board_realign, board_fit
 (show/auto) and board_look with clean=true are refused. Drawing, loading and the TODO view still
 work but stay hidden until the night view ends; then the board shows what it would have.
-
-Args:
-    sky: True (default) for the night sky, False for plain black.
 
 Returns the daemon's reply: the view, the sky's seed, and the view it hides."""
 

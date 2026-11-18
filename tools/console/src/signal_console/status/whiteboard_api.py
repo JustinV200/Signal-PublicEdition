@@ -3,7 +3,7 @@
 The daemon (tools/whiteboard) records its port in .state/daemon.json and its
 API token in .state/token, which it wants as X-Signal-Token. The token only
 ever goes in that header to the daemon's loopback port; it never reaches the
-console's page. Shared by the boards reader, the devices page and the camera
+console's page. Shared by the boards reader, System's device rows and the camera
 stream proxy. The console never starts the daemon.
 """
 

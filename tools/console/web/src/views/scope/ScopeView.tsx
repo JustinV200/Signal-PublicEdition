@@ -1,37 +1,54 @@
-// The scope buffer, the landing view: the radar on the left and a text
-// readout of the same facts on the right (Claude, voice hub, board, pending
-// requests). No controls here; the tabs hold them.
+// The scope buffer, the landing view: the radar on the left and a readout on
+// the right that starts with what needs the owner (NEEDS YOU, CHAT, CLAUDE,
+// VOICE, BOARD, YOU, and RUNNING while a button runs). Each readout row is a
+// button that opens its view, as a click on a blip does; the tabs hold the controls.
 import { useStore } from "../../state";
+import type { View } from "../../state";
 import { useTicker } from "../../time";
 import { usePageVisible } from "../../ui";
-import { buildBlips, buildReadout } from "./blips";
+import { buildBlips } from "./blips";
+import { signalWords } from "./radar";
+import { buildReadout } from "./readout";
 import { Scope } from "./Scope";
 import styles from "./scope.module.css";
 
 const TICK_MS = 1000;
-const HINT = "Live state at a glance. The controls are in Chat, Voice and Boards.";
 
 /** The scope view. */
 export function ScopeView() {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const now = useTicker(TICK_MS);
   const visible = usePageVisible();
+  // The server's keepalive drives the sweep: a stale or dropped stream stops it, with words.
+  const signal = signalWords(state.syncedAt, state.connection.status === "offline", now);
+  const open = (view: View) => dispatch({ type: "view", view });
   return (
-    <div className={`col ${styles.view}`}>
-      <div className={styles.header}>
+    <div className="frame view">
+      <div className="view-header">
         <span className="hud-label">Scope</span>
-        <span className={styles.hint}>{HINT}</span>
       </div>
       <div className={styles.columns}>
-        <Scope blips={buildBlips(state, now)} sweeping={visible} />
-        <dl className={styles.readout} aria-label="live state">
+        <Scope
+          blips={buildBlips(state, now)}
+          signal={signal}
+          sweeping={visible && signal === null}
+          onOpen={open}
+        />
+        <nav className={styles.readout} aria-label="live state">
           {buildReadout(state, now).map((row) => (
-            <div key={row.label} className={styles.readoutRow}>
-              <dt className="hud-label">{row.label}</dt>
-              <dd>{row.value}</dd>
-            </div>
+            <button
+              key={row.key}
+              type="button"
+              className={styles.row}
+              // The full value, for when a long one is cut short with an ellipsis.
+              title={row.value}
+              onClick={() => open(row.view)}
+            >
+              <span className="hud-label">{row.label}</span>
+              <span className={styles.value}>{row.value}</span>
+            </button>
           ))}
-        </dl>
+        </nav>
       </div>
     </div>
   );

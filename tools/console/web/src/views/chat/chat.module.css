@@ -1,12 +1,19 @@
-/* Chat stream rows: a 14ch gutter (HH:MM  role) then the body. */
-.view {
-  padding: 14px 0 18px;
-}
-
+/* Chat stream rows: the shared label column (HH:MM  role) then the body.
+   8px above and below, so messages sit 16px apart: further than the 12px
+   between paragraphs of one reply (markdown.module.css). */
 .msg {
   display: grid;
-  grid-template-columns: 14ch 1fr;
-  padding: 5px 0;
+  grid-template-columns: var(--label-col) minmax(0, 1fr);
+  padding: var(--sp-4) 0;
+}
+
+/* Back-to-back action rows (button runs) stack 4px apart, as one group. */
+.action:has(+ .action) {
+  padding-bottom: var(--sp-1);
+}
+
+.action + .action {
+  padding-top: var(--sp-1);
 }
 
 .gutter {
@@ -32,8 +39,10 @@
   font-weight: 600;
 }
 
+/* 76ch measure: long reply lines stay readable inside the 96ch column. */
 .body {
   min-width: 0;
+  max-width: 76ch;
   overflow-wrap: anywhere;
   transition: opacity 120ms linear;
 }
@@ -46,6 +55,7 @@
   color: var(--fg-2);
 }
 
+/* A chat row still sending. Action rows never fade: their `sending…` says it. */
 .sending {
   opacity: 0.6;
 }
@@ -81,10 +91,6 @@
   padding: 10px 0 4px;
 }
 
-.empty {
-  color: var(--fg-3);
-}
-
 /* Narrow: the gutter becomes a line above the body. */
 @media (max-width: 720px) {
   .msg {
@@ -93,4 +99,20 @@
   .gutter {
     line-height: 18px;
   }
+}
+
+/* The claim help: the cause in 600 (warning colour only repeats the words),
+   then the sentence to paste and Copy, in the empty state's --fg-2. */
+.claim {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 0 12px;
+  color: var(--fg-2);
+}
+
+.claimCause {
+  font-weight: 600;
+  color: var(--warn);
 }

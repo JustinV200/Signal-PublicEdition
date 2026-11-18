@@ -7,9 +7,11 @@ export type SampleKind = "email" | "writing" | "message" | "code";
 
 export type SetupRequest =
   | { command: "intro" | "list" | "plan" | "status" | "tour" | "wire" }
-  | { command: "prereqs" | "verify" | "choose"; tools: string[] }
+  | { command: "prereqs" | "choose" | "auto"; tools: string[] }
   | { command: "apply"; tool: string; step: string; answer?: "yes" | "no"; value?: string }
   | { command: "mark"; tool: string; step: string; status: "done" | "skipped" }
+  // A step's guide (its registry `doc`) as Markdown; exit 1 with a sentence when there is none.
+  | { command: "doc"; tool: string; step: string }
   | { command: "config"; tool: string; set?: Record<string, string> }
   | { command: "samples"; action: "count" | "mail"; kind?: SampleKind }
   | { command: "samples"; action: "files"; paths: string[]; kind: SampleKind }
@@ -36,6 +38,8 @@ export interface SetupStep {
   default: boolean;
   /** Needs the owner's own terminal (a password, Windows Hello, a typed client ID). */
   terminal: boolean;
+  /** `setup auto` runs it unasked: a required run or copy step that needs nobody. */
+  automatic: boolean;
   text: string;
   doc: string;
   /** A settings step's config group ("" for the tool's main settings). */
@@ -50,13 +54,29 @@ export interface SetupTool {
   id: string;
   name: string;
   description: string;
+  /** Where Pick tools lists it: Core, Everyday, Hardware or Extras ("" for none). */
+  group: string;
+  /** What setting it up costs, in a few words ("15 min, Google account"). */
+  cost: string;
   platform: string;
   supportedHere: boolean;
   /** done, skipped, failed, started or "not set up". */
   status: string;
+  /** Among the owner's picks (`setup choose`); a tool whose steps ran unpicked is not. */
+  picked: boolean;
+  /** Finished, and its servers and hooks are in Claude Code's config. */
+  wired: boolean;
   needs: string[];
   prereqs: string[];
   steps: SetupStep[];
+}
+
+/** Where `setup auto` stopped one tool: the step, and whether it needs the owner or failed. */
+export interface AutoStop {
+  tool: string;
+  step: string;
+  title: string;
+  reason: "needs_you" | "failed";
 }
 
 export type SettingType = "str" | "int" | "float" | "bool" | "list" | "times";
@@ -78,7 +98,7 @@ export interface SettingRow {
 
 export type HealthState = "active" | "down" | "not_set_up";
 
-/** A tool's live health from `setup status --json` (the Tools page). */
+/** A tool's live health from `setup status --json` (System's tools list). */
 export interface ToolHealth {
   id: string;
   name: string;
@@ -86,7 +106,14 @@ export interface ToolHealth {
   supportedHere: boolean;
   setupStatus: string;
   state: HealthState;
-  detail: string;
+  /** What the check found (or why setup isn't finished); "" for a tool never picked. */
+  words: string;
+  /** What to do, in one sentence, or "": an Active tool may have one too ("not running"). */
+  fix: string;
+  /** A command that fixes it, runnable as shown from the repo root, or "". */
+  command: string;
+  /** Finished, and its servers and hooks are in Claude Code's config. */
+  wired: boolean;
 }
 
 export interface TourSection {

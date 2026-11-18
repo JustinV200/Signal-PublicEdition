@@ -3,7 +3,11 @@
 We fetch robots.txt ourselves (not RobotFileParser.read) so it goes out with our
 User-Agent, a timeout and a size cap, and so the status rules are RFC 9309's:
 2xx is parsed, 4xx (401/403 included) means allow-all, and 5xx or an unreachable
-host is a temporary refusal that isn't cached, so a later call tries again.
+host is a temporary refusal that isn't cached, so a later call tries again. The one
+exception is a timeout: a host that doesn't answer in ROBOTS_TIMEOUT_S is treated as
+having no robots file (allow-all, cached), since the failure policy is "deny" and a
+hung robots.txt would otherwise block the host for good. Data-API calls never get
+here (api_request.py).
 """
 
 import asyncio
@@ -14,7 +18,7 @@ from analysis_chamber.agents.fetch.http import USER_AGENT, FetchError, HttpGet, 
 from analysis_chamber.agents.fetch.ratelimit import HostRateLimiter, origin_key
 
 ROBOTS_MAX_BYTES = 512 * 1024  # RFC 9309 asks crawlers to parse at least 500 KiB
-ROBOTS_TIMEOUT_S = 15.0
+ROBOTS_TIMEOUT_S = 5.0  # a host that hangs (FRED's robots.txt does) must not stall the run
 # RFC 9309: follow at least five redirects; past that, robots.txt is "unavailable".
 MAX_ROBOTS_REDIRECTS = 5
 _REDIRECT_STATUSES = range(300, 400)
@@ -66,6 +70,8 @@ class RobotsCache:
                     self._get, url, ROBOTS_MAX_BYTES, ROBOTS_TIMEOUT_S
                 )
             except OSError as error:
+                if _is_timeout(error):
+                    break  # no robots file: allow-all, below
                 raise FetchError("robots.txt unreachable; try again later") from error
             if response.status in _REDIRECT_STATUSES and response.location:
                 target = _redirect_target(url, response.location)
@@ -94,3 +100,9 @@ def _redirect_target(url: str, location: str) -> str | None:
     except ValueError:  # e.g. "http://[bad/x", or a port out of range
         return None
     return target if urlsplit(target).scheme in ("http", "https") else None
+
+
+def _is_timeout(error: OSError) -> bool:
+    """True if the failure was a timeout (directly, or wrapped in a URLError)."""
+    reason = getattr(error, "reason", error)  # URLError keeps the cause in .reason
+    return isinstance(error, TimeoutError) or isinstance(reason, TimeoutError)

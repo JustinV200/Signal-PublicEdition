@@ -3,6 +3,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from signal_setup import progress, registry
 from signal_setup.cli.agent import AgentAsker
 from signal_setup.steps import run
@@ -26,6 +28,18 @@ def test_tool_status_through_a_resumed_setup(tmp_path: Path) -> None:
     assert progress.tool_status(data, calendar, "windows") == progress.SKIPPED
     progress.set_step(data, "calendar", "install", progress.DONE)  # re-running un-skips
     assert progress.tool_status(data, calendar, "windows") == progress.DONE
+
+
+@pytest.mark.parametrize("settled", [progress.DONE, progress.SKIPPED])
+def test_tool_with_only_optional_steps_is_done_once_one_is_settled(tmp_path, settled) -> None:
+    # Regression: picking copytone (two optional steps) read done before anything happened.
+    copytone = registry.by_id("copytone")
+    data = progress.load(tmp_path)
+    progress.set_skipped(data, "copytone", False)  # what picking it records
+    assert progress.tool_status(data, copytone, "windows") == progress.STARTED
+
+    progress.set_step(data, "copytone", "voice-test", settled)
+    assert progress.tool_status(data, copytone, "windows") == progress.DONE
 
 
 def test_scheduled_task_steps_only_apply_on_windows() -> None:

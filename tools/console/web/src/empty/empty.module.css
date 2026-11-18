@@ -1,0 +1,23 @@
+/* The shared empty state: the ring in its own column beside the HUD label and
+   the line under it, both starting at one x. */
+.empty {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 1.5ch;
+  align-items: center;
+}
+
+/* One text row tall: the Mark is 0.7em of 2.2em body type, about 21.6px,
+   one 22px row. */
+.mark {
+  grid-row: span 2;
+  align-self: start;
+  font-size: 2.2em;
+  line-height: 1;
+  color: var(--fg-2);
+}
+
+.line {
+  grid-column: 2;
+  color: var(--fg-2);
+}

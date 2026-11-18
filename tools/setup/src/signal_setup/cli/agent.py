@@ -52,17 +52,28 @@ def _print(data: Any) -> None:
 
 
 def list_tools(root: Path) -> int:
-    """Every tool with its platform label, support here, status and steps."""
+    """Every tool with its group, cost, platform label, support here, status, steps, and two flags.
+
+    `picked`: the tool is among the user's picks (progress `chosen`), so a tool whose steps
+    ran without a pick (the console the setup window builds first) isn't one. `wired`: a
+    finished tool's servers and hooks are in Claude Code's config (read only).
+    """
     data, platform = progress.load(root), platforms.current()
+    tools = registry.load()
+    wired = wiring.wired_tools(root, tools, data, platform)
     _print(
         [
             {
                 "id": t.id,
                 "name": t.name,
                 "description": t.description,
+                "group": t.group,
+                "cost": t.cost,
                 "platform": platforms.label(t),
                 "supported_here": platforms.is_supported(t, platform),
                 "status": progress.tool_status(data, t, platform) or "not set up",
+                "picked": t.id in data["chosen"],
+                "wired": t.id in wired,
                 "needs": list(t.needs),
                 "prereqs": list(t.prereqs),
                 "steps": [
@@ -73,6 +84,7 @@ def list_tools(root: Path) -> int:
                         "optional": s.optional,
                         "default": s.default,
                         "terminal": s.terminal,
+                        "automatic": s.is_automatic(),
                         "text": s.text,
                         "doc": s.doc,
                         "group": s.group,
@@ -82,7 +94,7 @@ def list_tools(root: Path) -> int:
                     for s in progress.applicable_steps(t, platform)
                 ],
             }
-            for t in registry.load()
+            for t in tools
         ]
     )
     return 0
@@ -91,7 +103,7 @@ def list_tools(root: Path) -> int:
 def check_prereqs(tool_ids: list[str]) -> int:
     """Which prerequisites of the given tools (default all) are missing."""
     tools = [registry.by_id(i) for i in tool_ids] or list(registry.load())
-    names = [n for t in tools for n in (*t.prereqs, *(p for s in t.steps for p in s.prereqs))]
+    names = [n for t in tools for n in t.all_prereqs()]
     _print([{"name": p.name, "get_it": p.hint} for p in prereqs.missing(names)])
     return 0
 
@@ -113,7 +125,7 @@ def apply(root: Path, tool_id: str, step_id: str, answer: str | None, value: str
     tool = registry.by_id(tool_id)
     step = tool.step(step_id)
     if step.terminal or step.kind == "samples":
-        how = "setup samples ..." if step.kind == "samples" else f"setup {tool.id}"
+        how = "setup samples ..." if step.kind == "samples" else f"setup step {tool.id} {step.id}"
         _print({"status": NEEDS_TERMINAL, "run_in_user_terminal": how})
         return 3
     data = progress.load(root)
@@ -172,14 +184,26 @@ def wire(root: Path, confirmed: bool) -> int:
 
 
 def verify_tools(root: Path, tool_ids: list[str]) -> int:
-    """Verify the given tools (default: every finished one). Exit 1 if any check fails."""
+    """Verify the given tools (default: every finished one). Exit 1 if any check fails.
+
+    A failed check without a summary line also gets `output`, its last output line, so
+    the setup skill can reason about the error.
+    """
     data, platform = progress.load(root), platforms.current()
     tools = [registry.by_id(i) for i in tool_ids] or [
         t for t in registry.load() if progress.tool_status(data, t, platform) == progress.DONE
     ]
     results = {t.id: verify.check(root, t, data) for t in tools}
-    _print({tool_id: {"ok": ok, "detail": detail} for tool_id, (ok, detail) in results.items()})
-    return 0 if all(ok for ok, _ in results.values()) else 1
+    _print({tool_id: _verify_row(r) for tool_id, r in results.items()})
+    return 0 if all(r.passed for r in results.values()) else 1
+
+
+def _verify_row(result: verify.CheckResult) -> dict[str, Any]:
+    """One tool's `setup verify` entry: ok, words, fix, command, and output when there is one."""
+    row = {"ok": result.passed, "words": result.words, "fix": result.fix, "command": result.command}
+    if result.output:
+        row["output"] = result.output
+    return row
 
 
 def samples_command(root: Path, action: str, args: list[str], kind: str) -> int:

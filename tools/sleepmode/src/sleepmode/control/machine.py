@@ -55,13 +55,12 @@ class SleepMode:
         """Wire the state machine to its collaborators (real ones from sleepmode.wiring)."""
         self._deps = deps
 
-    def sleep(self, wake_at: str | None = None, night_sky: bool = True) -> SleepState:
+    def sleep(self, wake_at: str | None = None) -> SleepState:
         """Turn sleep mode on, or update it if it's already on.
 
         Args:
             wake_at: When to wake ("07:00", "7am", ISO date-time). None keeps the
                 pending wake time if sleep mode is already on, else sets none.
-            night_sky: Show the whiteboard's night sky; False shows black instead.
 
         Returns:
             The new state, with each display's result and any notes.
@@ -83,9 +82,7 @@ class SleepMode:
         wake_time = parse_wake_time(wake_at, now) if wake_at else None
         previous = load_state_quietly(self._deps.state_path)
         monitors = self._list_monitors()
-        claim = SleepState(
-            is_asleep=True, session_id=uuid.uuid4().hex, since=now, night_sky=night_sky
-        )
+        claim = SleepState(is_asleep=True, session_id=uuid.uuid4().hex, since=now)
         self._claim_session(claim)
         keeper: KeeperProcess | None = None
         try:
@@ -99,7 +96,7 @@ class SleepMode:
             # still turning them off. Never raises; if a later step fails, the rollback's
             # wake brings the lights back.
             lights = self._deps.lighting.off(may_snapshot=not _is_asleep(previous))
-            darkened = tuple(self._darken(monitors, night_sky, now, notes))
+            darkened = tuple(self._darken(monitors, now, notes))
             state = replace(
                 claim,
                 monitors=darkened,
@@ -196,13 +193,13 @@ class SleepMode:
             raise SleepModeError(f"couldn't list the displays: {error}") from error
 
     def _darken(
-        self, monitors: list[Monitor], night_sky: bool, now: datetime, notes: list[str]
+        self, monitors: list[Monitor], now: datetime, notes: list[str]
     ) -> list[MonitorResult]:
         """Power off (or black out) every display but the projector, then the projector."""
         projector, others = split_projector(monitors, self._deps.projector_match)
         results = self._deps.screens.power_off(others)
         if projector is not None:
-            result, note = darken_projector(self._deps, projector, night_sky, now)
+            result, note = darken_projector(self._deps, projector, now)
             results.append(result)
             if note is not None:
                 notes.append(note)
@@ -248,7 +245,6 @@ class SleepMode:
             keep_display_on=projector is not None,
             grace_s=self._deps.grace_s,
             projector=projector,
-            night_sky=state.night_sky,
         )
         # Saved before the keeper starts: it checks that the file names its session.
         save_state(self._deps.state_path, state)

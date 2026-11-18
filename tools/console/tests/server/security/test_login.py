@@ -1,4 +1,5 @@
-"""Page login: a one-time key from the local route buys a session token, never a cookie."""
+"""Page login: a one-time key from the local route buys a session token, never a cookie,
+and only the token's digest is saved, so it survives a server restart."""
 
 from signal_console.server import SESSION_TOKEN_HEADER, SessionAuth
 from signal_console.server.security import LOGIN_KEY_TTL_S, MAX_SESSIONS
@@ -30,10 +31,15 @@ def test_expired_login_key_is_refused():
     assert auth.log_in(stale_key) is None
 
 
-def test_each_login_mints_a_new_token_and_the_oldest_drops_past_the_cap():
-    auth = SessionAuth()
+def test_tokens_survive_a_restart_as_digests_and_the_oldest_drops_past_the_cap(tmp_path):
+    digest_file = tmp_path / "session-digests.json"
+    auth = SessionAuth(digest_file)
     tokens = [auth.log_in(auth.issue_login_key()) for _ in range(MAX_SESSIONS + 1)]
 
+    restarted = SessionAuth(digest_file)
     assert len(set(tokens)) == len(tokens)
-    assert not auth.is_session_token(tokens[0])
-    assert all(auth.is_session_token(token) for token in tokens[1:])
+    assert not restarted.is_session_token(tokens[0])
+    assert all(restarted.is_session_token(token) for token in tokens[1:])
+    assert not restarted.is_session_token("never-issued")
+    saved = digest_file.read_text(encoding="utf-8")
+    assert not any(token in saved for token in tokens)

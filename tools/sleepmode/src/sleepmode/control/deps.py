@@ -31,14 +31,18 @@ class Screens(Protocol):
 
 
 class NightView(Protocol):
-    """The whiteboard's night view; both calls raise WhiteboardUnavailableError."""
+    """The whiteboard's night view; every call raises WhiteboardUnavailableError."""
 
-    def show(self, seed: int, sky: bool) -> None:
-        """Show the night view (sky) or a black page (no sky) on the projector."""
+    def show(self, seed: int) -> None:
+        """Show the night sky on the projector."""
         ...
 
     def hide(self) -> None:
         """Go back to the view shown before the night view."""
+        ...
+
+    def is_showing(self) -> bool:
+        """True if the night view is on and a page (the projector's kiosk) shows it."""
         ...
 
 

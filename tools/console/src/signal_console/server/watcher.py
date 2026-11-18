@@ -1,11 +1,16 @@
 """Poll the orchestrator claim, the voice hub and the whiteboard; publish `state` on change.
 
 A claim that differs from the last one seen (another session or label, or
-the one found at startup) also gets a `note` event in the feed. The
+the one found at startup) also gets a `note` event in the feed. The state
+carries the owner's `away` block too (signal_console.away: here, away or
+asleep; null while the brief's state can't be read), for the title row. Each poll
+also checks the claimed session is still open (its inbox pipe is listed),
+published as `orchestrator.alive`. The
 orchestrator's turn state comes from its turn hooks (record_turn) plus the
 session's subagents in usage.json, read each poll. So do the model strip's
 files (signal_console.models): the settings' next-session pick, the claimed
-session's model and voice's pick.
+session's model and voice's pick. The state also carries `openCommand`
+(open_hint), which the page shows while the server is down.
 
 Also tails the hub's log every POLL_S for its phase and the voice feed (see
 hub_feed). With no page listening, the rest is re-read only every IDLE_POLL_S
@@ -20,14 +25,18 @@ import asyncio
 import logging
 import math
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import aiohttp
+from signal_brief import BriefLogError, BriefPaths
 
+from signal_console.away import away_payload
 from signal_console.hub import find_console_hub, find_hub
 from signal_console.models import ModelFiles, models_state
-from signal_console.orchestrator import Claim, read_claim
+from signal_console.open_hint import open_command
+from signal_console.orchestrator import Claim, claimed_ago, is_claim_alive, read_claim
 from signal_console.paths import USAGE_FILE_PATH
 from signal_console.server.events import EventHub, new_event_id, now_iso
 from signal_console.server.hub_feed import HubFeed
@@ -45,7 +54,7 @@ log = logging.getLogger(__name__)
 class StatusWatcher:
     """Keeps the console's /api/state current and feeds hub output into the event feed."""
 
-    # Five parameters, one over the usual limit: the keyword-only two are file locations.
+    # Six parameters, over the usual limit: the keyword-only three are file locations.
     def __init__(
         self,
         events: EventHub,
@@ -53,11 +62,15 @@ class StatusWatcher:
         session: aiohttp.ClientSession,
         *,
         model_files: ModelFiles,
+        brief_paths: BriefPaths,
         usage_path: Path = USAGE_FILE_PATH,
     ) -> None:
         """Set up; nothing is read until refresh() or run(). Tests pass their own file paths."""
         self._events = events
         self._model_files = model_files
+        self._brief_paths = brief_paths
+        # The owner's away block, re-read each refresh; None until then or while unreadable.
+        self._away: dict[str, Any] | None = None
         self._state_dir = state_dir
         self._session = session
         self._feed = HubFeed(events, state_dir)
@@ -89,6 +102,8 @@ class StatusWatcher:
         self._refreshed_at = time.monotonic()
         self._feed.read()
         self._voice = await self._read_voice()
+        # In a thread: an expired away mode is ended under the brief's lock (up to 2 s).
+        self._away = await asyncio.to_thread(self._read_away)
         if read_boards and time.monotonic() - self._boards_read_at >= BOARD_POLL_S:
             await self._read_boards()
         self._publish_if_changed()
@@ -120,12 +135,17 @@ class StatusWatcher:
         self._track_claim(claim)
         orchestrator = {
             "claimed": claim is not None,
+            # A boolean only: the socket name and token never leave the server.
+            "alive": is_claim_alive(claim),
             "label": claim.label if claim else None,
+            # The page words it as an age in the tooltip ("linked 3d ago").
+            "claimedAt": claim.claimed_at if claim else None,
             "turn": self._turn_state() if claim else None,
         }
         board = {
             "saves": self._boards.saves,
             "view": self._boards.view,
+            "itemCount": self._boards.item_count,
             "online": self._boards.online,
         }
         models = models_state(
@@ -139,6 +159,9 @@ class StatusWatcher:
             "voice": self._voice,
             "board": board,
             "models": models,
+            "away": self._away,
+            # The page caches it to show while the server is down (no secret in it).
+            "openCommand": open_command(),
         }
 
     def _track_claim(self, claim: Claim | None) -> None:
@@ -181,6 +204,14 @@ class StatusWatcher:
             return {"running": True, "phase": STARTING_PHASE, "startedBy": "external"}
         return {"running": False, "phase": "off", "startedBy": None}
 
+    def _read_away(self) -> dict[str, Any] | None:
+        try:
+            return away_payload(self._brief_paths, datetime.now().astimezone())
+        except BriefLogError as error:
+            # The page words a null block as "can't tell"; the next refresh tries again.
+            log.debug("away state unreadable: %s", error)
+            return None
+
     async def _read_boards(self) -> None:
         self._boards = await read_board_status(self._session)
         self._boards_read_at = time.monotonic()
@@ -188,7 +219,8 @@ class StatusWatcher:
 
 def _claim_note(claim: Claim | None) -> str:
     if claim is None:
-        return "No orchestrator session has claimed the console now; requests can't be sent."
-    who = f'the session claimed as "{claim.label}"' if claim.label else "an unlabelled session"
-    when = f" (claimed {claim.claimed_at})" if claim.claimed_at else ""
-    return f"Console requests now go to {who}{when}."
+        return "No Claude session is linked now, so messages can't be sent."
+    who = f'the session labelled "{claim.label}"' if claim.label else "an unlabelled session"
+    age = claimed_ago(claim.claimed_at, datetime.now(UTC))
+    when = f" ({age})" if age else ""
+    return f"Messages now go to {who}{when}."

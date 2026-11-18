@@ -1,31 +1,46 @@
-// Where the wizard opens, worked out once the tool list has loaded: the tool
-// a Tools page button or `#t=<tool>` asked for (picking it first if it isn't
-// picked yet), else where setup stopped (wizardScreens.resumeIndex). After
-// that the owner moves with the strip, Back and Next; finishing a step never
-// jumps the wizard by itself. Picking is tried once per tool: if it fails (say
-// a 409 while another step runs) the wizard opens where it stopped and says why.
+// Which wizard page is open, once the tool list has loaded: the page kept in
+// the store (`setupPage`, set by the strip, Back and Next, or by a System
+// tools row's button or `#t=<tool>` asking for a tool), so leaving Setup and
+// coming back lands on it again; else, on the first visit or when that page
+// is gone (its tool unpicked), where setup stopped
+// (wizardScreens.resumeIndex), which is then kept too (pageToKeep). So
+// finishing a step never jumps the wizard by itself. A tool asked for that
+// isn't picked yet is picked first, tried once per tool: if it fails (say a
+// 409 while another step runs) the wizard opens where it stopped and says why.
 import { useEffect, useRef, useState } from "react";
 import { runSetup } from "../../api";
 import type { SetupTool } from "../../api";
 import { useStore } from "../../state";
-import { buildScreens, isChosen, resumeIndex } from "./wizardScreens";
+import { buildScreens, isChosen, openIndex, pageToKeep, screenKey } from "./wizardScreens";
 
-/** The current screen index (null until the tools load), its setter, and why a pick failed. */
+/**
+ * The wizard's pages and the open one.
+ *
+ * @param tools The `setup list` answer; null until it loads.
+ * @param reload Reads the list again (after a pick).
+ * @returns The pages, the open page's index (null until the tools load), its setter
+ *   and why a pick failed.
+ */
 export function useStartScreen(tools: SetupTool[] | null, reload: () => void) {
   const { state, dispatch } = useStore();
-  const [index, setIndex] = useState<number | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
   // Tools a pick was already tried for, so a failing `choose` never loops.
   const triedRef = useRef(new Set<string>());
   const target = state.setupTool;
+  const keptPage = state.setupPage;
   const asked = tools && target ? tools.find((tool) => tool.id === target) : undefined;
   const needsPick = asked !== undefined && !isChosen(asked);
 
-  // Set during render (React's "adjust state when props change"), so nothing flashes.
-  if (tools && !needsPick && (target || index === null)) {
-    const start = resumeIndex(buildScreens(tools), tools, target);
-    if (start !== index) setIndex(start);
-  }
+  const screens = tools ? buildScreens(tools) : [];
+  const index = tools ? openIndex(screens, tools, target, keptPage) : null;
+  const openKey = index === null ? null : screenKey(screens[index]);
+  const setIndex = (to: number) => dispatch({ type: "setupPage", page: screenKey(screens[to]) });
+
+  useEffect(() => {
+    // Keep the resumed page, so a later `setup list` (a step done) can't move the wizard.
+    const keep = pageToKeep(openKey, keptPage, needsPick);
+    if (keep !== null) dispatch({ type: "setupPage", page: keep });
+  }, [openKey, keptPage, needsPick, dispatch]);
 
   useEffect(() => {
     if (!tools || !target) return;
@@ -50,5 +65,5 @@ export function useStartScreen(tools: SetupTool[] | null, reload: () => void) {
     dispatch({ type: "openSetup", tool: null }); // the jump is done; forget it
   }, [tools, target, needsPick, reload, dispatch]);
 
-  return { index, setIndex, pickError };
+  return { screens, index, setIndex, pickError };
 }

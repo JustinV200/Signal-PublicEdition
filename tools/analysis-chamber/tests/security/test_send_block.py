@@ -85,6 +85,11 @@ ALLOWLIST_TABLE = [
     ("critic", "mcp__mail__mail_read", {"account": "personal"}, False),
     ("qa", "mcp__chamber__chamber_extract_file", {}, True),
     ("signup", "mcp__browser__navigate", {}, True),
+    ("signup", "mcp__browser-docker__navigate", {}, True),
+    ("signup", "mcp__browser-docker__upload_file", {}, False),
+    ("signup", "mcp__browser-docker__read_download", {}, False),  # docker refuses downloads
+    ("signup", "mcp__browser__upload_file", {}, False),
+    ("signup", "mcp__browser__fill_login", {}, False),
     ("signup", "mcp__mail__mail_search", {"account": "signup@example.test"}, True),
     ("signup", "mcp__mail__mail_search", {"account": "personal"}, False),
     ("signup", "mcp__mail__mail_accounts", {}, True),

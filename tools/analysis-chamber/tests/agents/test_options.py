@@ -1,11 +1,18 @@
 """The option builders: every role carries the send block, and MCP servers stay scoped."""
 
 import json
+from dataclasses import replace
 
 import pytest
 
 from analysis_chamber import security
-from analysis_chamber.agents import critic_options, lead_options, plan_options, qa_options
+from analysis_chamber.agents import (
+    collect_tools_text,
+    critic_options,
+    lead_options,
+    plan_options,
+    qa_options,
+)
 
 # plan_options is the lead with no MCP servers, so it shares the lead's security role.
 SECURITY_ROLE = {"plan": "lead"}
@@ -59,3 +66,14 @@ def test_plan_and_critic_get_no_mcp_and_qa_resumes_or_forks(ctx):
     assert qa_options(ctx, "lead-1", fork=True).fork_session is True
     with pytest.raises(ValueError):  # a fork needs a session to fork from
         qa_options(ctx, None, fork=True)
+
+
+def test_collect_tools_text_lists_what_the_lead_really_gets(ctx):
+    servers = {name: {"command": "uv", "args": ["run", name]} for name in ("mail", "brief")}
+    (ctx.config.repo_root / ".mcp.json").write_text(json.dumps({"mcpServers": servers}))
+    text = collect_tools_text(ctx)
+    assert "Web search" in text and "GPU" in text and "files the user names" in text.lower()
+    assert "mail (" in text and "brief (" in text and "rcs" not in text  # only servers present
+    assert "free key can be signed up" in text  # the fixture sets signup_mail_account
+    keyless = collect_tools_text(replace(ctx, config=replace(ctx.config, signup_mail_account="")))
+    assert "Keyless sources only" in keyless

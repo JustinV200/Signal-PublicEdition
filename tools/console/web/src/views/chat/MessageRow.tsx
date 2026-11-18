@@ -2,7 +2,9 @@
 // bold, `claude` renders markdown, `action` is muted plain text followed by
 // where the button's run has got to (sending, working, done with what it did),
 // `note` (a console notice) is bold with an amber label so it cannot be
-// missed. A failed delivery adds a `failed: …` line with a Retry button.
+// missed. Only a chat row fades while sending; back-to-back action rows sit
+// closer than other messages. A failed delivery adds a `failed: …` line with
+// a Retry button.
 import { Markdown } from "../../markdown";
 import type { ActionProgress, LocalMessage, Origin } from "../../state";
 import { formatClock } from "../../time";
@@ -64,11 +66,13 @@ function labelFor(message: LocalMessage): { text: string; className?: string } {
 export function MessageRow({ message, live, progress, onRetry }: MessageRowProps) {
   const label = labelFor(message);
   const origin = retryOrigin(message);
-  const bodyClasses = [styles.body, message.delivery === "sending" && styles.sending].filter(
-    Boolean,
-  );
+  const isAction = message.kind === "action";
+  // An action row's `sending…` already says it, so only chat rows fade.
+  const isFaded = message.delivery === "sending" && !isAction;
+  const bodyClasses = [styles.body, isFaded && styles.sending].filter(Boolean);
+  const rowClasses = [styles.msg, isAction && styles.action, live && "anim-row"].filter(Boolean);
   return (
-    <div className={`${styles.msg} ${live ? "anim-row" : ""}`}>
+    <div className={rowClasses.join(" ")}>
       <div className={styles.gutter}>
         {formatClock(message.at)}
         {GUTTER_GAP}

@@ -63,6 +63,7 @@ Commands that run until stopped exit 130 on Ctrl+C.
 | `command.py` | the `Command` record |
 | `options.py` | global options, device-spec parsing, settings from args |
 | `phone_mode.py` | `run --phone` wiring and the link printout |
+| `hub_check.py` | `audiohub check`: installed, and is the hub running (token file plus a bare port connect) |
 | `commands/` | one module per command, plus the `COMMANDS` registry |
 
 ## Dependencies

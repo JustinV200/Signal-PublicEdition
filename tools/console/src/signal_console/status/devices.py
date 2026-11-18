@@ -1,10 +1,9 @@
-"""The Connected devices rows: projector, webcam, voice hub, glasses, desktop browser, Docker.
+"""The Connected devices rows: projector, webcam, voice hub, desktop browser, Docker.
 
-Every row says its state in words (the owner is colourblind; the page adds a
-filled or hollow dot as a second cue). Read-only: one whiteboard /api/status
-request, the hub state the status watcher already keeps, and a process scan
-cached for PROCESS_CACHE_S. The glasses have no status of their own: the
-hub opens their mic while it runs, so their row follows the hub's.
+Every row says its state in words, so it also works for colourblind users (the
+page adds a filled or hollow dot as a second cue). Read-only: one whiteboard
+/api/status request, the hub state the status watcher already keeps, and a
+process scan cached for PROCESS_CACHE_S.
 """
 
 import asyncio
@@ -24,9 +23,11 @@ PROCESS_CACHE_S = 10.0
 VIEW_WORDS = {
     "todo": "the to-do list",
     "idle": "the idle board",
-    "items": "your board",
+    "items": "a drawing",
     "night": "the night view",
 }
+# The watcher's startedBy values in words (the same words as the page's Voice view).
+STARTED_BY_WORDS = {"console": "started by the console", "external": "started outside the console"}
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ Row = dict[str, Any]
 
 
 class DeviceReader:
-    """Builds the device rows on request; the page polls it while the Devices view is open."""
+    """Builds the device rows on request; the page polls it while System is open."""
 
     def __init__(
         self,
@@ -61,7 +62,6 @@ class DeviceReader:
             projector_row(board),
             webcam_row(board),
             hub_row(voice),
-            glasses_row(voice),
             _row(
                 "browser",
                 "Desktop browser",
@@ -100,8 +100,10 @@ def projector_row(board: dict[str, Any] | None) -> Row:
     pages = board.get("pages_connected")
     pages = pages if isinstance(pages, int) else 0
     if pages < 1:
-        return _row("projector", "Projector", False, ("", "Whiteboard on, but no board page open"))
-    showing = VIEW_WORDS.get(str(board.get("view")), "the board page")
+        return _row(
+            "projector", "Projector", False, ("", "Whiteboard on, but no projector page open")
+        )
+    showing = VIEW_WORDS.get(str(board.get("view")), "the projector page")
     return _row("projector", "Projector", True, (f"Projecting {showing}", ""))
 
 
@@ -121,18 +123,11 @@ def webcam_row(board: dict[str, Any] | None) -> Row:
 def hub_row(voice: dict[str, Any]) -> Row:
     """The voice hub: running (with its phase) or stopped."""
     if not voice.get("running"):
-        return _row("hub", "Voice hub", False, ("", "Stopped"))
+        return _row("hub", "Voice", False, ("", "Stopped"))
     phase = voice.get("phase")
-    by = voice.get("startedBy") or "unknown"
     words = f"Running, {phase}" if phase else "Running"
-    return _row("hub", "Voice hub", True, (f"{words} (started by {by})", ""))
-
-
-def glasses_row(voice: dict[str, Any]) -> Row:
-    """The glasses, which are in use exactly while the hub runs (it holds their mic open)."""
-    if not voice.get("running"):
-        return _row("glasses", "Glasses", False, ("", "Not in use (the voice hub is stopped)"))
-    return _row("glasses", "Glasses", True, ("In use by the voice hub", ""))
+    by = STARTED_BY_WORDS.get(voice.get("startedBy"))
+    return _row("hub", "Voice", True, (f"{words} ({by})" if by else words, ""))
 
 
 def _row(device_id: str, name: str, is_on: bool | None, words: tuple[str, str]) -> Row:

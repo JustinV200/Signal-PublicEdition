@@ -7,6 +7,7 @@ the lead's in-process `chamber` server; see README.md.
 from analysis_chamber.agents.context import RunContext
 from analysis_chamber.agents.fetch import PASS_THROUGH_TOOLS, WITHHELD
 from analysis_chamber.agents.options import (
+    collect_tools_text,
     critic_options,
     lead_options,
     plan_options,
@@ -21,6 +22,7 @@ __all__ = [
     "RunContext",
     "SdkRunner",
     "TurnResult",
+    "collect_tools_text",
     "critic_options",
     "lead_options",
     "plan_options",

@@ -17,6 +17,7 @@ DEFAULT_PORT = 8790
 # Files in STATE_DIR.
 DAEMON_FILE = "daemon.json"  # {pid, createTime, port, startedAt} of the running server
 LOCAL_KEY_FILE = "local-key"  # secret the turn hook and the CLI send as LOCAL_KEY_HEADER
+SESSION_DIGESTS_FILE = "session-digests.json"  # SHA-256 of the page tokens, never a token
 CLAIM_FILE = "orchestrator.json"  # the claimed session's inbox {socket, token, label, claimedAt}
 HUB_FILE = "hub.json"  # {pid, createTime} of the voice hub `console hub start` started
 HUB_LOG_FILE = "hub.log"  # that hub's stdout and stderr
@@ -31,8 +32,16 @@ MODELS_LOCK_FILE = "models.lock"  # one model or effort pick written at a time
 
 LOCAL_KEY_HEADER = "X-Console-Key"
 
+# The repo's .env (gitignored, the MCP servers' secrets): the console reads only SIGNAL_OWNER_NAME.
+ENV_FILE_PATH = REPO_ROOT / ".env"
+
 # Signal's local Claude Code settings: the console writes only `model` and `effortLevel` there.
 LOCAL_SETTINGS_PATH = REPO_ROOT / ".claude" / "settings.local.json"
+# The checked-in project settings; the doctor reads hooks from both files, never writes either.
+PROJECT_SETTINGS_PATH = REPO_ROOT / ".claude" / "settings.json"
+
+# `console open` starts this for the app window (else the default browser).
+EDGE_PATH = Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
 
 # The voice hub (tools/audiohub). Its port is audiohub's default [ipc] port.
 AUDIOHUB_ROOT = REPO_ROOT / "tools" / "audiohub"

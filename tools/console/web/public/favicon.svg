@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The console's tab icon: the radar scope (ring, sweep wedge, centre disc) in the phosphor on the window colour. -->
+  <rect width="32" height="32" rx="6" fill="#070b0d"/>
+  <circle cx="16" cy="16" r="12" fill="none" stroke="#62e4da" stroke-width="2"/>
+  <path d="M16 16 L16 4 A12 12 0 0 1 26.39 10 Z" fill="#62e4da" fill-opacity="0.5"/>
+  <circle cx="16" cy="16" r="3" fill="#62e4da"/>
+</svg>

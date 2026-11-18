@@ -34,7 +34,6 @@ class KeeperOptions:
         keep_display_on: Hold the displays on too (while the projector is in use).
         grace_s: Seconds of ignored input after it starts.
         projector: The projector's rect, which the keeper keeps dark (night_guard), or None.
-        night_sky: What the keeper asks the whiteboard for: the sky, or a black page.
     """
 
     session_id: str
@@ -42,7 +41,6 @@ class KeeperOptions:
     keep_display_on: bool
     grace_s: float
     projector: tuple[int, int, int, int] | None = None
-    night_sky: bool = True
 
 
 def keeper_command(options: KeeperOptions, python: str = sys.executable) -> list[str]:
@@ -58,8 +56,6 @@ def keeper_command(options: KeeperOptions, python: str = sys.executable) -> list
     ]
     if options.keep_display_on:
         command.append("--keep-display-on")
-    if options.night_sky:
-        command.append("--night-sky")
     # The "=" form keeps a negative x (a display left of the primary) from reading as a flag.
     command += [f"--blackout={_rect_text(rect)}" for rect in options.rects]
     if options.projector is not None:

@@ -1,53 +1,83 @@
-// The console tour: a bar above the view that walks through each view in tab
-// order, switching to it and saying what it's for (the help panel's words).
-// Started from the setup wizard's Tour screen; End tour or Finish closes it.
-// The view's own tab is the active one, so where you are shows in
-// the tab row too.
+// The console tour: a bar above the view (outside its scroller, like Help)
+// that walks the tour's stops (state's tourStops: Chat, Tasks, System, Scope,
+// then the picked tools' tabs), switching to each and saying what it's for in
+// VIEW_HELP's words, the same text Help shows. Started from the setup
+// wizard's Tour page or Help's Take the tour, at the last stop it reached
+// (kept in localStorage); End tour keeps that stop, Finish forgets it. A tab
+// click moves the tour to that tab's stop (the store's `view` action); a tab
+// that isn't a stop says so, and Back returns to the last stop. It hides while
+// Help is open and comes back when Help closes. Back, Next and End tour keep
+// their place at every stop: the label never shares their row's width.
 import { useEffect } from "react";
-import { useStore } from "../state";
+import { saveTourStop, tourStops, useStore } from "../state";
 import type { View } from "../state";
-import { Button } from "../ui";
+import { Button, Mark } from "../ui";
 import styles from "./help.module.css";
 import { VIEW_HELP } from "./HelpPanel";
 
-/** The tour's stops: each view with its help text. */
-const STOPS = VIEW_HELP.map(([name, text]) => ({ name, text, view: name.toLowerCase() as View }));
+/** A tab's name and help text from VIEW_HELP. */
+function viewHelp(view: View): { name: string; text: string } {
+  const entry = VIEW_HELP.find(([name]) => name.toLowerCase() === view);
+  return entry ? { name: entry[0], text: entry[1] } : { name: view, text: "" };
+}
 
-/** The bar; renders nothing unless a tour is running. */
+/** What the bar says on a tab that isn't a stop; `next` null at the last stop. */
+function offTourNote(open: string, back: string, next: string | null): string {
+  const onward = next ? `Next goes on to ${next}` : "Finish ends the tour";
+  return `${open} isn't a stop on the tour. Back returns to ${back}; ${onward}.`;
+}
+
+/** The bar; renders nothing unless a tour is running and Help is closed. */
 export function TourBar() {
   const { state, dispatch } = useStore();
-  const step = state.tourStep;
-  const stop = step === null ? null : STOPS[Math.min(step, STOPS.length - 1)];
+  const stop = state.tourStop;
 
   useEffect(() => {
-    if (stop) dispatch({ type: "view", view: stop.view });
-  }, [stop, dispatch]);
+    if (stop) saveTourStop(stop);
+  }, [stop]);
 
-  if (step === null || !stop) return null;
-  const go = (to: number | null) => dispatch({ type: "tour", step: to });
-  const isLast = step >= STOPS.length - 1;
+  // Help and the tour show one at a time: while Help is open the tour keeps its stop, hidden.
+  if (stop === null || state.helpOpen) return null;
+  const stops = tourStops(state.setupPicks);
+  // A stop the picks dropped mid-tour counts as the first.
+  const at = Math.max(0, stops.indexOf(stop));
+  const isOnStop = state.view === stop;
+  const isLast = at >= stops.length - 1;
+  const go = (to: View | null) => dispatch({ type: "tour", stop: to });
+  const finish = () => {
+    saveTourStop(null);
+    go(null);
+  };
+  const open = viewHelp(state.view);
+  const here = viewHelp(stops[at]);
   return (
-    <section className={`col ${styles.tour} anim-fade`} aria-label="console tour" role="status">
-      <div className={styles.head}>
-        <span className="hud-label">
-          Tour {step + 1}/{STOPS.length} · {stop.name}
-        </span>
-        <span className={styles.tourButtons}>
-          <Button
-            onClick={() => go(step - 1)}
-            disabledReason={step === 0 ? "first stop" : undefined}
-          >
-            Back
-          </Button>
-          <Button primary onClick={() => go(isLast ? null : step + 1)}>
-            {isLast ? "Finish" : "Next"}
-          </Button>
-          <Button onClick={() => go(null)}>End tour</Button>
-        </span>
+    <section className="frame anim-fade" aria-label="console tour" role="status">
+      <div className={`panel ${styles.tour}`}>
+        <div className={`${styles.head} ${styles.tourHead}`}>
+          <span className="hud-label">
+            {isOnStop ? `Tour ${at + 1}/${stops.length} · ${here.name}` : `Tour · ${open.name}`}
+          </span>
+          <span className={styles.tourButtons}>
+            {/* A quiet reason: a caption would push Next along at the first stop. */}
+            <Button
+              onClick={() => go(isOnStop ? stops[at - 1] : stops[at])}
+              quietReason={isOnStop && at === 0 ? "first stop" : undefined}
+            >
+              Back
+            </Button>
+            <Button primary onClick={() => (isLast ? finish() : go(stops[at + 1]))}>
+              {isLast ? "Finish" : "Next"}
+            </Button>
+            <Button onClick={() => go(null)}>End tour</Button>
+          </span>
+        </div>
+        <p className={`${styles.note} ${styles.tourNote}`}>
+          <Mark shape="triangle" />{" "}
+          {isOnStop
+            ? `The ${here.name} tab, marked tour above: ${here.text}`
+            : offTourNote(open.name, here.name, isLast ? null : viewHelp(stops[at + 1]).name)}
+        </p>
       </div>
-      <p className={styles.note}>
-        ▸ The {stop.name} tab is the one lit up above: {stop.text}
-      </p>
     </section>
   );
 }

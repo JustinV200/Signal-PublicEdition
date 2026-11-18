@@ -5,7 +5,7 @@ The harness loads the real board.html body and board.css, then sends scene messa
 the way the daemon does: the night view starts one sky inside the fitted stage (so it
 sits on the board, not the wall), keeps it while only the remembered view changes,
 stops it (canvas gone, the items visible again) when the view goes back to the items,
-and draws nothing with sky off. Under it, not even an item
+and starts it again on the next night. Under it, not even an item
 whose SVG says visibility="visible" (which paints through a hidden parent) or carries
 a <style> (SVG or markdown) shows, nor under the TODO or idle view (where the board
 agent's "thinking" box still shows) or in blank mode, and
@@ -58,12 +58,12 @@ const lit = () => [...document.getElementById("stage").children]
 const seen = () => ({ canvases: nightEl.querySelectorAll("canvas").length,
   sky: getComputedStyle(nightEl).visibility, lit: lit(),
   item: paints(document.getElementById("leak")) });
-send("night", { seed: 20261019, sky: true, previous_view: "items" });
+send("night", { seed: 20261019, previous_view: "items" });
 // Items render in a microtask (renderers.js); later scenes reuse the same element.
 await new Promise((done) => setTimeout(done, 0));
 const shown = seen();
 const first = nightEl.querySelector("canvas");
-send("night", { seed: 20261019, sky: true, previous_view: "todo" });
+send("night", { seed: 20261019, previous_view: "todo" });
 const kept = nightEl.querySelector("canvas") === first;
 send("items", null);
 const after = seen();
@@ -77,8 +77,8 @@ window.fakeSocket.onmessage({ data: JSON.stringify({ type: "scene",
 await new Promise((done) => setTimeout(done, 0));
 const idleItem = paints(document.getElementById("leak"));
 const idleThinking = paints(document.querySelector(".item-loading"));
-send("night", { seed: 20261019, sky: false, previous_view: "items" });
-const black = seen();
+send("night", { seed: 20261020, previous_view: "items" });
+const again = seen();
 // A clean capture's blank page hides the same item on the items view.
 send("items", null);
 window.fakeSocket.onmessage({ data: JSON.stringify({ type: "mode", mode: "blank", markers: [] }) });
@@ -86,7 +86,7 @@ const blankItem = paints(document.getElementById("leak"));
 // Mermaid's scratch element sits on <body>, outside every hidden layer.
 const scratch = document.body.appendChild(document.createElement("div"));
 scratch.id = "dmermaid-x";
-const result = { shown, kept, after, black, todoItem, idleItem, idleThinking, blankItem,
+const result = { shown, kept, after, again, todoItem, idleItem, idleThinking, blankItem,
   scratch: getComputedStyle(scratch).opacity,
   // The sky lives in the fitted stage, sized like the other layers, so it's warped onto
   // the board quad and clipped to it.
@@ -107,7 +107,7 @@ async def test_board_page_starts_the_night_sky_and_stops_it_on_leaving(run_harne
         "lit": ["items", "highlights"],
         "item": True,
     }
-    assert result["black"] == {"canvases": 0, "sky": "visible", "lit": [], "item": False}
+    assert result["again"] == {"canvases": 1, "sky": "visible", "lit": [], "item": False}
     assert (result["todoItem"], result["blankItem"], result["idleItem"]) == (False, False, False)
     assert result["idleThinking"] is True
     assert result["scratch"] == "0"

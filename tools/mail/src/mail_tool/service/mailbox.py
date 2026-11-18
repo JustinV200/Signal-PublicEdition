@@ -61,19 +61,34 @@ class MailService:
     def search(
         self, account: str, query: str, max_results: int = DEFAULT_MAX_RESULTS
     ) -> list[dict[str, Any]]:
-        """Messages matching a Gmail search query, newest first (summary view).
+        """The first page of search_page(), as a bare list (the original result shape)."""
+        return self.search_page(account, query, max_results)["messages"]
+
+    def search_page(
+        self, account: str, query: str, max_results: int = DEFAULT_MAX_RESULTS, page_token: str = ""
+    ) -> dict[str, Any]:
+        """One page of messages matching a Gmail search query, newest first (summary view).
 
         Args:
             account: Alias or address.
             query: Gmail search syntax, e.g. "is:unread newer_than:1d".
             max_results: 1-50 (clamped).
+            page_token: A previous page's next_page_token; "" starts from the newest.
+
+        Returns:
+            {"messages": [...]}, plus "next_page_token" when more results exist (pass it back
+            as page_token with the same query), and "estimated_total" when Gmail gives
+            resultSizeEstimate (a rough count of all matches, not exact).
 
         Raises:
             MailError: Unknown account, re-auth needed, offline, or a Gmail error.
         """
         client = self._client_for(account)
         limit = min(max(1, max_results), MAX_RESULTS_LIMIT)
-        listing = client.get("messages", {"q": query, "maxResults": limit})
+        params: dict[str, Any] = {"q": query, "maxResults": limit}
+        if page_token:
+            params["pageToken"] = page_token
+        listing = client.get("messages", params)
         params = {"format": "metadata", "metadataHeaders": SEARCH_HEADERS}
         hits = [item for item in listing.get("messages") or [] if isinstance(item, dict)]
         ids = [checked_id(str(hit.get("id")), "message") for hit in hits]
@@ -87,7 +102,14 @@ class MailService:
         # The listing call above already refreshed the token, so the workers share it.
         with ThreadPoolExecutor(max_workers=SEARCH_WORKERS) as pool:
             messages = list(pool.map(fetch, ids))  # map keeps the newest-first order
-        return [summary_view(message) for message in messages if message is not None]
+        page: dict[str, Any] = {
+            "messages": [summary_view(message) for message in messages if message is not None]
+        }
+        if listing.get("nextPageToken"):
+            page["next_page_token"] = str(listing["nextPageToken"])
+        if isinstance(listing.get("resultSizeEstimate"), int):
+            page["estimated_total"] = listing["resultSizeEstimate"]
+        return page
 
     def read(self, account: str, message_id: str) -> dict[str, Any]:
         """One message: headers, plain-text body (capped) and attachment list.

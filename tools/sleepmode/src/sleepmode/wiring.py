@@ -31,7 +31,12 @@ from sleepmode.keeper import NightView, StateReading, is_process_alive, start_ke
 from sleepmode.lighting import Lighting
 from sleepmode.schedule import WakeScheduler, WakeTask
 from sleepmode.screens import ScreenPower, ddc
-from sleepmode.whiteboard_link import NightViewClient, night_seed, start_whiteboard_if_down
+from sleepmode.whiteboard_link import (
+    NightViewClient,
+    night_seed,
+    repair_night_view,
+    start_whiteboard_if_down,
+)
 
 # The wake task runs the venv's windowless interpreter, so nothing flashes on screen.
 WAKE_TASK_ARGUMENTS = "-m sleepmode wake --reason schedule"
@@ -52,7 +57,7 @@ def build_sleep_mode() -> SleepMode:
         projector_match=projector_match(),
         screens=ScreenPower(ddc=ddc, off_value=DDC_OFF_VALUE, settle_s=DDC_SETTLE_S),
         whiteboard=NightViewClient(WHITEBOARD_STATE_DIR),
-        start_whiteboard=partial(start_whiteboard_if_down, WHITEBOARD_STATE_DIR, WHITEBOARD_ROOT),
+        start_whiteboard=_start_whiteboard,
         scheduler=WakeScheduler(task, STATE_DIR),
         lighting=Lighting(CONFIG_FILE),
         start_keeper=partial(start_keeper, startup_check_s=KEEPER_STARTUP_CHECK_S),
@@ -79,10 +84,20 @@ def read_state_for_keeper() -> StateReading:
     return StateReading(is_readable=True, is_asleep=state.is_asleep, session_id=state.session_id)
 
 
-def night_view_for_keeper(sky: bool) -> NightView:
-    """The keeper's whiteboard calls: is the night view up, and show it (tonight's seed)."""
+def night_view_for_keeper() -> NightView:
+    """The keeper's whiteboard calls: is the night view up, show it (tonight's seed), and
+    repair the whiteboard (start it, or have it reopen its kiosk) when it isn't."""
     client = NightViewClient(WHITEBOARD_STATE_DIR)
-    return NightView(client.is_showing, partial(client.show, night_seed(datetime.now()), sky))
+    return NightView(
+        client.is_showing,
+        partial(client.show, night_seed(datetime.now())),
+        partial(repair_night_view, client, _start_whiteboard),
+    )
+
+
+def _start_whiteboard() -> bool:
+    """Start the whiteboard daemon unless it's running (see start_whiteboard_if_down)."""
+    return start_whiteboard_if_down(WHITEBOARD_STATE_DIR, WHITEBOARD_ROOT)
 
 
 def _windowless_python() -> Path:

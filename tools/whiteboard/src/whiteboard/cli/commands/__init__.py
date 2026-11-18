@@ -10,12 +10,13 @@ from whiteboard.cli.commands.camera import CAMERA
 from whiteboard.cli.commands.hardware import CAMERAS, DISPLAYS
 from whiteboard.cli.commands.mcp import COMMAND as MCP
 from whiteboard.cli.commands.saves import DELETE_SAVE, LOAD, SAVE, SAVES
-from whiteboard.cli.commands.serve import SERVE, STOP
+from whiteboard.cli.commands.serve import SERVE, STATUS, STOP
 from whiteboard.cli.commands.views import IDLE, KEYNOTES, NIGHT, TASKS, TODO
 
 COMMANDS = (
     SERVE,
     STOP,
+    STATUS,
     MCP,
     CALIBRATE,
     FIT,

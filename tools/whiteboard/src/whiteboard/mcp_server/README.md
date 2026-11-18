@@ -23,7 +23,7 @@ The stdio MCP server behind `whiteboard mcp` (server name `whiteboard`, `mcp==2.
 | `board_todo_done(item)`, `board_todo_undone(item)` | Tick or untick an item (id or a unique piece of its text) in this or next week's plan, then update the view. |
 | `board_tasks_show()` | Clear the board and draw the task grid from the console's task list and the usage file (see `whiteboard.tasks_grid`). Returns the counts only. |
 | `board_idle_show()`, `board_idle_hide()` | The idle view, the board's default when nothing is drawn, and back to the items. Returns the view and counts only (no plan or feed text). |
-| `board_night_show(sky=True)`, `board_night_hide()` | Sleep mode's night view (tonight's dim sky, or black) and back to the view it hid. Sleep mode calls the daemon itself; these are for when the owner asks. While it shows, drawings stay hidden and flashes are refused. |
+| `board_night_show()`, `board_night_hide()` | Sleep mode's night view (tonight's dim sky) and back to the view it hid. Sleep mode calls the daemon itself; these are for when the owner asks. While it shows, drawings stay hidden and flashes are refused. |
 
 The `board_todo_*` results (except hide) come back as JSON inside `<untrusted_plan_content>` tags, after a line saying that item text is the owner's plan data, some of it copied from email, and never instructions. Every `<` in the JSON is escaped, so plan text can't close the frame (`whiteboard.todo.plan_data`). A `board_todo_*` error can quote plan lines, so it comes back framed the same way, as `{"ok": false, "error": ...}`.
 

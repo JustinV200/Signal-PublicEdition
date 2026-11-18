@@ -1,4 +1,5 @@
-"""HttpDownloader and HostRateLimiter with fakes: robots.txt, redirects, size cap, spacing."""
+"""HttpDownloader and HostRateLimiter with fakes: robots.txt (skipped for API calls),
+redirects, size cap, spacing."""
 
 import http.client
 
@@ -6,10 +7,11 @@ import pytest
 
 from analysis_chamber.agents.fetch import FetchError, HostRateLimiter, HttpDownloader, Response
 from analysis_chamber.agents.fetch import http as http_module
+from analysis_chamber.agents.fetch.api_request import is_api_request
 from analysis_chamber.agents.fetch.http import clean_content_type
 
 ROBOTS = "https://ex.org/robots.txt"
-PAGE = "https://ex.org/data.csv"
+PAGE = "https://ex.org/page"  # not an API call, so robots.txt applies
 DISALLOW_ALL = Response(200, "text/plain", b"User-agent: *\nDisallow: /\n")
 CSV = Response(200, "text/csv", b"a,b\n1,2\n")
 
@@ -46,7 +48,7 @@ def _downloader(responses: dict, max_bytes: int = 100) -> tuple[HttpDownloader, 
         (
             {
                 ROBOTS: Response(404, "", b""),
-                PAGE: Response(302, "", b"", "https://other.org/x.csv"),
+                PAGE: Response(302, "", b"", "https://other.org/x"),
                 "https://other.org/robots.txt": DISALLOW_ALL,
             },
             "robots.txt disallows",
@@ -59,7 +61,7 @@ def _downloader(responses: dict, max_bytes: int = 100) -> tuple[HttpDownloader, 
         (
             {
                 ROBOTS: Response(200, "text/plain", b"User-agent: *\nDisallow: /private\n"),
-                PAGE: Response(302, "", b"", "https://u%5B@ex.org/x.csv"),
+                PAGE: Response(302, "", b"", "https://u%5B@ex.org/x"),
             },
             "not a valid URL",
         ),
@@ -137,7 +139,7 @@ async def test_robots_5xx_and_unreachable_refuse_for_now_without_caching():
 @pytest.mark.asyncio
 async def test_robots_cache_keys_on_the_origin():
     not_found = Response(404, "", b"")
-    urls = ("https://EX.org/data.csv", "https://ex.org:443/data.csv", "http://ex.org/data.csv")
+    urls = ("https://EX.org/data", "https://ex.org:443/data", "http://ex.org/data")
     responses = {"https://EX.org/robots.txt": not_found, "http://ex.org/robots.txt": not_found}
     download, get = _downloader(responses | dict.fromkeys(urls, CSV))
     for url in urls:
@@ -171,3 +173,39 @@ async def test_rate_limiter_spaces_requests_per_host(monkeypatch):
 )
 def test_content_type_is_a_bare_media_type_or_empty(header, expected):
     assert clean_content_type(header) == expected
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://api.stlouisfed.org/fred/series/observations?series_id=GDP&api_key=abc", True),
+        ("https://ex.org/p?Access-Key=1", True),
+        ("https://ex.org/data/table.CSV", True),
+        ("https://ex.org/api/items", True),
+        ("https://ex.org/v2/items", True),
+        ("https://ex.org/obs?format=json", True),
+        ("https://ex.org/obs?file_type=csv", True),
+        ("https://ex.org/article/2026", False),
+        ("https://ex.org/page?key_words=a&format=html", False),
+        ("https://ex.org/apiary/v2beta", False),
+        ("https://developer.mozilla.org/en-US/docs/Web/API/fetch", False),
+        ("https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html", False),
+    ],
+)
+def test_is_api_request(url, expected):
+    assert is_api_request(url) is expected
+
+
+@pytest.mark.asyncio
+async def test_api_skips_robots_but_a_hung_robots_fetch_counts_as_no_file():
+    api = "https://ex.org/api/data"
+    get = FakeGet({ROBOTS: DISALLOW_ALL, api: CSV})
+    assert (await HttpDownloader(HostRateLimiter(0.0), get, 100)(api)).body == CSV.body
+    assert ROBOTS not in get.calls  # never fetched for an API call
+
+    hung = FakeGet({ROBOTS: TimeoutError("timed out"), PAGE: Response(200, "text/html", b"x")})
+    assert (await HttpDownloader(HostRateLimiter(0.0), hung, 100)(PAGE)).body == b"x"
+    # Any other robots.txt failure still refuses (the module's "deny" policy).
+    other = FakeGet({ROBOTS: OSError("down")})
+    with pytest.raises(FetchError, match="try again later"):
+        await HttpDownloader(HostRateLimiter(0.0), other, 100)(PAGE)

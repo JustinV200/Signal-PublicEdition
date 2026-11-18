@@ -1,16 +1,18 @@
-// One device: a shape (filled dot on, hollow dot off, `?` unknown), its name
-// and its state in words. The words always carry the state; the shape is the
-// second cue and colour only a third (the owner is colourblind). The webcam row
-// also gets the Open camera button.
+// One device: a shape (ui's disc on, ring off, `?` unknown), its name
+// and the server's words, which always carry the state (no separate state
+// word, so nothing is said twice). A row that isn't on sets its words in 600;
+// the shape is the second cue and colour only a third, so it also works for
+// colourblind users. The webcam row also gets the Open camera button.
 import type { ReactNode } from "react";
 import type { DeviceRow as Device } from "../../api";
+import { Mark } from "../../ui";
 import styles from "./devices.module.css";
 
-const MARKS: Record<Device["state"], string> = { on: "●", off: "○", unknown: "?" };
-const STATE_WORDS: Record<Device["state"], string> = {
-  on: "on",
-  off: "off",
-  unknown: "unknown",
+// `?` is plain text: Plex has it, and no shape says "unknown".
+const MARKS: Record<Device["state"], ReactNode> = {
+  on: <Mark shape="disc" />,
+  off: <Mark shape="ring" />,
+  unknown: "?",
 };
 
 interface DeviceRowProps {
@@ -27,8 +29,8 @@ export function DeviceRow({ device, children }: DeviceRowProps) {
         {MARKS[device.state]}
       </span>
       <span className={styles.name}>{device.name}</span>
-      <span className={styles.words}>
-        <span className={styles.stateWord}>{STATE_WORDS[device.state]}</span> {device.words}
+      <span className={device.state === "on" ? styles.words : `${styles.words} ${styles.notOk}`}>
+        {device.words}
       </span>
       <span className={styles.action}>{children}</span>
     </li>

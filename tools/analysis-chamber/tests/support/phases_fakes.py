@@ -63,6 +63,9 @@ class FakeOptions:
     def plan(self, ctx):
         return ("plan",)
 
+    def collect_tools(self, ctx):
+        return "- FAKE-TOOL-LIST"
+
     def critic(self, ctx):
         return ("critic",)
 

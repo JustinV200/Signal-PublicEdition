@@ -28,10 +28,13 @@ _LEAD_READS = (
     "mcp__brief__brief_get",
 )
 
-# The signup sub-agent: the browser (no uploads, no owner sign-ins) for free API-key
+# The signup sub-agent: a browser (no uploads, no owner sign-ins) for free API-key
 # signups, plus mail reads limited to config.signup_mail_account for verification mails.
-# Purchases are gated by the browser tool itself (it waits for the owner's approval).
+# It prefers the throwaway docker browser; the desktop one is the fallback when the
+# docker server isn't configured (signup.py loads only one of them). Purchases are
+# gated by the browser tool itself (it waits for the owner's approval).
 _SIGNUP_TOOLS = (
+    *("mcp__browser-docker__" + name for name in BROWSER_ACTIONS),
     *("mcp__browser__" + name for name in (*BROWSER_ACTIONS, "read_download")),
     *_MAIL_READS,
 )

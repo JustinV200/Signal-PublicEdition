@@ -26,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     add("cancel", commands.cancel, "cancel a run").add_argument("run_id")
     add("start", commands.start, "draft a plan").add_argument("question")
     add("status", commands.status, "show a run's status").add_argument("run_id")
+    add("check", commands.check, "health check: kit built and daemon answering (JSON line)")
     approve = add("approve", commands.approve, "approve a plan or send edits")
     approve.add_argument("run_id")
     approve.add_argument("--edits", default=None, help="plan changes; keeps the plan unapproved")

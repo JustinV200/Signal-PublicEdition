@@ -1,7 +1,8 @@
-/* Reset, font and the three-row window frame (status / view / input), plus
-   the two HUD pieces every view shares: the faint grid behind the scrolling
-   view and the `.hud-label` style for titles. Component looks live in each
-   *.module.css; this file only sets what every element shares. */
+/* Reset, font and the window's rows (status / view / strip / input) with its
+   centred frame, plus the pieces every view shares: the faint grid behind
+   the scrolling view, the view header, the one panel and the `.hud-label`
+   style for titles. Component looks live in each *.module.css; this file
+   only sets what every element or view shares. */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -17,7 +18,8 @@ body,
 body {
   background: var(--bg);
   color: var(--fg);
-  font: 400 var(--font-body) / var(--line-body) var(--font-mono);
+  /* A whole-pixel row (22px, 25px at 4K) so text lands on the HUD grid. */
+  font: 400 var(--font-body) / var(--row) var(--font-mono);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
 }
@@ -47,19 +49,40 @@ button {
   padding: 0;
 }
 
+/* Form fields and inline code take the app's font (Plex Mono, its size and
+   weight): browsers give fields Arial and code Consolas by default. Not `pre`:
+   the bundled Plex subset has no box-drawing characters (U+2500-257F), which
+   would fall back to a narrower font and break the tables in Chat's code blocks,
+   so a block keeps the browser's monospace and its `code` inherits that.
+   Component classes still set their own size where they need one. */
+input,
+select,
+textarea,
+code,
+kbd,
+samp {
+  font: inherit;
+}
+
 :focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* The window: fixed status line (two rows), scrolling view, fixed input line. */
+/* The window: fixed status line (two rows), the band for Help and the tour
+   (app/Shell, empty when both are closed), scrolling view, the result strip
+   (app/ResultStrip, every view but Chat; on Chat the last row stays empty),
+   fixed input line.
+   The one column never grows past the window: a long nowrap line (the server-down
+   words with Refresh and Help) would otherwise widen the whole page at narrow widths. */
 #root {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, auto) 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-/* The scrolling view sits on the HUD grid: 1px lines at a few percent alpha,
-   faint enough to read long text over. */
+/* The scrolling view sits on the HUD grid: 1px accent lines at 8%, every two
+   text rows, faint enough to read long text over. */
 main {
   background-image:
     linear-gradient(var(--grid) 1px, transparent 1px),
@@ -67,12 +90,63 @@ main {
   background-size: var(--grid-size) var(--grid-size);
 }
 
-/* One centred text column; rules span the full window outside it. */
+/* The frame: one centred box for the status line, the input line and every
+   view, so all text starts at one x; rules span the full window outside it.
+   The left margin is worked out from the window (100vw), not the parent, so
+   the scrolling view's scrollbar cannot shift its text off the status line's
+   edge: an auto margin there would centre in the narrower space. Only the
+   side padding is set, so a view's or row's own top and bottom padding
+   never fights it. */
+.frame {
+  max-width: var(--frame);
+  margin-left: max(0px, (100vw - var(--frame)) / 2);
+  margin-right: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Reading width for Chat and Help, left-aligned inside the frame. */
 .col {
-  width: 100%;
   max-width: var(--col);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
+}
+
+/* Every view's root (with .frame): only top and bottom, so the frame keeps
+   its side gutters. */
+.view {
+  padding-top: 14px;
+  padding-bottom: 18px;
+}
+
+/* Every view's header line: the HUD title, then its words and buttons. The
+   26px minimum is the content box (not border-box), so a header with a
+   button and one with only words put the rule at the same y. Views that need
+   more (Tasks' usage on the right) add a class for that child only. */
+.view-header {
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) 3ch;
+  min-height: var(--control-height);
+  padding-bottom: var(--sp-4);
+  margin-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--rule);
+  color: var(--fg-2);
+}
+
+/* The one panel: a raised block for a preview, the Away block, the camera,
+   help, the tour, code and command output. It is never clickable itself, so
+   it has no border: the surface step sets it apart, and outlines stay for
+   things you click (lists of rows, buttons, tabs). */
+.panel {
+  background: var(--bg-2);
+  border-radius: var(--radius);
+  padding: var(--sp-5) 2ch;
+}
+
+/* Code blocks and command output scroll sideways on a thin bar. */
+pre {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* HUD labels: view titles, readout keys, the app name. Phosphor with a
@@ -82,7 +156,7 @@ main {
   font-size: var(--font-small);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-label);
   text-shadow: 0 0 6px var(--glow);
 }
 

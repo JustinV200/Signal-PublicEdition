@@ -24,6 +24,10 @@ class DaemonError(Exception):
     """The daemon isn't running, refused the request, or the call failed."""
 
 
+class DaemonNotRunningError(DaemonError):
+    """No daemon.json, or nothing listens on its port: the daemon isn't running."""
+
+
 class DaemonClient:
     """Calls the daemon's routes. Each method returns the reply dict."""
 
@@ -48,9 +52,9 @@ class DaemonClient:
         """One run's status view."""
         return self._post("/status", {"run_id": run_id}, QUICK_TIMEOUT_S)
 
-    def list(self) -> dict[str, Any]:
-        """{runs: [...]} for every run."""
-        return self._post("/list", {}, QUICK_TIMEOUT_S)
+    def list(self, timeout_s: float = QUICK_TIMEOUT_S) -> dict[str, Any]:
+        """{runs: [...]} for every run; `timeout_s` caps the wait (the health check's is short)."""
+        return self._post("/list", {}, timeout_s)
 
     def ask(self, run_id: str, question: str) -> dict[str, Any]:
         """Ask the run's Q&A agent; returns {run_id, answer}."""
@@ -64,11 +68,12 @@ class DaemonClient:
         """Send one request and return its JSON reply.
 
         Raises:
-            DaemonError: Not running, connection dropped, timeout, or an error reply.
+            DaemonError: Not running (DaemonNotRunningError), connection dropped, timeout,
+                or an error reply.
         """
         state = read_state(self._state_dir)
         if state is None:
-            raise DaemonError(
+            raise DaemonNotRunningError(
                 f"the analysis-chamber daemon isn't running (no {STATE_FILE_NAME}); "
                 + NOT_RUNNING_HINT
             )
@@ -79,7 +84,7 @@ class DaemonClient:
             response = connection.getresponse()
             raw = response.read()
         except ConnectionRefusedError as error:
-            raise DaemonError(
+            raise DaemonNotRunningError(
                 f"the analysis-chamber daemon isn't running; {NOT_RUNNING_HINT}"
             ) from error
         except http.client.RemoteDisconnected as error:

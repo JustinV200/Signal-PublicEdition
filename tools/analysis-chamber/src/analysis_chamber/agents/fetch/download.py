@@ -12,6 +12,7 @@ import asyncio
 from dataclasses import dataclass
 from urllib.parse import urljoin, urlsplit
 
+from analysis_chamber.agents.fetch.api_request import is_api_request
 from analysis_chamber.agents.fetch.http import (
     FetchError,
     HttpGet,
@@ -91,7 +92,7 @@ class HttpDownloader:
         raise FetchError("too many redirects")
 
     async def _get_checked(self, url: str) -> Response:
-        """One hop: scheme and robots.txt checks, the rate limit, then the GET."""
+        """One hop: scheme and robots.txt checks (skipped for API calls), rate limit, GET."""
         try:
             parts = urlsplit(url)
             origin = origin_key(url)
@@ -99,7 +100,8 @@ class HttpDownloader:
             raise FetchError("not a valid URL") from error
         if parts.scheme not in ALLOWED_SCHEMES or not parts.hostname:
             raise FetchError("not an http(s) URL (or a redirect to one that isn't)")
-        if not await self._robots.allows(url):
+        # Data-API calls skip robots.txt (api_request.py); ordinary pages honour it.
+        if not is_api_request(url) and not await self._robots.allows(url):
             raise FetchError("robots.txt disallows this URL")
         await self._limiter.wait(origin)
         try:

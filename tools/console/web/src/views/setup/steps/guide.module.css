@@ -1,0 +1,12 @@
+/* A step's inline guide's body (StepGuide.tsx; its collapsed <details> is
+   setup.module.css's .disclosure): bordered and scrolling, since a tool's
+   README runs long. */
+.body {
+  max-height: 24em;
+  overflow: auto;
+  margin-top: 6px;
+  /* Room on the left for ordered-list numbers, which hang outside the text. */
+  padding: 6px 1ch 6px 2.5ch;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}

@@ -21,7 +21,7 @@ Builds the Agent SDK sessions a chamber run uses, and runs them.
 ## Roles
 
 - **Lead:** the in-process `chamber` server and the Signal servers in `security.mcp_servers_for("lead")`, loaded from `.mcp.json` (`signal_mcp.py`). The outer `uv run` is rewritten to `uv run --directory <repo_root>` so each server starts from any cwd. The browser server is never in the lead's session; only the signup sub-session gets it. It also gets the PostToolUse free-text swap and the PostToolUseFailure warning.
-- **Plan:** `plan_options` is the lead (same model, prompt, hooks and disallowed list) with no MCP servers at all, so plan and revise turns can't collect anything before approval (spec 7.1).
+- **Plan:** `plan_options` is the lead (same model, prompt, hooks and disallowed list) with no MCP servers at all, so plan and revise turns can't collect anything before approval (spec 7.1). `collect_tools_text(ctx)` (`options/collect_tools.py`) builds the list of what collect can use (web, APIs and whether keys can be signed up, the Signal servers present in `.mcp.json` per the lead allowlist, named files, the kit) that the plan prompt shows.
 - **Critic:** a fresh session with no MCP servers. It may run code but is told not to change the lead's files.
 - **Q&A:** no MCP servers. It resumes `resume` if given, and `fork=True` adds `fork_session` so a mid-run lead session is left untouched.
 
@@ -36,9 +36,9 @@ Builds the Agent SDK sessions a chamber run uses, and runs them.
 
 ### Fetch rules (`fetch/`)
 
-- Downloads honour robots.txt, 1 request/s per origin (shared across runs) and a 200 MB cap.
+- Downloads honour robots.txt for ordinary pages, but skip it for data-API calls (`is_api_request` in `fetch/api_request.py`: an API-key query parameter, a path ending .json/.csv or with an `/api/` or `/v<N>/` segment, or `format=json|csv` style parameters; judged from the URL only). They also keep 1 request/s per origin (shared across runs) and a 200 MB cap.
 - The robots.txt cache and the rate limiter both key on `origin_key(url)`: scheme, lowercased hostname and port (the scheme's default if none is given). So `EX.org` and `ex.org:443` are one origin, and http and https on one host are two.
-- robots.txt is fetched with our User-Agent, a 15 s timeout and a 512 KiB cap. Per RFC 9309, a 4xx means allow-all. A 5xx or an unreachable host refuses that call and isn't cached.
+- robots.txt is fetched with our User-Agent, a 5 s timeout and a 512 KiB cap. Per RFC 9309, a 4xx means allow-all. A 5xx or an unreachable host refuses that call and isn't cached, except a timeout, which counts as no robots file (allow-all, cached) so a hung robots.txt can't block a host.
 - Redirects are followed by hand, at most 5, and every hop is checked again: http(s) only, robots.txt, the rate limit.
 - The server's content type is cut to a bare `type/subtype`, or "" if it isn't one. It isn't trusted on its own: a body that starts with `<` is always a page, and a JSON type must parse, else it's a page. A body with no type or `application/octet-stream` and no data-file extension is a page if it's UTF-8 with no NULs, so prose can't land in `data/raw/`.
 - Error text the lead sees is fixed (`HTTP 404`, an exception type name), never server text. `HttpDownloader.__call__` and `RobotsCache.allows` are catch-all boundaries: any other exception is logged and becomes `FetchError("bad URL or response (<Type>)")` (`http.unexpected_error`). Cancellation still propagates.

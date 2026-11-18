@@ -7,7 +7,7 @@ import type { Dispatch, ReactNode } from "react";
 import { createSender } from "./actions/sending";
 import type { Sender } from "./actions/sending";
 import { reduce, startState } from "./reducer";
-import type { AppState, StoreAction } from "./reducer";
+import type { AppState, StoreAction } from "./types";
 import { useConnection } from "./useConnection";
 
 interface StoreValue {

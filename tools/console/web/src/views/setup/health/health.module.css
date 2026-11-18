@@ -1,0 +1,120 @@
+/* Health lists (System's CONSOLE and TOOLS groups, the wizard's summary) and
+   the banner a Fix opens a tool page with. Each row is a grid: mark, name,
+   words, controls, then the fix (when there is one) under the words. The
+   tone colours only repeat the mark and the label. */
+.list {
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2ch 26ch minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 1ch;
+  padding: 6px 1ch;
+  border-bottom: 1px solid var(--rule);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+/* Another group's pointer (Models) scrolls here and focuses the row (only a
+   script or a click focuses a row, never Tab, so :focus rather than :focus-visible). */
+.row:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.mark {
+  text-align: center;
+}
+
+.name {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.words {
+  min-width: 0;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.words strong {
+  color: var(--fg);
+}
+
+.note {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 1ch;
+}
+
+/* The fix sits under the words, in the words' column through the controls'. */
+.fix {
+  grid-column: 3 / -1;
+}
+
+.fixBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--fg);
+}
+
+.command {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 1ch;
+}
+
+/* A long command with an absolute path wraps rather than widening the page. */
+.commandText {
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: inset 2px 0 0 var(--error);
+}
+
+.tone_ok {
+  color: var(--ok);
+}
+
+.tone_attention {
+  color: var(--warn);
+}
+
+.tone_bad {
+  color: var(--error);
+}
+
+.tone_off {
+  color: var(--fg-3);
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 2ch minmax(0, 1fr);
+  }
+  .words,
+  .controls,
+  .fix {
+    grid-column: 2;
+  }
+}

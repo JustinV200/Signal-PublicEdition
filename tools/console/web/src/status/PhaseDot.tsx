@@ -1,6 +1,7 @@
-// The voice dot: filled when running, hollow when stopped; starting and
+// The voice dot: ui's disc when running, its ring when stopped; starting and
 // thinking pulse, speaking shows three bars. The phase word next to it carries the meaning.
 import type { VoiceState } from "../api";
+import { Mark } from "../ui";
 import styles from "./status.module.css";
 
 export type DotPhase = "starting" | "listening" | "thinking" | "speaking" | "stopped";
@@ -25,8 +26,13 @@ export function PhaseDot({ phase }: { phase: DotPhase }) {
       </span>
     );
   }
+  const stopped = phase === "stopped";
   const classes = [styles.dot];
-  if (phase === "stopped") classes.push(styles.hollow);
+  if (stopped) classes.push(styles.hollow);
   if (phase === "thinking" || phase === "starting") classes.push("anim-pulse");
-  return <span className={classes.join(" ")} aria-hidden="true" />;
+  return (
+    <span className={classes.join(" ")} aria-hidden="true">
+      <Mark shape={stopped ? "ring" : "disc"} />
+    </span>
+  );
 }

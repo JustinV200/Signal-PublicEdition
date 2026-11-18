@@ -1,20 +1,6 @@
 /* Tasks view: a header with counts and the usage line, the active task rows,
-   then the queued and done groups. Status tags carry a number and a word;
-   their colour (tokens only) is a second cue. */
-.view {
-  padding: 14px 0 18px;
-}
-
-.header {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 3ch;
-  color: var(--fg-2);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-}
-
+   then the queued and done groups. Status tags are words; their colour
+   (tokens only) is a second cue. */
 .counts {
   color: var(--fg);
 }
@@ -26,18 +12,31 @@
 
 .list {
   list-style: none;
-  padding: 6px 0 0;
 }
 
+/* One grid per task: the tag in the shared label column (less the gap), so
+   the name and the YOU and next lines start at the same x as Chat's text.
+   The bottom rule is the progress bar: accent up to --pct (set per row from
+   the task's percent, which stays beside the name), the rule colour after. */
 .task {
+  display: grid;
+  grid-template-columns: calc(var(--label-col) - 1ch) minmax(0, 1fr) auto;
+  column-gap: 1ch;
   padding: 6px 0;
-  border-bottom: 1px solid var(--rule);
+  background: linear-gradient(to right, var(--accent) var(--pct), var(--rule) 0) bottom / 100% 2px
+    no-repeat;
 }
 
-.line {
-  display: grid;
-  grid-template-columns: 14ch minmax(0, 1fr) auto;
-  gap: 1ch;
+/* A row that needs the owner: a 2px --warn bar on its left (an inset shadow,
+   as the setup banner's). The 1ch padding keeps the tag off the bar; the tag
+   column gives that 1ch back so the name still starts on the label column,
+   from 720px up. Below it the lines sit 1ch in, inside the bar: the narrow
+   grid columns come from the later .task media rule, which overrides
+   .needsYouRow because it comes later at the same specificity. */
+.needsYouRow {
+  padding-left: 1ch;
+  box-shadow: inset 2px 0 0 var(--warn);
+  grid-template-columns: calc(var(--label-col) - 2ch) minmax(0, 1fr) auto;
 }
 
 .tag {
@@ -65,7 +64,7 @@
 
 .you,
 .next {
-  padding-left: 15ch;
+  grid-column: 2 / -1;
   overflow-wrap: anywhere;
 }
 
@@ -92,20 +91,13 @@
   overflow-wrap: anywhere;
 }
 
-.empty {
-  color: var(--fg-3);
-  padding-top: 12px;
-}
-
 @media (max-width: 720px) {
-  .line {
+  .task {
     grid-template-columns: minmax(0, 1fr) auto;
   }
-  .tag {
-    grid-column: 1 / -1;
-  }
+  .tag,
   .you,
   .next {
-    padding-left: 0;
+    grid-column: 1 / -1;
   }
 }

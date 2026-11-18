@@ -51,6 +51,15 @@ export function isSameDay(a: TimeLike, b: TimeLike): boolean {
   );
 }
 
+/** A compact age: `25s`, `12m`, `3h`. */
+export function shortAge(ms: number): string {
+  const seconds = Math.floor(ms / MS_PER_SECOND);
+  if (seconds < SECONDS_PER_MINUTE) return `${seconds}s`;
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE);
+  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`;
+  return `${Math.floor(minutes / MINUTES_PER_HOUR)}h`;
+}
+
 /** Short age like `just now`, `5m ago`, `2h ago`, `yesterday`, `3d ago`. */
 export function formatRelative(at: TimeLike, now: number): string {
   const age = now - toMs(at);

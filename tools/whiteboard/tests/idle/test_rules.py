@@ -28,8 +28,8 @@ EMPTY_S = 10.0
         (Scene(items=(LOADING,)), 90.0, 100.0, True),  # the thinking box doesn't count
         (Scene(items=(TEXT,)), 90.0, 100.0, False),  # something drawn
         (Scene(view="todo"), 90.0, 100.0, False),  # another view showing
-        (show_night(Scene(), 1, True), 90.0, 100.0, True),  # under the night: items beneath
-        (show_night(Scene(view="todo"), 1, True), 90.0, 100.0, False),
+        (show_night(Scene(), 1), 90.0, 100.0, True),  # under the night: items beneath
+        (show_night(Scene(view="todo"), 1), 90.0, 100.0, False),
     ],
 )
 def test_items_view_empty_for_ten_seconds_goes_idle(
@@ -44,7 +44,7 @@ def test_idle_yields_to_drawing_and_waits_under_the_night(tmp_path: Path) -> Non
     assert show_drawn_items(idle, [LOADING]).view == "idle"
     assert show_drawn_items(idle, [TEXT]).view == "items"
     # Under the night the rule only changes the view the night goes back to.
-    night = switch_view(show_night(Scene(), 1, True), "idle")
+    night = switch_view(show_night(Scene(), 1), "idle")
     assert (night.view, night.night.previous_view) == ("night", "idle")
     assert hide_night(night).view == "idle"
     # Older code rejects "idle", so scene.json keeps the items there instead.

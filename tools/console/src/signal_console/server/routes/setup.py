@@ -29,7 +29,9 @@ async def run_setup(request: web.Request) -> web.StreamResponse:
     """`{command, ...}` -> 200 NDJSON stream of the CLI's lines and its exit code.
 
     400 for an unknown command or a bad field, 409 while another command that writes
-    runs (read-only commands, such as list or status, run beside anything).
+    runs (read-only commands, such as list or status, run beside anything). A command
+    that loses the race after that check streams its reason with `"busy": true`, then
+    exit 1, which the page treats like the 409.
     The exit code follows the setup CLI: 0 done, 1 failed, 2 bad id, 3 needs the user.
     """
     runner = request.app[SERVICES_KEY].setup
@@ -52,7 +54,8 @@ async def run_setup(request: web.Request) -> web.StreamResponse:
     try:
         code = await runner.run(call, lambda line: send({"line": line}))
     except SetupBusy as error:  # lost a race with another click since check_free
-        await send({"line": str(error)})
+        # Marked busy, so the page words it like a 409: nothing failed, nothing to hand off.
+        await send({"line": str(error), "busy": True})
         code = 1
     # The page may have gone away; the command already finished and saved its progress.
     with contextlib.suppress(ConnectionError, RuntimeError):
@@ -62,10 +65,13 @@ async def run_setup(request: web.Request) -> web.StreamResponse:
 
 
 async def open_setup_terminal(request: web.Request) -> web.Response:
-    """`{tool}` -> 200 `{ok}` after opening a terminal on `setup.ps1 <tool>`; 400 if it can't."""
+    """`{tool, step}` -> 200 `{ok}` after opening a terminal on `setup.ps1 step <tool> <step>`.
+
+    400 for a bad id or when the terminal can't open.
+    """
     body = await read_json_object(request)
     try:
-        open_terminal(REPO_ROOT, body.get("tool"))
+        open_terminal(REPO_ROOT, body.get("tool"), body.get("step"))
     except (SetupRequestError, OSError) as error:
         raise bad_request(str(error)) from error
     return web.json_response({"ok": True})

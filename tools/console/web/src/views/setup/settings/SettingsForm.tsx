@@ -5,11 +5,14 @@
 // and any placeholder left first, advanced ones behind a toggle. Save sends
 // only the changed values (`setup config <tool> --set`); the CLI checks them,
 // re-runs a step a change affects (e.g. a scheduled task) and marks the step
-// done once no placeholder is left.
-import { useState } from "react";
+// done once no placeholder is left. What the owner types is kept in the
+// store (`setupDrafts`), so after leaving Setup and coming back the form
+// reopens by itself with the typed values still in it.
+import { useEffect, useRef, useState } from "react";
 import { firstJson, parseSettings } from "../../../api";
 import type { SettingRow, SetupStep } from "../../../api";
-import { Button } from "../../../ui";
+import { useStore } from "../../../state";
+import { Button, Mark } from "../../../ui";
 import { OutputLog, useSetupRun } from "../run";
 import styles from "../setup.module.css";
 import { changedValues, valueText } from "./fields";
@@ -29,20 +32,33 @@ interface SaveReply {
 
 /** The form for one settings step. */
 export function SettingsForm({ toolId, step, onSaved }: SettingsFormProps) {
+  const { state, dispatch } = useStore();
   const opener = useSetupRun();
   const saver = useSetupRun();
   const [rows, setRows] = useState<SettingRow[] | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [reply, setReply] = useState<SaveReply | null>(null);
+  // Typed values live in the store under this step's prefix, so they outlast leaving Setup.
+  const prefix = `settings/${toolId}/${step.id}/`;
+  const typed = state.setupDrafts;
+  const drafts = Object.fromEntries(
+    (rows ?? []).map((r) => [r.id, typed[prefix + r.id] ?? valueText(r.value, r.type)]),
+  );
+  const setDraft = (id: string, text: string | null) =>
+    dispatch({ type: "setupDraft", key: prefix + id, text });
+  // Typed before the owner left Setup: the form opens again by itself to show them.
+  const hadTypedRef = useRef(Object.keys(typed).some((key) => key.startsWith(prefix)));
 
   const load = async () => {
     const listed = await opener.run({ command: "config", tool: toolId });
     if (!listed || listed.exit !== 0) return;
-    const inGroup = parseSettings(firstJson(listed.lines)).filter((r) => r.group === step.group);
-    setRows(inGroup);
-    setDrafts(Object.fromEntries(inGroup.map((r) => [r.id, valueText(r.value, r.type)])));
+    setRows(parseSettings(firstJson(listed.lines)).filter((r) => r.group === step.group));
   };
+  useEffect(() => {
+    if (hadTypedRef.current) void load();
+    // Once, on mount: `load` is a fresh function each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const open = async () => {
     const created = await opener.run({ command: "apply", tool: toolId, step: step.id });
     // Exit 3 just means placeholders are left to fill in: that's what the form is for.
@@ -54,7 +70,10 @@ export function SettingsForm({ toolId, step, onSaved }: SettingsFormProps) {
     if (Object.keys(changed).length === 0) return;
     const result = await saver.run({ command: "config", tool: toolId, set: changed });
     if (!result) return;
-    setReply(firstJson(result.lines) as SaveReply);
+    const saved = firstJson(result.lines) as SaveReply;
+    setReply(saved);
+    // A saved value shows as the CLI stored it; a refused one keeps what was typed.
+    for (const id of Object.keys(changed)) if (!saved.errors?.[id]) setDraft(id, null);
     await load();
     onSaved();
   };
@@ -62,7 +81,7 @@ export function SettingsForm({ toolId, step, onSaved }: SettingsFormProps) {
   if (!rows) {
     return (
       <div className={styles.controls}>
-        <Button onClick={() => void open()} pending={opener.running}>
+        <Button onClick={() => void open()} {...opener.button()}>
           Open settings
         </Button>
         <OutputLog run={opener} what={`${toolId}: ${step.title}`} />
@@ -79,14 +98,14 @@ export function SettingsForm({ toolId, step, onSaved }: SettingsFormProps) {
           key={row.id}
           row={row}
           draft={drafts[row.id] ?? ""}
-          onChange={(text) => setDrafts((old) => ({ ...old, [row.id]: text }))}
+          onChange={(text) => setDraft(row.id, text)}
         />
       ))}
       <div className={styles.controls}>
         <Button
           primary
           onClick={() => void save()}
-          pending={saver.running}
+          {...saver.button()}
           disabledReason={unsaved === 0 ? "nothing changed" : undefined}
         >
           Save settings
@@ -112,10 +131,18 @@ function SaveSummary({ reply }: { reply: SaveReply | null }) {
     <ul className={styles.summary} role="status">
       {errors.map(([id, why]) => (
         <li key={id}>
-          ✗ {id}: {why}
+          <Mark shape="cross" /> {id}: {why}
         </li>
       ))}
-      <li>{left.length ? `! placeholders left: ${left.join(", ")}` : "✓ no placeholders left"}</li>
+      <li>
+        {left.length ? (
+          `! placeholders left: ${left.join(", ")}`
+        ) : (
+          <>
+            <Mark shape="check" /> no placeholders left
+          </>
+        )}
+      </li>
     </ul>
   );
 }

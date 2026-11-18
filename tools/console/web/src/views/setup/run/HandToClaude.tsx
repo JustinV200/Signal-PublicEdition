@@ -1,14 +1,16 @@
 // The fallback when a setup step fails: hand the failure to Claude. With a
-// claimed orchestrator session it goes into Chat as a typed message (the
-// owner's own click, the same as typing it); without one, the prompt is copied
-// to paste into Claude Code.
+// linked session (claimed and still open) it is sent to Claude as a typed
+// message (the owner's own click, the same as typing it) and the page stays on
+// Setup; without one, the prompt is copied (the shared CopyButton) to paste
+// into Claude Code.
 import { useState } from "react";
-import { useStore } from "../../../state";
-import { Button } from "../../../ui";
+import { claudeLink, PASTE_INTO_CLAUDE_NOTE, useStore } from "../../../state";
+import { Button, CopyButton } from "../../../ui";
 import styles from "../setup.module.css";
 
-const COPIED = "Copied. Paste it into Claude Code in this folder.";
-const COPY_FAILED = "Couldn't copy; select the output above and paste it into Claude Code.";
+const NOT_LINKED = "not linked to a Claude Code session yet";
+const BEFORE_SEND = "sends the error to Claude";
+const AFTER_SEND = "Sent. Claude answers in Claude Code.";
 
 /** The longest run of backticks in `text`, so the fence around it can be longer. */
 function longestBackticks(text: string): number {
@@ -42,32 +44,34 @@ interface HandToClaudeProps {
 
 /** The button, and what happened after a click. */
 export function HandToClaude({ what, output }: HandToClaudeProps) {
-  const { state, dispatch, sender } = useStore();
-  const [note, setNote] = useState<string | null>(null);
+  const { state, sender } = useStore();
+  const [isSent, setIsSent] = useState(false);
   const prompt = handOffPrompt(what, output);
+  const { server } = state;
 
-  if (state.server?.orchestrator.claimed) {
+  if (server && claudeLink(server.orchestrator) === "linked") {
+    // No jump to Chat: the owner stays on the step, and a failed send shows in Chat as any message's does.
     const send = () => {
       void sender.send(prompt);
-      dispatch({ type: "view", view: "chat" });
+      setIsSent(true);
     };
     return (
       <div className={styles.controls}>
         <Button onClick={send}>Hand to Claude</Button>
-        <span className={styles.note}>sends the error to Claude in Chat</span>
+        <span className={styles.note} role="status">
+          {isSent ? AFTER_SEND : BEFORE_SEND}
+        </span>
       </div>
     );
   }
-  const copy = () => {
-    navigator.clipboard.writeText(prompt).then(
-      () => setNote(COPIED),
-      () => setNote(COPY_FAILED),
-    );
-  };
   return (
     <div className={styles.controls}>
-      <Button onClick={copy}>Copy for Claude</Button>
-      <span className={styles.note}>{note ?? "no Claude session has claimed the console yet"}</span>
+      <CopyButton
+        text={prompt}
+        label="Copy for Claude"
+        note={NOT_LINKED}
+        copiedNote={PASTE_INTO_CLAUDE_NOTE}
+      />
     </div>
   );
 }

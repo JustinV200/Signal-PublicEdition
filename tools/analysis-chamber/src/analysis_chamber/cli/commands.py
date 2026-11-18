@@ -17,6 +17,12 @@ from analysis_chamber.runs import MANIFEST_NAME
 
 EXIT_FAILED = 1
 EXIT_USAGE = 2
+_UV_RUN = "uv run --project tools/analysis-chamber --frozen --no-sync analysis-chamber"
+# Commands check() offers as fixes, runnable as shown from the repo root.
+SERVE_COMMAND = f"{_UV_RUN} serve"
+KIT_BUILD_COMMAND = f"{_UV_RUN} kit build"
+# Well under the setup tool's 8 s health timeout, so a hung daemon gets check()'s own words.
+CHECK_TIMEOUT_S = 4.0
 
 
 def _client_call(call: Callable[[Any], Any]) -> int:
@@ -62,6 +68,35 @@ def ask(args: argparse.Namespace) -> int:
 def cancel(args: argparse.Namespace) -> int:
     """Cancel a run."""
     return _client_call(lambda client: client.cancel(args.run_id))
+
+
+def check(args: argparse.Namespace) -> int:
+    """The setup tool's health check: is the kit built, and does the daemon answer?
+
+    Never starts the daemon. Prints one JSON line {words, fix, command}
+    (tools/setup/README.md, "Verify checks"); exit 0 only when the daemon answers.
+    """
+    daemon = importlib.import_module("analysis_chamber.daemon")
+    config = load_config()
+    if not config.kit_venv.is_dir():
+        fix = "Build the analysis kit (a large download)."
+        return _print_check(EXIT_FAILED, "installed, kit not built", fix, KIT_BUILD_COMMAND)
+    try:
+        count = len(daemon.DaemonClient(config.state_dir).list(CHECK_TIMEOUT_S).get("runs", []))
+    except daemon.DaemonNotRunningError:
+        fix = "It starts at logon once the startup step is done, or start it in a terminal."
+        return _print_check(EXIT_FAILED, "installed, daemon not running", fix, SERVE_COMMAND)
+    except daemon.DaemonError:
+        # It runs but answers wrongly (a stale token, a hang): starting another can't help.
+        fix = "End the stuck daemon process (see analysis-chamber.log), then start it again."
+        return _print_check(EXIT_FAILED, "installed, daemon not answering", fix)
+    return _print_check(0, f"running, {count} run{'' if count == 1 else 's'}")
+
+
+def _print_check(code: int, words: str, fix: str | None = None, command: str | None = None) -> int:
+    """Print check()'s summary line and return `code`."""
+    print(json.dumps({"words": words, "fix": fix, "command": command}))
+    return code
 
 
 def serve(args: argparse.Namespace) -> int:

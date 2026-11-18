@@ -1,17 +1,20 @@
 // The Tasks page: what the orchestrator reports through `console tasks set`.
 // The header gives the counts and the usage line; active tasks are listed
-// most finished first, then the queued and done groups. The server sends the
-// order; this view only words it. A read only: nothing here sends a request.
+// with the ones that need the owner first, then the server's order (most
+// finished first), then the queued and done groups. A read only: nothing here
+// sends a request.
 import type { TaskInfo } from "../../api";
+import { EmptyState } from "../../empty";
 import { useStore } from "../../state";
 import { useTicker } from "../../time";
 import { DoneGroup } from "./DoneGroup";
 import styles from "./tasks.module.css";
+import { needsYouFirst } from "./taskOrder";
 import { TaskRow } from "./TaskRow";
 import { NAMES_SHOWN, headerCounts, queuedHeading, taskNames, usageWords } from "./taskWords";
 
 const TICK_MS = 30_000;
-const EMPTY = "No tasks reported. The orchestrator writes them with console tasks set.";
+const EMPTY = "No tasks right now. Claude lists its work here when it starts some.";
 
 function names(tasks: TaskInfo[]): string {
   const more = tasks.length > NAMES_SHOWN ? ` · + ${tasks.length - NAMES_SHOWN} more` : "";
@@ -36,18 +39,18 @@ export function TasksView() {
   const total = tasks ? tasks.active.length + tasks.queued.length + tasks.done.length : 0;
 
   return (
-    <div className={`col ${styles.view}`}>
-      <div className={styles.header}>
+    <div className="frame view">
+      <div className="view-header">
         <span className="hud-label">Tasks</span>
         {tasks && <span className={styles.counts}>{headerCounts(tasks)}</span>}
         <span className={styles.usage}>{usageWords(tasks?.usage ?? null, now)}</span>
       </div>
       {!tasks || total === 0 ? (
-        <p className={styles.empty}>{EMPTY}</p>
+        <EmptyState label="Nothing in progress">{EMPTY}</EmptyState>
       ) : (
         <>
           <ul className={styles.list}>
-            {tasks.active.map((task) => (
+            {needsYouFirst(tasks.active).map((task) => (
               <TaskRow key={task.id} task={task} />
             ))}
           </ul>

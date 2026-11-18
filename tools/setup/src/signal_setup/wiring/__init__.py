@@ -1,7 +1,7 @@
 """Wiring: turn finished tools into Claude Code config (MCP servers, permissions, hooks).
 
-Public API: build_plan, apply_plan, summary_lines, WiringError, check_object, and the small
-edits setup makes.
+Public API: build_plan, apply_plan, summary_lines, wired_tools (read-only: which finished
+tools are already in the config), WiringError, check_object, and the small edits setup makes.
 """
 
 from pathlib import Path
@@ -11,6 +11,7 @@ from signal_setup.wiring.edits import EMAIL_PATTERN, set_constant, set_env_value
 from signal_setup.wiring.json_file import WiringError, check_object
 from signal_setup.wiring.plan import Plan
 from signal_setup.wiring.plan import build as build_plan
+from signal_setup.wiring.present import wired_tools
 from signal_setup.wiring.writers import (
     MCP_FILE,
     SETTINGS_FILE,
@@ -31,11 +32,29 @@ __all__ = [
     "set_constant",
     "set_env_value",
     "summary_lines",
+    "wired_tools",
 ]
 
 
 def summary_lines(plan: Plan) -> list[str]:
-    """The permissions summary shown before the one confirmation."""
+    """The consent summary shown before the one confirmation.
+
+    First the plain lines (one per tool: what Claude may do without asking), then one
+    blank line, then the exact entries. The setup window splits at that blank line and
+    folds the exact entries under Show exact entries.
+    """
+    # Not "everything else asks": the owner's own settings (a permission mode such as
+    # bypassPermissions included) are kept, and scheduled runs set their own flags.
+    kept = "Your own permission settings, mode included, stay as they are."
+    if plan.consent:
+        plain = [*plan.consent, f"Setup auto-approves nothing else. {kept}"]
+    else:
+        plain = [f"No tool is finished yet, so setup adds nothing. {kept}"]
+    return [*plain, "", *_exact_lines(plan)]
+
+
+def _exact_lines(plan: Plan) -> list[str]:
+    """Every server, allow rule and hook the plan writes, and the files they go in."""
     hooks = sorted({f"{h.event}: {tool} ({h.module})" for tool, h in plan.hooks})
     lines = [
         f"Tools to wire: {', '.join(plan.tools) or 'none'}",
@@ -46,7 +65,6 @@ def summary_lines(plan: Plan) -> list[str]:
     lines += ["Hooks (.claude/settings.local.json):"] + ([f"  {h}" for h in hooks] or ["  none"])
     if plan.statusline:
         lines.append(f"Status line: usage's, in {USER_SETTINGS}")
-    lines.append("Everything else still asks first. No permission mode is changed.")
     return lines
 
 

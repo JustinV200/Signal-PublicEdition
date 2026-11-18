@@ -1,33 +1,34 @@
-// The status line's freshness block: `updated 3s ago` (when the server last
-// sent anything, keepalives included) and a labelled Refresh button that
-// re-reads everything now (the state, the tasks and the open view's polls).
-import { STALL_MS } from "../api";
+// The status line's freshness block, shown only when something is wrong: the
+// stream has gone quiet past STALL_MS (`no update for 25s`) or the server is
+// not answering (`updated 3s ago` until it goes stale). It carries a labelled
+// Refresh button that re-reads everything now (the state, the tasks and the
+// open view's polls); while all is well both stay hidden, and the `Refresh`
+// command does the same from Ctrl+K.
+import { isStreamStale } from "../api";
 import { useStore } from "../state";
-import { formatRelative } from "../time";
+import { shortAge } from "../time";
 import { Button } from "../ui";
 import styles from "./status.module.css";
 
-const MS_PER_SECOND = 1000;
-const SECONDS_PER_MINUTE = 60;
-
-/** `updated 3s ago`, `updated 5m ago`, or `not updated yet` before the first byte. */
-export function freshnessWords(syncedAt: number | null, now: number): string {
+/** `updated 3s ago`, `no update for 25s` once stale, or `not updated yet` before the first byte. */
+function freshnessWords(syncedAt: number | null, now: number): string {
   if (syncedAt === null) return "not updated yet";
-  const seconds = Math.max(0, Math.floor((now - syncedAt) / MS_PER_SECOND));
-  if (seconds < SECONDS_PER_MINUTE) return `updated ${seconds}s ago`;
-  return `updated ${formatRelative(syncedAt, now)}`;
+  const ageMs = Math.max(0, now - syncedAt);
+  if (isStreamStale(syncedAt, now)) return `no update for ${shortAge(ageMs)}`;
+  return `updated ${shortAge(ageMs)} ago`;
 }
 
-/** The words and the Refresh button; `now` comes from the status line's ticker. */
+/** The words and the Refresh button, or nothing while fresh and online; `now` is the status line's ticker. */
 export function Freshness({ now }: { now: number }) {
   const { state, dispatch } = useStore();
-  const { syncedAt } = state;
-  // Past the stall limit the stream is being reopened: the words say how old, the colour repeats it.
-  const isStale = syncedAt === null || now - syncedAt > STALL_MS;
+  const { syncedAt, connection } = state;
+  const stale = isStreamStale(syncedAt, now);
+  if (!stale && connection.status !== "offline") return null;
   return (
     <span className={styles.freshness}>
+      {/* Stale is worded (`no update for`); the warning colour only repeats it. */}
       <span
-        className={isStale ? styles.warn : undefined}
+        className={stale ? styles.warn : undefined}
         title="When the console last heard from its server"
       >
         {freshnessWords(syncedAt, now)}

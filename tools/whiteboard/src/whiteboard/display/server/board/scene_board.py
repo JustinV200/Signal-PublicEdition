@@ -146,10 +146,10 @@ class SceneBoard:
         """
         await self._commit(switch_view(self._scene, view))
 
-    async def show_night(self, seed: int, sky: bool) -> NightView:
+    async def show_night(self, seed: int) -> NightView:
         """Show the night view (scene.show_night) and return its settings, with the view it
         goes back to. The items and TODO view wait under it."""
-        scene = show_night(self._scene, seed, sky)
+        scene = show_night(self._scene, seed)
         await self._commit(scene)
         return scene.night
 

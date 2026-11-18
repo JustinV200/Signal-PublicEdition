@@ -1,6 +1,7 @@
 // One board in the list: `▸` when selected, name, `saved <relative>` and a
 // bold "Showing" tag when it is on the projector. Click or focus selects it
 // and nothing more; the preview's button does the loading.
+import { Mark } from "../../ui";
 import styles from "./boards.module.css";
 
 interface BoardRowProps {
@@ -10,8 +11,6 @@ interface BoardRowProps {
   showing: boolean;
   onSelect: () => void;
 }
-
-const SELECTED_MARK = "▸";
 
 /** A selectable row (roving tabindex: only the selected row is tabbable). */
 export function BoardRow({ name, meta, selected, showing, onSelect }: BoardRowProps) {
@@ -26,7 +25,7 @@ export function BoardRow({ name, meta, selected, showing, onSelect }: BoardRowPr
       onFocus={onSelect}
     >
       <span className={styles.mark} aria-hidden="true">
-        {selected ? SELECTED_MARK : ""}
+        {selected && <Mark shape="triangle" />}
       </span>
       <span className={styles.name}>{name}</span>
       <span className={styles.meta}>{meta}</span>

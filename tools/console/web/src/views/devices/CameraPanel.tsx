@@ -42,7 +42,7 @@ export function CameraPanel({ onClose }: CameraPanelProps) {
   }, []);
 
   return (
-    <section className={styles.camera} aria-label="camera view">
+    <section className={`panel ${styles.camera}`} aria-label="camera view">
       <div className={styles.cameraHead}>
         <span>
           Camera:{" "}

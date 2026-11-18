@@ -1,16 +1,20 @@
-/* The console button: a bordered box that reads as clickable at a glance.
-   Hover fills it, press darkens it, focus draws the accent ring; disabled
-   goes faint with a dashed border and the reason beside it. */
+/* The console button: a bordered box in the small type that reads as
+   clickable at a glance. Hover fills it, press darkens it, focus draws the
+   accent ring; the primary one has an accent outline, a resting fill and a
+   600 label, so it differs by fill and weight, not by hue alone. Disabled goes
+   faint with a dashed border, its reason beside it in --fg-2 (a reason can be
+   a consequence, so never faint). */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 1ch;
   height: var(--control-height);
   padding: 0 1.2ch;
+  font-size: var(--font-small);
   color: var(--fg);
   background: var(--bg-2);
-  border: 1px solid var(--fg-3);
-  border-radius: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -29,16 +33,17 @@
   border-color: var(--fg);
 }
 
+/* The label stays --fg: --accent on the light theme's fill is under 4.5:1. */
 .primary {
+  font-weight: 600;
   border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent-fill);
 }
 
 .primary:hover {
-  color: var(--accent);
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
-  box-shadow: 0 0 8px var(--glow);
+  background: color-mix(in srgb, var(--accent) var(--primary-hover-mix), var(--bg-2));
+  box-shadow: var(--glow-md);
 }
 
 .btn:disabled {
@@ -46,6 +51,7 @@
   background: none;
   border-color: var(--rule);
   border-style: dashed;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -53,22 +59,31 @@
 .btn.pending:disabled {
   color: var(--fg-2);
   border-style: solid;
-  border-color: var(--fg-3);
+  border-color: var(--border);
   cursor: progress;
 }
 
+/* Waiting for input (Send with an empty draft): solid and quiet, not broken. */
+.btn.awaits:disabled {
+  color: var(--fg-2);
+  border-style: solid;
+  border-color: var(--border);
+  cursor: default;
+}
+
 .hint {
-  font: inherit;
-  font-size: var(--font-small);
+  font-weight: 400;
   color: var(--fg-3);
 }
 
-.btn:hover .hint {
+/* --fg-3 is under 4.5:1 on the primary fill, so its hint is --fg-2. */
+.btn:hover .hint,
+.primary .hint {
   color: var(--fg-2);
 }
 
 .reason {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: var(--font-small);
 }
 

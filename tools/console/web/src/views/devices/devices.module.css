@@ -1,27 +1,11 @@
-/* Devices view: header and hint, the Away/Here block, the device rows
-   (shape, name, state words, action), then the camera panel when open. */
-.view {
-  padding: 14px 0 18px;
-}
-
-.header {
-  display: flex;
-  align-items: baseline;
-  gap: 3ch;
-  color: var(--fg-2);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-}
+/* Devices, as System's YOU and DEVICES groups: the header words, the
+   Away/Here block, the device rows (shape, name, state words, action), then
+   the camera panel when open. The Away block and the camera are the global
+   .panel; these add only their layout. */
 
 .meta {
   color: var(--fg-2);
   font-size: var(--font-small);
-}
-
-.hint {
-  color: var(--fg-3);
-  font-size: var(--font-small);
-  padding: 8px 0 12px;
 }
 
 .away {
@@ -29,11 +13,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 2ch;
-  padding: 8px 1ch;
-  margin-bottom: 12px;
-  background: var(--bg-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  margin-bottom: var(--sp-5);
 }
 
 .awayState {
@@ -53,8 +33,13 @@
   margin-left: auto;
 }
 
+.untilLabel {
+  color: var(--fg-2);
+}
+
+/* 33ch: the 28ch placeholder, the side padding and the border, plus a little slack, so it shows in full. */
 .until {
-  width: 30ch;
+  width: 33ch;
   height: var(--control-height);
   padding: 0 1ch;
   color: var(--fg);
@@ -75,7 +60,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 2ch 22ch minmax(0, 1fr) auto;
+  grid-template-columns: 2ch 24ch minmax(0, 1fr) auto;
   align-items: center;
   gap: 1ch;
   padding: 6px 1ch 6px 0.5ch;
@@ -91,7 +76,7 @@
   color: var(--fg-3);
 }
 
-/* Second cue only: the state word beside it says the same. */
+/* Second cue only: the words beside it say the same. */
 .on {
   color: var(--ok);
 }
@@ -110,7 +95,8 @@
   overflow-wrap: anywhere;
 }
 
-.stateWord {
+/* Off or unknown: the words in 600 and --fg, so a row that isn't on stands out without colour. */
+.notOk {
   color: var(--fg);
   font-weight: 600;
 }
@@ -122,11 +108,7 @@
 }
 
 .camera {
-  margin-top: 12px;
-  padding: 10px 1ch;
-  background: var(--bg-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  margin-top: var(--sp-5);
 }
 
 .cameraHead {

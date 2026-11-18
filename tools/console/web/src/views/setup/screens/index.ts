@@ -1,5 +1,6 @@
 // The wizard's screens.
 export { IntroScreen } from "./IntroScreen";
+export { splitPlan } from "./consentPlan";
 export { PermissionsScreen } from "./PermissionsScreen";
 export { PickScreen } from "./PickScreen";
 export { SummaryScreen } from "./SummaryScreen";

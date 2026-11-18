@@ -1,11 +1,14 @@
-// The model strip, on the Models page (ModelsView). Two rows:
-//   ORCHESTRATOR  now: opus-5-5 · medium  next session [model] [effort]  applies to...
-//   VOICE         [model] [effort]  applies on your next request
+// The model strip, System's MODELS group. Two rows on one grid, so the
+// pickers line up, each with its note on a line of its own under the pickers:
+//   CLAUDE  now: opus-5-5 · medium  next session  model [▾]  effort [▾]
+//                                   applies to every new Claude session, not this one
+//   VOICE                                         model [▾]  effort [▾]
+//                                   applies on your next request
 // then a hint on switching the running session from VS Code.
 // Like the Away/Here toggle, a pick acts directly (POST /api/models) on
 // the owner's click instead of asking Claude. The new state comes back on the
 // event stream, so the pickers always show what the server holds.
-import { useState } from "react";
+import { useId, useState } from "react";
 import { pickModel, UnauthorizedError } from "../api";
 import type { ModelField, ModelPick, ModelsState, ModelTarget } from "../api";
 import { useStore } from "../state";
@@ -23,6 +26,8 @@ import { PickSelect } from "./PickSelect";
 const SAVING_REASON = "saving the last pick";
 const FIELDS: ModelField[] = ["model", "effort"];
 const NO_PICK: ModelPick = { model: null, effort: null };
+// How each target reads in a picker's accessible name: `Claude model`, `Voice effort`.
+const TARGET_WORDS: Record<ModelTarget, string> = { orchestrator: "Claude", voice: "Voice" };
 
 interface PickersProps {
   models: ModelsState;
@@ -34,21 +39,27 @@ interface PickersProps {
   unknownLabel?: string;
 }
 
-/** The model and effort pickers for one target. */
+/** The model and effort pickers for one target, each after its visible label. */
 function Pickers({ models, target, current, onPick, disabledReason, unknownLabel }: PickersProps) {
+  const idPrefix = useId();
   return (
     <>
       {FIELDS.map((field) => (
-        <PickSelect
-          key={field}
-          target={target}
-          label={`${target} ${field}`}
-          options={models.choices[target][field]}
-          current={(current ?? NO_PICK)[field]}
-          onPick={(index) => onPick(target, field, index)}
-          disabledReason={disabledReason}
-          unknownLabel={unknownLabel}
-        />
+        <span key={field} className={styles.field}>
+          <label className={styles.label} htmlFor={`${idPrefix}-${field}`}>
+            {field}
+          </label>
+          <PickSelect
+            id={`${idPrefix}-${field}`}
+            target={target}
+            label={`${TARGET_WORDS[target]} ${field}`}
+            options={models.choices[target][field]}
+            current={(current ?? NO_PICK)[field]}
+            onPick={(index) => onPick(target, field, index)}
+            disabledReason={disabledReason}
+            unknownLabel={unknownLabel}
+          />
+        </span>
       ))}
     </>
   );
@@ -82,7 +93,7 @@ export function ModelStrip() {
   return (
     <div className={styles.strip}>
       <div className={styles.row}>
-        <span className={`hud-label ${styles.key}`}>Orchestrator</span>
+        <span className={`hud-label ${styles.key}`}>Claude</span>
         <span className={styles.now}>{nowWords(models.orchestrator.now)}</span>
         <span className={styles.label}>next session</span>
         <Pickers
@@ -97,6 +108,9 @@ export function ModelStrip() {
       </div>
       <div className={styles.row}>
         <span className={`hud-label ${styles.key}`}>Voice</span>
+        {/* Voice has no "now" or "next session": empty cells keep its pickers in Claude's columns. */}
+        <span className={styles.now} />
+        <span className={styles.label} />
         <Pickers
           models={models}
           target="voice"

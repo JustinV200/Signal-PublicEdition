@@ -3,13 +3,15 @@
 This is sleepmode's side of the contract in tools/sleepmode/README.md ("The
 whiteboard contract"):
 
-- POST /api/night/show {"seed": int, "sky": bool} switches the projector page to
-  the night view: a dim night sky (sky true) or plain black (sky false).
+- POST /api/night/show {"seed": int} switches the projector page to the night view,
+  a dim night sky.
 - POST /api/night/hide {} goes back to the view that showed before.
-- GET /api/status says which view shows and how many pages are connected, so the
-  keeper can tell the night view is really on the projector (is_showing).
+- GET /api/status says which view shows and how many pages are connected, so sleep
+  and the keeper can tell the night view is really on the projector (is_showing).
+- POST /api/kiosk/open {} asks the daemon to reopen its projector kiosk when no page
+  is connected (the night guard's repair, whiteboard_link.repair).
 
-Both carry the daemon's X-Signal-Token. The daemon is found through its own
+All carry the daemon's X-Signal-Token. The daemon is found through its own
 discovery files (tools/whiteboard/.state/daemon.json and token). This client never
 starts the daemon (sleep does, through daemon_start): when it isn't running, or doesn't
 have these routes yet (404), every call raises WhiteboardUnavailableError and the caller
@@ -34,6 +36,7 @@ LOOPBACK_HOST = "127.0.0.1"
 TOKEN_HEADER = "X-Signal-Token"
 SHOW_PATH = "/api/night/show"
 HIDE_PATH = "/api/night/hide"
+KIOSK_OPEN_PATH = "/api/kiosk/open"
 STATUS_PATH = "/api/status"
 NIGHT_VIEW = "night"
 TOKEN_FILE = "token"
@@ -69,13 +72,13 @@ class NightViewClient:
         # An empty ProxyHandler keeps loopback requests off any system proxy.
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
-    def show(self, seed: int, sky: bool) -> None:
-        """Switch the projector to the night view (sky true) or a black page (sky false).
+    def show(self, seed: int) -> None:
+        """Switch the projector to the night view, tonight's sky (`seed` from night_seed).
 
         Raises:
             WhiteboardUnavailableError: The whiteboard couldn't do it.
         """
-        self._request(SHOW_PATH, {"seed": seed, "sky": sky})
+        self._request(SHOW_PATH, {"seed": seed})
 
     def hide(self) -> None:
         """Leave the night view for the view shown before it (a no-op outside the night view).
@@ -94,6 +97,21 @@ class NightViewClient:
         status = self._request(STATUS_PATH, None)
         pages = status.get("pages_connected")
         return status.get("view") == NIGHT_VIEW and isinstance(pages, int) and pages > 0
+
+    def open_kiosk(self) -> bool:
+        """Ask the daemon to reopen its projector kiosk if no page is connected.
+
+        Returns:
+            True if it tried to reopen it; False if a page was connected or it's backing off.
+
+        Raises:
+            WhiteboardUnavailableError: Not running, refused, or its kiosk is off (409).
+        """
+        return self._request(KIOSK_OPEN_PATH, {}).get("opened") is True
+
+    def is_daemon_running(self) -> bool:
+        """True if daemon.json names a running whiteboard daemon (it may still be starting)."""
+        return read_live_daemon_info(self._state_dir) is not None
 
     def _request(self, path: str, body: dict[str, Any] | None) -> dict[str, Any]:
         """POST body as JSON (GET when None) and return the JSON reply, mapping every failure."""

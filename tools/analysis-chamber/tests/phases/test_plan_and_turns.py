@@ -20,7 +20,8 @@ async def test_draft_plan_is_one_planning_turn_and_adds_personal_section(tmp_pat
     assert (ctx.run_dir / "plan.md").read_text(encoding="utf-8") == plan == ctx.manifest.plan_text
     assert "The user must choose" in plan
     assert str(ctx.config.private_root / ctx.manifest.id) in plan
-    assert str(ctx.config.analyses_root / ctx.manifest.id) in plan
+    assert str(ctx.config.analyses_root) in plan
+    assert "FAKE-TOOL-LIST" in call.prompt  # the plan turn is told what collect can use
     assert ctx.manifest.sessions["lead"] == "lead-1"
 
 

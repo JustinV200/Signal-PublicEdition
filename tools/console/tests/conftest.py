@@ -10,14 +10,16 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
+import pytest
 import pytest_asyncio
 from aiohttp.test_utils import TestClient, TestServer
 from signal_brief import BriefPaths
 
 from signal_console.actions import ActionTools
+from signal_console.health import HealthPaths
 from signal_console.hub import HubRecord
 from signal_console.models import ModelFiles
-from signal_console.orchestrator import Claim
+from signal_console.orchestrator import Claim, messages
 from signal_console.server import (
     SESSION_TOKEN_HEADER,
     ActionRunner,
@@ -46,7 +48,7 @@ class FakeStatus:
     board_reads: int = 0
 
     async def snapshot(self) -> dict[str, Any]:
-        return {"orchestrator": {"claimed": False, "label": None, "turn": None}}
+        return {"orchestrator": {"claimed": False, "alive": False, "label": None, "turn": None}}
 
     async def saves(self) -> dict[str, str | None]:
         self.board_reads += 1
@@ -178,8 +180,24 @@ def tmp_model_files(folder: Path) -> ModelFiles:
     )
 
 
+def tmp_health_paths(folder: Path) -> HealthPaths:
+    """Every file the health checks read, under `folder`: never the real .state or settings."""
+    return HealthPaths(
+        state_dir=folder,
+        web_dist_dir=folder / "dist",
+        settings_files=(folder / "settings.json", folder / "settings.local.json"),
+        edge_path=folder / "msedge.exe",
+        whiteboard_dir=folder / "whiteboard",
+        tool_root=folder / "console",
+        # tcpmux, a port nothing on a Windows PC listens on: the port row reads "free".
+        default_port=1,
+    )
+
+
 @pytest_asyncio.fixture
-async def console(tmp_path: Path) -> AsyncIterator[Console]:
+async def console(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Console]:
+    # Never the repo's real .env: with no file there, the chat marker names "the owner".
+    monkeypatch.setattr(messages, "ENV_FILE_PATH", tmp_path / ".env")
     events = EventHub(tmp_path / "history.jsonl")
     status = FakeStatus()
     inbox = FakeInbox()
@@ -203,6 +221,7 @@ async def console(tmp_path: Path) -> AsyncIterator[Console]:
             BriefPaths(tmp_path / "brief", tmp_path / "sleep-state.json"),
             tmp_model_files(tmp_path / "models"),
             SetupRunner([sys.executable, str(FAKE_SETUP_CLI)], tmp_path),
+            tmp_health_paths(tmp_path),
         )
         app = build_app(services, tmp_path / "dist")
         async with TestClient(TestServer(app, host="127.0.0.1")) as client:

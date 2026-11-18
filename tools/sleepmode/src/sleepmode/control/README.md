@@ -5,11 +5,11 @@ The sleep / wake / status state machine, its state file, and the text summaries.
 ## Public API
 
 - `SleepMode(deps)`:
-  - `sleep(wake_at=None, night_sky=True) -> SleepState` turns sleep mode on, or updates it if it's on.
+  - `sleep(wake_at=None) -> SleepState` turns sleep mode on, or updates it if it's on.
     - First saves the new session id, so an older keeper's input wake sees a newer sleep and does nothing.
     - Sets the wake task first, so a hung `schtasks` leaves the screens lit. With no `wake_at` while already asleep, the pending wake time is kept; otherwise any old wake task is removed.
     - Turns the RGB lights off (`deps.lighting.off`). That's before any screen goes dark too, so a lighting step that hangs leaves the screens lit, not dark with no keeper. It's also before the keeper starts, so no input wake can restore the lights while they're still going off. When it replaces a sleep that's still on, it passes `may_snapshot=False`, so that sleep's snapshot of the lights isn't saved over. A lighting failure is a note, never an error, and if a later step fails, the rollback's wake brings the lights back.
-    - Darkens every display but the projector, then asks the whiteboard for the night view. If the whiteboard can't, the projector gets a black window, and `deps.start_whiteboard` starts the whiteboard daemon if it's down (a failed start is a note). This projector step is in `projector_step.py`.
+    - Darkens every display but the projector, then asks the whiteboard for the night view. The projector is recorded as `NIGHT_SKY` only if `is_showing()` says a page shows it; otherwise it's a black window waiting for the whiteboard (the keeper repairs it), and if the whiteboard couldn't be reached, `deps.start_whiteboard` starts the daemon if it's down (a failed start is a note). This projector step is in `projector_step.py`.
     - Saves the state, then starts the keeper, which must still be running a moment later, then saves its pid. A keeper of the sleep it replaced that hangs on is then ended.
     - Raises `ValueError` for a bad or past `wake_at` (before anything changes). Raises `SleepModeError` if the displays can't be listed or the state can't be saved (nothing changed). Any failure after the session id is saved, the keeper not starting or dying at once included, wakes everything back up (the lights too), ends this sleep's keeper (if it started) and a replaced keeper that hang on, and then raises `SleepModeError` (Ctrl+C gets the same clean-up and is re-raised). If that wake itself fails, this sleep's keeper is left up, since the screens may still be dark and it's what wakes them on input.
   - `wake(reason="request", only_session=None) -> SleepState` turns sleep mode off (in `wake.py`). It sends DDC power-on to every display but the projector the sleep recorded, tells the whiteboard to leave the night view, and marks the state awake, so the keeper exits. Then it brings the lights back (`deps.lighting.restore`, skipped when the state says no sleep is on, so a repeat wake leaves them be) and removes the wake task, both after the save so slow lights or a hung `schtasks` can't hold the black windows up. Their notes are in the answer and the log, not the saved state. Last, `stop_keeper` ends a keeper that's still running a few seconds later. That last step runs even if the awake state couldn't be saved or Ctrl+C lands during `schtasks`.
@@ -23,7 +23,7 @@ The sleep / wake / status state machine, its state file, and the text summaries.
 
 ## The state file (`tools/sleepmode/.state/state.json`)
 
-It holds `is_asleep`, `session_id`, `since`, `wake_at`, `night_sky`, `monitors` (one `MonitorResult` per display), `keeper_pid`, `keeper_created` (the keeper's creation time as a FILETIME count), `woke_at`, `woke_by`, `lighting` (what the last sleep did to the lights, one line per backend) and `notes`. The times are local ISO.
+It holds `is_asleep`, `session_id`, `since`, `wake_at`, `monitors` (one `MonitorResult` per display), `keeper_pid`, `keeper_created` (the keeper's creation time as a FILETIME count), `woke_at`, `woke_by`, `lighting` (what the last sleep did to the lights, one line per backend) and `notes`. The times are local ISO.
 
 ## Depends on
 

@@ -19,6 +19,14 @@ const MS_PER_SECOND = 1000;
 /** No byte for this long means a dead stream. The server's keepalive is every 5 s (15 s before). */
 export const STALL_MS = 20_000;
 
+/**
+ * True past STALL_MS since the server's last byte (`syncedAt`, epoch ms), or before the first
+ * one. The status line's `no update for 25s` and the scope's `NO SIGNAL 25s` both use it.
+ */
+export function isStreamStale(syncedAt: number | null, now: number): boolean {
+  return syncedAt === null || now - syncedAt > STALL_MS;
+}
+
 export interface EventHandlers {
   onEvent: (event: ServerEvent) => void;
   /** The stream is open (also fires after each reconnect). */

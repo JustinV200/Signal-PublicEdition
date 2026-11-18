@@ -1,11 +1,14 @@
 """The deterministic edits: the address constants and the samples' sent-mail cleanup."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from signal_setup.samples.sent_mail import own_text
 from signal_setup.wiring import set_constant
+
+RepoFile = Callable[[str], Path]  # the conftest `repo_file` fixture
 
 
 def test_set_constant_rewrites_one_line_and_keeps_crlf(tmp_path: Path) -> None:
@@ -27,8 +30,7 @@ def test_own_text_drops_quotes_and_wrapper() -> None:
     assert own_text(body) == "Sounds good, see you then."
 
 
-def test_readme_starts_with_the_intro() -> None:
+def test_readme_starts_with_the_intro(repo_file: RepoFile) -> None:
     from signal_setup.intro import intro_text
 
-    readme = (Path(__file__).resolve().parents[3] / "README.md").read_text("utf-8")
-    assert intro_text() in readme
+    assert intro_text() in repo_file("README.md").read_text("utf-8")

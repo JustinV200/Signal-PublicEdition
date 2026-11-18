@@ -29,6 +29,7 @@ async def _run(console, body):
             None,
             0,
         ),
+        ({"command": "auto", "tools": ["mail", "brief"]}, ["auto", "mail,brief"], None, 0),
         (
             {"command": "apply", "tool": "mail", "step": "email", "value": "exit=3"},
             ["apply", "mail", "email", "--value=exit=3"],
@@ -64,10 +65,17 @@ async def test_run_streams_the_fixed_command(console, body, args, stdin, exit_co
     [
         {"command": "rm"},
         {"command": ["list"]},
+        # verify's rows carry a failing check's raw output: not for the page.
+        {"command": "verify", "tools": ["mail"]},
         {"command": "apply", "tool": "--help", "step": "x"},
         {"command": "apply", "tool": "mail", "step": "email", "value": "a\nb"},
+        {"command": "apply", "tool": "mail", "step": "email", "value": "a\x9bb"},
         {"command": "apply", "tool": "mail", "step": "email", "answer": "maybe"},
         {"command": "mark", "tool": "mail", "step": "signin", "status": "failed"},
+        # doc takes ids only: never a path or a flag.
+        {"command": "doc", "tool": "vault", "step": "../../AGENTS.md"},
+        {"command": "doc", "tool": "-x", "step": "add"},
+        {"command": "doc", "tool": "vault"},
         {"command": "config", "tool": "mail", "set": {"-x": "1"}},
         {"command": "config", "tool": "mail", "set": {"a=b": "1"}},
         {"command": "samples", "action": "files", "paths": ["--kind=code"]},
@@ -79,14 +87,27 @@ async def test_run_refuses_anything_else(console, body):
     assert (await _run(console, body))[0] == 400
 
 
-async def test_writes_run_one_at_a_time_and_reads_beside_them(console):
+async def test_writes_run_one_at_a_time_and_reads_beside_them(console, monkeypatch):
     write = {"command": "mark", "tool": "mail", "step": "signin", "status": "done"}
-    await console.services.setup._lock.acquire()  # a write in flight
+    runner = console.services.setup
+    await runner._lock.acquire()  # a write in flight
     try:
         assert (await _run(console, write))[0] == 409
         assert (await _run(console, {"command": "list"}))[0] == 200
+        # Lost the race after the route's own check: the stream says busy, not just failed.
+        real_check, checks = runner.check_free, []
+
+        def free_once_then_busy():
+            checks.append(1)
+            if len(checks) > 1:
+                real_check()
+
+        monkeypatch.setattr(runner, "check_free", free_once_then_busy)
+        status, records = await _run(console, write)
+        assert status == 200 and records[0]["busy"] is True and records[-1] == {"exit": 1}
     finally:
-        console.services.setup._lock.release()
+        runner._lock.release()
+    monkeypatch.undo()
     assert (await _run(console, write))[0] == 200
 
 
@@ -97,7 +118,29 @@ async def test_setup_routes_need_the_page_token(console):
     assert response.status == 401
 
 
-def test_terminal_runs_only_setup_ps1_for_a_tool(tmp_path):
-    assert terminal_command(tmp_path, "vault")[-2:] == [str(tmp_path / "setup.ps1"), "vault"]
-    with pytest.raises(ValueError):
-        terminal_command(tmp_path, "vault; calc")
+def test_terminal_runs_only_setup_ps1_step_for_a_tool_and_step(tmp_path):
+    assert terminal_command(tmp_path, "vault", "init")[-4:] == [
+        str(tmp_path / "setup.ps1"),
+        "step",
+        "vault",
+        "init",
+    ]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"tool": "vault; calc", "step": "init"},
+        {"tool": "vault"},
+        {"tool": "vault", "step": "--help"},
+        {"tool": "vault", "step": "init; calc"},
+        {"tool": "vault", "step": "init\n"},
+        {"tool": "vault", "step": ["init"]},
+    ],
+)
+async def test_terminal_refuses_an_unchecked_id(console, body):
+    # Refused before anything starts, so no window opens here.
+    response = await console.client.post(
+        "/api/setup/terminal", json=body, headers=console.page_headers()
+    )
+    assert response.status == 400

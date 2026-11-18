@@ -1,4 +1,4 @@
-"""Away mode for the Devices page: read it, and turn it on or off when the owner clicks.
+"""Away mode for the System page: read it, and turn it on or off when the owner clicks.
 
 Away mode is the brief's (packages/brief): while it's on, sessions hold their
 news for the owner. This is the one console control that acts directly instead of

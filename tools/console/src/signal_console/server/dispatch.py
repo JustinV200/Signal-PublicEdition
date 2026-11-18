@@ -22,9 +22,7 @@ from signal_console.orchestrator import (
 )
 from signal_console.server.events import EventHub, new_event_id, now_iso
 
-NOT_CLAIMED_ERROR = (
-    "No orchestrator session has claimed the console. Run `console claim` from that session."
-)
+NOT_CLAIMED_ERROR = "No Claude session yet. Run `console claim` in Claude Code to link one."
 # Shown for a bug rather than a known failure; the details go to the server log.
 UNEXPECTED_ERROR = "The console hit an unexpected error sending this; see the server log."
 

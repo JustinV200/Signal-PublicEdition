@@ -1,7 +1,7 @@
 // Board page entry point: connects to the daemon's /ws and dispatches its messages.
 // Messages: {type:"scene", items, view, night, stage}, {type:"mode", mode, markers},
 // {type:"todo", todo, newly_done}, {type:"idle", idle}, {type:"highlight", x,y,w,h,seconds}.
-// `night` is {seed, sky, previous_view} while the view is "night" (sleep mode), else null.
+// `night` is {seed, previous_view} while the view is "night" (sleep mode), else null.
 // Render failures go back to the daemon as {type:"render_error"} so they show up in its log.
 
 import { fitIdle, renderIdle } from "./idle/idle.js";
@@ -42,10 +42,10 @@ function handleMessage(message) {
 }
 
 // Start the sky for the scene's night settings, or stop it once the view isn't night:
-// hiding the layer alone would keep its frame loop running all day. Only a new seed or
-// sky restarts it, since every start rebuilds the sky; scene messages come often.
+// hiding the layer alone would keep its frame loop running all day. Only a new seed
+// restarts it, since every start rebuilds the sky; scene messages come often.
 function showNight(settings) {
-  const key = settings ? `${settings.seed}/${settings.sky}` : null;
+  const key = settings ? settings.seed : null;
   if (key === (night?.key ?? null)) return;
   night?.handle.stop();
   night = null;

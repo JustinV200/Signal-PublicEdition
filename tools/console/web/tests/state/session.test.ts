@@ -1,6 +1,6 @@
-// Session start against a fake fetch: a 401 anywhere must end in the calm
-// "run console open" state, and a good hash key is redeemed for a token
-// that every later request carries.
+// Session start against a fake fetch: a 401 anywhere must end in the
+// signed-out state with the server's own reason and command, and a good hash
+// key is redeemed for a token that every later request carries.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getState, getToken, login } from "../../src/api";
 import { startSession } from "../../src/state";
@@ -8,12 +8,16 @@ import { startSession } from "../../src/state";
 const STATE = {
   orchestrator: {
     claimed: true,
+    alive: true,
     label: "main",
+    claimedAt: null,
     turn: { state: "idle", startedAt: null, lastActivityAt: null, agents: 0, agentsUnsure: false },
   },
   voice: { running: false, phase: null, startedBy: null },
-  board: { saves: [], view: null, online: false },
+  board: { saves: [], view: null, itemCount: null, online: false },
   models: null,
+  away: null,
+  openCommand: 'uv run --project "C:/fake dir/tools/console" --frozen --no-sync console open',
 };
 
 function jsonResponse(status: number, body: unknown): Promise<Response> {
@@ -41,13 +45,28 @@ describe("startSession", () => {
     expect(getToken()).toBe("tok-1");
   });
 
-  it("turns a 401 into the signed-out state and forgets the token", async () => {
+  it("turns a failed login into the signed-out state with the server's reason", async () => {
+    const reason = "that login key is wrong, used or expired";
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => jsonResponse(401, { error: "not logged in" })),
+      vi.fn(() => jsonResponse(401, { error: reason, openCommand: STATE.openCommand })),
     );
-    expect(await startSession(null, { login, getState })).toEqual({ kind: "out" });
+    expect(await startSession("used-key", { login, getState })).toEqual({
+      kind: "out",
+      reason,
+      openCommand: STATE.openCommand,
+    });
     expect(getToken()).toBeNull();
-    expect(await startSession("used-key", { login, getState })).toEqual({ kind: "out" });
+  });
+
+  it("says the server isn't answering, not the browser's words, when fetch can't connect", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+    const outcome = await startSession(null, { login, getState });
+    expect(outcome.kind === "down" && String(outcome.error)).toBe(
+      "Error: the console server isn't answering",
+    );
   });
 });

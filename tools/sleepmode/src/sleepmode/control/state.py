@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sleepmode.screens import METHODS, MonitorResult
+from sleepmode.screens import LEGACY_METHODS, METHODS, MonitorResult
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,6 @@ class SleepState:
         session_id: Names this sleep; the keeper started for it exits when it changes.
         since: When sleep mode last turned on.
         wake_at: The scheduled wake time, or None.
-        night_sky: Whether the night sky was asked for.
         monitors: What was done to each display at the last sleep.
         keeper_pid: The keeper process's id, or None.
         keeper_created: That process's creation time (a FILETIME count), or None. With
@@ -49,7 +48,6 @@ class SleepState:
     session_id: str = ""
     since: datetime | None = None
     wake_at: datetime | None = None
-    night_sky: bool = True
     monitors: tuple[MonitorResult, ...] = ()
     keeper_pid: int | None = None
     keeper_created: int | None = None
@@ -66,6 +64,10 @@ def save_state(path: Path, state: SleepState) -> None:
         OSError: The file couldn't be written.
     """
     payload = asdict(state)
+    # shortcut: keepers and MCP servers started before the black-page option went
+    # (2026-11-18) require this key and wake everything if it's missing; drop it once
+    # none of those can still be running (after a wake and an MCP restart).
+    payload["night_sky"] = True
     for key in ("since", "wake_at", "woke_at"):
         value = getattr(state, key)
         payload[key] = value.isoformat(timespec="seconds") if value else None
@@ -128,7 +130,6 @@ def _parse_state(payload: Any) -> SleepState:
         session_id=_require(payload, "session_id", str),
         since=_parse_time(payload.get("since")),
         wake_at=_parse_time(payload.get("wake_at")),
-        night_sky=_require(payload, "night_sky", bool),
         monitors=tuple(_parse_monitor(item) for item in payload.get("monitors", [])),
         keeper_pid=_optional(payload, "keeper_pid", int),
         keeper_created=_optional(payload, "keeper_created", int),
@@ -144,6 +145,7 @@ def _parse_monitor(item: Any) -> MonitorResult:
     if not isinstance(item, dict):
         raise TypeError("a monitor entry isn't an object")
     method = _require(item, "method", str)
+    method = LEGACY_METHODS.get(method, method)
     if method not in METHODS:
         raise ValueError(f"unknown method {method!r}")
     rect = item["rect"]

@@ -1,4 +1,5 @@
-"""Public API of signal_console.orchestrator: claim a session, word chats, send to its inbox.
+"""Public API of signal_console.orchestrator: claim a session (or a free claim), tell if it's
+open, word claims and chats, send.
 
 The claim type and the inbox sender come from the shared signal_orchestrator
 package (the voice hub sends through it too); they're re-exported here so the
@@ -15,7 +16,10 @@ from signal_orchestrator import (
     send_to_inbox,
 )
 
+from signal_console.orchestrator.auto_claim import claim_if_free
 from signal_console.orchestrator.claim import read_claim, write_claim
+from signal_console.orchestrator.claim_words import claimed_ago, default_label
+from signal_console.orchestrator.liveness import is_claim_alive
 from signal_console.orchestrator.messages import (
     MARKER,
     ConsoleRequest,
@@ -33,7 +37,11 @@ __all__ = [
     "RequestError",
     "chat_request",
     "claim_from_env",
+    "claim_if_free",
+    "claimed_ago",
+    "default_label",
     "encode_frames",
+    "is_claim_alive",
     "read_claim",
     "send_to_inbox",
     "write_claim",

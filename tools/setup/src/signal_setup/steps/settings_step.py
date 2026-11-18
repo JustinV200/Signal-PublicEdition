@@ -25,7 +25,7 @@ def _ask(root: Path, setting: Setting, asker: Any) -> bool:
     while True:
         text = asker.text(f"New value, Enter keeps [{settings.display(now)}]")
         if text is None:
-            if settings.is_placeholder(now):
+            if settings.is_placeholder(now, settings.is_prose_file(setting.file)):
                 asker.say("That's still a placeholder; the tool won't count as set up.")
             return False
         try:

@@ -1,25 +1,33 @@
 // The boards buffer: a list of boards to pick from and a preview of the
-// picked one with the only button that sends it to the projector. A row click
-// or Up/Down only moves the `▸`; nothing loads until "Send to projector".
-// The cursor lives in the store so Up/Down from the input line move it too.
-// The header's Realign board and Full calibrate buttons re-fit the projection
-// (a full calibrate confirms first); both are off under the night view, since
-// the markers would light the room. The console runs every button itself.
+// picked one with the buttons that send it to the projector. A row click
+// or Up/Down only moves the `▸`; nothing loads until a preview button runs.
+// The selection lives in the store, by key, so Up/Down from the input line
+// move it too and a new save arriving above it leaves it on the same board.
+// The header's Realign whiteboard and Full calibrate buttons re-fit the projection;
+// both are off under the night view, since the markers would light the room
+// (the reason is said once, in a note under the header, so the header stays
+// one row; the buttons keep it as a tooltip only).
+// Every button runs through the confirm gate: a full calibrate, and loading a
+// save or showing its live version over a drawing (unless its refresher is
+// `todo`), ask first; the console runs the rest at once.
 import { useEffect, useRef } from "react";
 import type { KeyboardEvent } from "react";
+import { EmptyState } from "../../empty";
 import { focusInput } from "../../input";
 import {
+  boardIndexOf,
+  boardRowKey,
   boardRows,
   FIXED_ROWS,
   boardViewWords,
-  confirmPrompt,
   isRowShowing,
   NIGHT_REASON,
   NIGHT_VIEW,
+  useConfirmGate,
   usePendingActions,
   useStore,
 } from "../../state";
-import type { BoardRowInfo } from "../../state";
+import type { BoardButton } from "../../state";
 import { formatRelative, useTicker } from "../../time";
 import { Button } from "../../ui";
 import { BoardPreview } from "./BoardPreview";
@@ -27,41 +35,33 @@ import { BoardRow } from "./BoardRow";
 import styles from "./boards.module.css";
 
 const RELATIVE_TICK_MS = 60_000;
-const HINT =
-  "Click a board to preview it, then send it to the projector. The console loads it at once; the result shows in Chat.";
 // The console lists saves by asking the whiteboard daemon; a board request starts it.
 const OFF_NOTE =
   "The whiteboard is off, so its saved boards are not listed. Sending the to-do list or the idle board turns it on.";
 
 /** The boards view. */
 export function BoardsView() {
-  const { state, dispatch, sender } = useStore();
-  const { server, boardCursor } = state;
+  const { state, dispatch } = useStore();
+  const { request } = useConfirmGate();
+  const { server, boardKey } = state;
   const view = server?.board.view ?? null;
   const whiteboardOff = server !== null && !server.board.online;
   const now = useTicker(RELATIVE_TICK_MS);
   const rows = boardRows(server);
-  // The reducer clamps the cursor on every snapshot, so this index always exists.
-  const selected = rows[Math.min(boardCursor, rows.length - 1)];
+  // The to-do row when the selected board is gone, so this row always exists.
+  const selectedIndex = boardIndexOf(rows, boardKey);
+  const selected = rows[selectedIndex];
   const listRef = useRef<HTMLDivElement>(null);
   const pending = usePendingActions();
-  const nightReason = view === NIGHT_VIEW ? NIGHT_REASON : undefined;
-  const confirmCalibrate = () =>
-    dispatch({
-      type: "inputMode",
-      mode: {
-        kind: "confirm",
-        prompt: confirmPrompt("board.calibrate"),
-        action: "board.calibrate",
-      },
-    });
+  const isNight = view === NIGHT_VIEW;
+  const nightReason = isNight ? NIGHT_REASON : undefined;
 
   // Roving focus: when the cursor moves while a row has focus, focus follows it.
   useEffect(() => {
     const list = listRef.current;
     if (!list || !list.contains(document.activeElement)) return;
     list.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
-  }, [boardCursor]);
+  }, [selectedIndex]);
 
   const onListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowDown") dispatch({ type: "boardCursorMove", delta: 1 });
@@ -70,37 +70,37 @@ export function BoardsView() {
     event.preventDefault();
   };
 
-  const send = (row: BoardRowInfo) => {
-    void sender.runAction(row.action, row.args);
+  const run = (button: BoardButton) => {
+    request(button.action, button.args);
     focusInput();
   };
 
   return (
-    <div className={`col ${styles.view}`}>
-      <div className={styles.header}>
+    <div className="frame view">
+      <div className="view-header">
         <span className="hud-label">Boards</span>
         <span>
           On the projector now: <span className={styles.value}>{boardViewWords(view)}</span>
         </span>
         <span className={styles.headerActions}>
           <Button
-            onClick={() => void sender.runAction("board.realign")}
+            onClick={() => request("board.realign")}
             pending={pending.has("board.realign")}
-            disabledReason={nightReason}
+            quietReason={nightReason}
           >
-            Realign board
+            Realign whiteboard
           </Button>
           <Button
-            onClick={confirmCalibrate}
+            onClick={() => request("board.calibrate")}
             pending={pending.has("board.calibrate")}
-            disabledReason={nightReason}
+            quietReason={nightReason}
           >
             Full calibrate
           </Button>
         </span>
       </div>
-      <p className={styles.hint}>{HINT}</p>
       {whiteboardOff && <p className={styles.note}>{OFF_NOTE}</p>}
+      {nightReason && <p className={styles.note}>{nightReason}</p>}
       <div className={styles.columns}>
         <div
           ref={listRef}
@@ -111,27 +111,28 @@ export function BoardsView() {
         >
           {rows.map((row, index) => (
             <BoardRow
-              key={`${row.action}:${row.name}`}
+              key={boardRowKey(row)}
               name={row.name}
               meta={row.updatedAt === null ? "" : `saved ${formatRelative(row.updatedAt, now)}`}
-              selected={index === boardCursor}
+              selected={index === selectedIndex}
               showing={isRowShowing(row, view)}
-              onSelect={() => dispatch({ type: "boardCursor", index })}
+              onSelect={() => dispatch({ type: "boardSelect", key: boardRowKey(row) })}
             />
           ))}
           {rows.length === FIXED_ROWS && !whiteboardOff && (
-            <div className={styles.empty}>No saved boards yet.</div>
+            <div className={styles.empty}>
+              <EmptyState label="No saved boards">
+                Ask Claude to save a board and it&apos;s listed here.
+              </EmptyState>
+            </div>
           )}
         </div>
         <BoardPreview
           row={selected}
           showing={isRowShowing(selected, view)}
           now={now}
-          onSend={() => send(selected)}
-          onUpdate={() => {
-            if (selected.updateArgs) void sender.runAction("board.update", selected.updateArgs);
-            focusInput();
-          }}
+          night={isNight}
+          onRun={run}
         />
       </div>
     </div>

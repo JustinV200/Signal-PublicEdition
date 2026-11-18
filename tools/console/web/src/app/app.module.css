@@ -1,20 +1,122 @@
-/* Shell frame pieces: the scrolling view and the signed-out block. */
+/* Shell frame pieces: the band for Help and the tour, the scrolling view,
+   the signed-out page, the server-down notice and the result strip. */
+
+/* Help and the tour bar, outside the scroller. Empty, it takes no height;
+   otherwise a full-width rule sets it off from the view below. Its grid row
+   can shrink (base.css), so on a short window it never pushes the input line
+   off screen: Help shrinks inside it and scrolls in its own box, and only
+   the tour bar, which can't shrink, would make the band itself scroll. */
+.band {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  /* Room for the bar is kept, as on .main, so a tour stop tall enough to
+     scroll the band never narrows the bar against the other stops. */
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* .frame's auto right margin would stop the stretch in this flex column; 0 keeps the full frame width. */
+.band > * {
+  margin-right: 0;
+}
+
+.band:not(:empty) {
+  padding-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--rule);
+}
+
 .main {
   overflow-y: auto;
   position: relative;
   min-height: 0;
+  /* Room for the bar is kept whether or not the view overflows, so a long
+     view never moves its column against the status and input lines. Only on
+     the bar's own edge: the frame's left margin is worked out from 100vw
+     (base.css), so a gutter on the left too would push every view's text
+     right of the status line's by the bar's width. */
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
+/* The signed-out page fills every row: there is no status or input line. */
 .signIn {
   grid-row: 1 / -1;
-  padding-top: 24px;
-  line-height: 1.8;
-}
-
-.title {
-  font-weight: 600;
-}
-
-.muted {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   color: var(--fg-2);
+}
+
+/* Above the view while the server is down: a 2px warning rule on the left, like the
+   tour bar's. An inset shadow, not a border, so the text keeps the frame's left edge. */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 14px;
+  padding-block: 10px;
+  color: var(--fg-2);
+  background: var(--bg-2);
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+
+/* Why: worded and bold, the warning colour only repeats it. */
+.cause {
+  font-weight: 600;
+  color: var(--warn);
+}
+
+/* The result strip: one fixed row above the input line on every view but Chat.
+   It is always there, empty when idle, with a fixed height, so a result arriving
+   never moves the view or the input line; its words stay on one line. */
+.strip {
+  border-top: 1px solid var(--rule);
+  background: var(--bg);
+}
+
+.stripRow {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  height: calc(var(--control-height) + 2 * var(--sp-2));
+  color: var(--fg-2);
+}
+
+/* The small size goes here, not on the row: the frame's width is in ch, so a
+   smaller font on the row would move its left edge off everyone else's. */
+.stripWords {
+  font-size: var(--font-small);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Narrow windows leave little room beside Retry and Dismiss, so the row keeps two
+   text rows there (still fixed, so nothing moves) and the words wrap onto both. */
+@media (max-width: 720px) {
+  .stripRow {
+    height: calc(2 * var(--row) + 2 * var(--sp-2));
+  }
+
+  .stripWords {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* The word says it; the colour and weight only repeat it. */
+.stripFailed {
+  font-weight: 600;
+  color: var(--error);
 }

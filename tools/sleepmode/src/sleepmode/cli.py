@@ -1,6 +1,6 @@
 """The `sleepmode` command line: sleep, wake, status, mcp, plus the internal keeper command.
 
-    sleepmode sleep [--wake 07:00] [--no-sky]
+    sleepmode sleep [--wake 07:00]
     sleepmode wake
     sleepmode status
     sleepmode mcp          # the stdio MCP server (.mcp.json runs this)
@@ -38,7 +38,6 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     sleep = commands.add_parser("sleep", help="dark screens, night sky on the projector")
     sleep.add_argument("--wake", metavar="TIME", help="wake at TIME, e.g. 07:00, 7am or ISO")
-    sleep.add_argument("--no-sky", action="store_true", help="a black projector, no night sky")
     sleep.set_defaults(handler=_run_sleep)
     wake = commands.add_parser("wake", help="turn the screens back on")
     wake.add_argument("--reason", default="request", help=argparse.SUPPRESS)
@@ -53,14 +52,16 @@ def build_parser() -> argparse.ArgumentParser:
     keeper.add_argument("--keep-display-on", action="store_true")
     keeper.add_argument("--blackout", action="append", type=_rect, default=[])
     keeper.add_argument("--projector", type=_rect)
-    keeper.add_argument("--night-sky", action="store_true")
+    # TODO: ignored; MCP servers started before the black-page option went (2026-11-18)
+    # still pass it. Drop it once none of those can still be running (after an MCP restart).
+    keeper.add_argument("--night-sky", action="store_true", help=argparse.SUPPRESS)
     keeper.set_defaults(handler=_run_keeper)
     return parser
 
 
 def _run_sleep(args: argparse.Namespace) -> int:
     try:
-        state = build_sleep_mode().sleep(wake_at=args.wake, night_sky=not args.no_sky)
+        state = build_sleep_mode().sleep(wake_at=args.wake)
     except (ValueError, SleepModeError) as error:
         print(f"sleepmode: {error}", file=sys.stderr)
         return EXIT_FAILED
@@ -97,7 +98,6 @@ def _run_keeper(args: argparse.Namespace) -> int:
         args.keep_display_on,
         args.grace,
         args.projector,
-        args.night_sky,
     )
     try:
         sleep_mode = build_sleep_mode()
@@ -105,7 +105,7 @@ def _run_keeper(args: argparse.Namespace) -> int:
             options,
             read_state_for_keeper,
             lambda reason, session: sleep_mode.wake(reason=reason, only_session=session),
-            night_view_for_keeper(args.night_sky),
+            night_view_for_keeper(),
         )
     except Exception:
         # The keeper's stderr goes nowhere, so a crash has to reach the log file.

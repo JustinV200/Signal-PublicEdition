@@ -24,6 +24,7 @@ def default_backend(config: ChamberConfig) -> Backend:
     from analysis_chamber.agents import (
         RunContext,
         SdkRunner,
+        collect_tools_text,
         critic_options,
         lead_options,
         plan_options,
@@ -34,7 +35,11 @@ def default_backend(config: ChamberConfig) -> Backend:
     notifier = Notifier(config)
     # phases.AgentOptionsFactory asks for exactly this namespace (phases/deps.py).
     options = SimpleNamespace(
-        plan=plan_options, lead=lead_options, critic=critic_options, qa=qa_options
+        plan=plan_options,
+        lead=lead_options,
+        critic=critic_options,
+        qa=qa_options,
+        collect_tools=collect_tools_text,
     )
 
     def make_hooks(on_update: OnUpdate, run_notifier: object) -> object:

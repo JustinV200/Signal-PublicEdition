@@ -1,3 +1,15 @@
-// Tool health (setup status --json) in words, and its list.
+// Health in words and its list: the tools' (setup status --json) and the
+// console's own checks (GET /api/health), and the banner a Fix opens a tool page with.
+export { CheckBanner } from "./CheckBanner";
 export { HealthList } from "./HealthList";
-export { healthAction, healthCounts, healthLook } from "./healthWords";
+export { ToolHealthList } from "./ToolHealthList";
+export {
+  checkCounts,
+  consoleItem,
+  consoleRowKey,
+  healthAction,
+  healthCounts,
+  healthLook,
+  healthRowId,
+  NOT_WIRED_LOOK,
+} from "./healthWords";

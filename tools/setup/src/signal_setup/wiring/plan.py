@@ -1,16 +1,18 @@
 """What setup wires into Claude Code, worked out from the tools that are done.
 
 Only finished tools (and their finished optional steps) contribute MCP servers,
-permission rules, hooks and the status line. Skipped or unfinished tools get nothing.
+permission rules, hooks and the status line, each with one plain consent line saying
+what that lets Claude do. Skipped or unfinished tools get nothing.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from signal_setup import progress
 from signal_setup.platforms import venv_python
 from signal_setup.registry import Hook, Tool
+from signal_setup.wiring.consent import Grants, consent_line
 
 
 @dataclass(frozen=True)
@@ -22,20 +24,36 @@ class Plan:
     allow: tuple[str, ...]
     hooks: tuple[tuple[str, Hook], ...]  # (tool id, hook)
     statusline: bool
+    # One plain line per tool, for the consent page (consent.consent_line).
+    consent: tuple[str, ...] = ()
 
 
-def _done_step_extras(data: dict[str, Any], tool: Tool) -> tuple[list[str], list[str], bool]:
-    """MCP servers, permissions and the status-line flag from the tool's finished steps."""
-    servers: list[str] = []
-    allow: list[str] = []
-    statusline = False
+class _Adds(NamedTuple):
+    """What one finished tool adds: its MCP servers, allow rules and two step flags."""
+
+    servers: list[str]
+    allow: list[str]
+    statusline: bool
+    runs_claude: bool  # a done step registers an unattended Claude run
+
+
+def _adds(data: dict[str, Any], tool: Tool) -> _Adds:
+    """The tool's own servers and rules, plus those of its finished steps."""
+    servers, allow = list(tool.mcp), list(tool.permissions)
+    statusline = runs_claude = False
     for step in tool.steps:
         if progress.step_status(data, tool.id, step.id) != progress.DONE:
             continue
         servers += step.mcp
         allow += step.permissions
         statusline = statusline or step.statusline
-    return servers, allow, statusline
+        runs_claude = runs_claude or step.unattended_claude
+    return _Adds(servers, allow, statusline, runs_claude)
+
+
+def _grants(adds: _Adds, allowed: list[str]) -> Grants:
+    """The consent page's view of a tool: its filtered rules and what its steps set up."""
+    return Grants(allowed, bool(adds.servers), adds.statusline, adds.runs_claude)
 
 
 def _is_for_wired_server(rule: str, servers: list[str]) -> bool:
@@ -48,19 +66,21 @@ def _is_for_wired_server(rule: str, servers: list[str]) -> bool:
 def build(tools: tuple[Tool, ...], data: dict[str, Any], platform: str) -> Plan:
     """The plan for every tool in `tools` whose status in `data` is done."""
     done = [t for t in tools if progress.tool_status(data, t, platform) == progress.DONE]
-    servers: list[str] = []
-    allow: list[str] = []
-    hooks: list[tuple[str, Hook]] = []
-    statusline = False
-    for tool in done:
-        extra_servers, extra_allow, wants_statusline = _done_step_extras(data, tool)
-        servers += [*tool.mcp, *extra_servers]
-        allow += [*tool.permissions, *extra_allow]
-        hooks += [(tool.id, hook) for hook in tool.hooks]
-        statusline = statusline or wants_statusline
-    servers = list(dict.fromkeys(servers))
-    allow = [rule for rule in dict.fromkeys(allow) if _is_for_wired_server(rule, servers)]
-    return Plan(tuple(t.id for t in done), tuple(servers), tuple(allow), tuple(hooks), statusline)
+    adds = {t.id: _adds(data, t) for t in done}
+    servers = list(dict.fromkeys(s for t in done for s in adds[t.id].servers))
+    # Each tool's rules, less those for a server nobody wires (they'd be rules for nothing).
+    allowed = {
+        t.id: [r for r in dict.fromkeys(adds[t.id].allow) if _is_for_wired_server(r, servers)]
+        for t in done
+    }
+    return Plan(
+        tools=tuple(t.id for t in done),
+        mcp_servers=tuple(servers),
+        allow=tuple(dict.fromkeys(r for t in done for r in allowed[t.id])),
+        hooks=tuple((t.id, hook) for t in done for hook in t.hooks),
+        statusline=any(adds[t.id].statusline for t in done),
+        consent=tuple(consent_line(t, _grants(adds[t.id], allowed[t.id])) for t in done),
+    )
 
 
 def owned(tools: tuple[Tool, ...]) -> tuple[set[str], set[str], set[str]]:

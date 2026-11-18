@@ -9,7 +9,7 @@ Turns monitors off and on, and decides which display is the projector.
   - `power_on(monitors) -> {device_name: error}` sends DDC power-on to each. It returns the ones that refused, and never raises for a monitor.
 - `ddc`: the real calls, `read_power_mode(hmonitor)` and `set_power_mode(hmonitor, value)`, through dxva2 via ctypes with explicit signatures. They raise `DdcError`, or `ctypes.ArgumentError` for a handle ctypes can't pass. `Ddc` is the protocol fakes implement.
 - `split_projector(monitors, name_match) -> (projector | None, others)` follows the whiteboard's rule: a name match, else the first non-primary display.
-- `MonitorResult(device_name, friendly_name, method, detail, rect, is_projector)` and the methods `DDC_OFF`, `BLACK_WINDOW`, `NIGHT_SKY`, `BLACK_PAGE`.
+- `MonitorResult(device_name, friendly_name, method, detail, rect, is_projector)` and the methods `DDC_OFF`, `BLACK_WINDOW`, `NIGHT_SKY`.
 
 ## Depends on
 

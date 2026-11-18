@@ -10,7 +10,8 @@ requests, so:
 - /api/* needs a live session token in the X-Console-Token header (401
   without), except /api/login, and the local routes, which need the local key
   header instead. A header rather than a cookie, because browsers send
-  127.0.0.1 cookies to every local port (see sessions.py).
+  127.0.0.1 cookies to every local port (see sessions.py). A 401 body is the
+  reason and the `console open` command line (signed_out_body), never a secret.
 No CORS headers are ever sent. Copied in spirit from tools/whiteboard's
 loopback_only, request_guard and page_guard.
 TODO: move these guards into a shared packages/ module with the whiteboard's.
@@ -21,6 +22,7 @@ from collections.abc import Awaitable, Callable
 from aiohttp import web
 
 from signal_console.local_api import HOOK_TURN_PATH, LOGIN_KEY_PATH
+from signal_console.open_hint import open_command
 from signal_console.paths import LOCAL_KEY_HEADER
 from signal_console.server.security.sessions import (
     SESSION_TOKEN_HEADER,
@@ -33,6 +35,8 @@ LOGIN_PATH = "/api/login"
 LOCAL_PATHS = frozenset({HOOK_TURN_PATH, LOGIN_KEY_PATH})
 SAFE_METHODS = frozenset({"GET", "HEAD"})
 OWN_HOST_NAMES = ("127.0.0.1", "localhost")
+NOT_SIGNED_IN = "not signed in"
+HTTP_UNAUTHORIZED = 401
 
 # Vite builds load scripts and styles from files; inline styles are allowed because
 # UI libraries commonly inject <style> tags. blob: images are the camera view's frames,
@@ -55,8 +59,8 @@ def build_guard(auth: SessionAuth, local_key: str) -> Middleware:
         local_key: The secret the local routes require as X-Console-Key.
 
     Returns:
-        An aiohttp middleware. Rejections are 403, or 401 for "not logged in",
-        and close the connection.
+        An aiohttp middleware. Rejections are 403, or 401 for "not signed in"
+        (with signed_out_body), and close the connection.
     """
 
     @web.middleware
@@ -73,10 +77,26 @@ def build_guard(auth: SessionAuth, local_key: str) -> Middleware:
             if not secrets_match(request.headers.get(LOCAL_KEY_HEADER, ""), local_key):
                 return _refuse(request, 403, f"missing or wrong {LOCAL_KEY_HEADER} header")
         elif not auth.is_session_token(request.headers.get(SESSION_TOKEN_HEADER, "")):
-            return _refuse(request, 401, "not logged in; run `console open`")
+            return _refuse(request, HTTP_UNAUTHORIZED, NOT_SIGNED_IN)
         return await handler(request)
 
     return guard
+
+
+def signed_out_body(reason: str) -> dict[str, str]:
+    """A 401 body: why the page is signed out and the command that opens a signed-in window.
+
+    Unauthenticated, so it holds no key or token: the command names only this
+    checkout's folder, and only local processes can read it (the Host check,
+    and no CORS header is ever sent).
+
+    Args:
+        reason: Plain words for the page, e.g. NOT_SIGNED_IN.
+
+    Returns:
+        `{"error": reason, "openCommand": <the command line>}`.
+    """
+    return {"error": reason, "openCommand": open_command()}
 
 
 async def add_security_headers(request: web.Request, response: web.StreamResponse) -> None:
@@ -111,7 +131,9 @@ def _refuse(request: web.Request, status: int, reason: str) -> web.Response:
     # Closing stops a refused client reusing the keep-alive connection, e.g. to have
     # an unread body parsed as the next request.
     if request.path.startswith(API_PREFIX):
-        response = web.json_response({"error": reason}, status=status)
+        # A 401 also tells the page how to sign in again.
+        body = signed_out_body(reason) if status == HTTP_UNAUTHORIZED else {"error": reason}
+        response = web.json_response(body, status=status)
     else:
         response = web.Response(status=status, text=reason)
     response.force_close()

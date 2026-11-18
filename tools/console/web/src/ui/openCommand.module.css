@@ -1,0 +1,14 @@
+/* OpenCommand: its lead, the command in inline code and Copy, stacked. */
+.command {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: var(--col);
+}
+
+/* A long line with an absolute path: it wraps rather than widening the page. */
+.commandText {
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}

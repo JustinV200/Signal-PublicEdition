@@ -1,115 +1,77 @@
 /* Scope view: the radar SVG beside the text readout (stacked when narrow).
-   Everything on the scope is drawn in the phosphor accent at low alpha; the
-   blip shapes and labels carry the meaning. */
-.view {
-  padding: 14px 0 18px;
-}
-
-.header {
-  display: flex;
-  align-items: baseline;
-  gap: 3ch;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-  flex-wrap: wrap;
-}
-
-.hint {
-  color: var(--fg-3);
-  font-size: var(--font-small);
-}
-
+   The radar's own drawing styles are in radar/radar.module.css. */
 .columns {
   display: grid;
-  grid-template-columns: minmax(240px, 400px) minmax(0, 1fr);
+  /* Pinned: the SVG draws its 400-unit viewBox at 400px, so text never scales. */
+  grid-template-columns: 400px minmax(0, 1fr);
   gap: 4ch;
   align-items: center;
-  padding-top: 16px;
 }
 
+/* Exactly 400px at every width the frame fits; only a phone narrower than
+   that shrinks it rather than scrolling sideways. */
 .scope {
-  width: 100%;
+  width: 400px;
+  max-width: 100%;
   height: auto;
   display: block;
   overflow: visible;
 }
 
-.face {
-  fill: color-mix(in srgb, var(--accent) 5%, transparent);
-  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
-  stroke-width: 1;
-}
-
-.grid {
-  fill: none;
-  stroke: color-mix(in srgb, var(--accent) 22%, transparent);
-  stroke-width: 1;
-}
-
-.sweep {
-  fill: var(--accent);
-  transform-box: view-box;
-  transform-origin: 50% 50%;
-}
-
-.sweepEdge {
-  stroke: var(--accent);
-  stroke-width: 1;
-  opacity: 0.45;
-}
-
-@keyframes sweep {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Slow and linear so it never pulls the eye; the view stops it when the page is hidden. */
-.sweeping {
-  animation: sweep 8s linear infinite;
-}
-
-.blips {
-  fill: var(--accent);
-  filter: drop-shadow(0 0 3px var(--glow));
-}
-
-.hollow {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.5;
-}
-
-.label {
-  fill: var(--fg);
-  font-size: 12px;
-  filter: none;
-}
-
+/* The readout: bordered row-buttons in the boards list's look, each opening its view. */
 .readout {
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  min-width: 0;
+}
+
+/* Label and value share a baseline (the label is the smaller hud type). */
+.row {
   display: grid;
   grid-template-columns: 11ch minmax(0, 1fr);
-  row-gap: 10px;
   column-gap: 2ch;
-  align-content: start;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  padding: 6px 1ch;
+  color: var(--fg);
+  border-bottom: 1px solid var(--rule);
+  transition: background-color 80ms linear;
 }
 
-.readoutRow {
-  display: contents;
+.row:last-child {
+  border-bottom: 0;
 }
 
-.readoutRow dd {
-  overflow-wrap: anywhere;
+/* Inside the row, so the neighbouring rows and the list border never hide the ring. */
+.row:focus-visible {
+  outline-offset: -2px;
+}
+
+.row:hover {
+  background: var(--bg-2);
+}
+
+/* One line each on a wide screen; the title holds the full text of a cut value. */
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sweeping {
-    animation: none;
+  .row {
+    transition: none;
   }
 }
 
 @media (max-width: 720px) {
   .columns {
     grid-template-columns: 1fr;
+  }
+  /* No hover to read a cut value on a phone, so wrap instead. */
+  .value {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

@@ -1,7 +1,7 @@
 """Page-level check of the night view's JS (static/night/night.js) in headless Edge.
 
 Checks that the sky is a pure function of the seed (one seed, one layout; the next
-night differs), that `sky: false` adds nothing to the page, that a started sky is one
+night differs), that a started sky is one
 canvas that stop() removes, and that a drawn frame (band, nebulae, halo, moon and
 meteor included, with the brightest possible star on top of them) never passes the
 per-channel brightness cap. The effects and the moon's phase are covered by
@@ -21,9 +21,7 @@ import { buildMoon } from "/static/night/moon.js";
 const layout = (seed) =>
   JSON.stringify(buildSky(seed).stars.slice(0, 40).map((s) => [s.r, s.cos, s.sin]));
 const box = document.getElementById("night");
-startNight(box, { seed: 20261019, sky: false });
-const blackChildren = box.childElementCount;
-const lit = startNight(box, { seed: 20261019, sky: true });
+const lit = startNight(box, { seed: 20261019 });
 const litChildren = box.childElementCount;
 const litTag = box.firstElementChild?.tagName;
 lit.stop();
@@ -49,11 +47,11 @@ for (let i = 0; i < data.length; i += 4) {
   for (let c = 0; c < 3; c++) max[c] = Math.max(max[c], data[i + c]);
 }
 let badSeed = "none";
-try { startNight(box, { seed: "x", sky: false }); } catch (error) { badSeed = error.name; }
+try { startNight(box, { seed: "x" }); } catch (error) { badSeed = error.name; }
 const result = {
   sameSeed: layout(20261019) === layout(20261019),
   nextNight: layout(20261019) === layout(20261020),
-  blackChildren, litChildren, litTag, afterStop: box.childElementCount,
+  litChildren, litTag, afterStop: box.childElementCount,
   max, badSeed,
 };
 fetch("/result", { method: "POST", headers: { "content-type": "application/json" },
@@ -66,7 +64,6 @@ async def test_night_page_is_seeded_capped_and_stops_clean(run_harness) -> None:
     result = await run_harness(HARNESS)
     assert result["sameSeed"] is True
     assert result["nextNight"] is False
-    assert result["blackChildren"] == 0
     assert result["litChildren"] == 1 and result["litTag"] == "CANVAS"
     assert result["afterStop"] == 0
     assert result["badSeed"] == "TypeError"

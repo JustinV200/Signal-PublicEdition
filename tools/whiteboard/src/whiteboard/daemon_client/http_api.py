@@ -151,14 +151,13 @@ class DaemonApi:
         body = {} if item is None else {"item": item}
         return self.request("POST", f"/api/todo/{_quote(action)}", body)
 
-    def night(self, action: str, sky: bool = True) -> dict[str, Any]:
-        """POST /api/night/<action>: show (the night sky, or plain black with sky=False) or hide.
+    def night(self, action: str) -> dict[str, Any]:
+        """POST /api/night/<action>: show (tonight's night sky) or hide.
 
-        Returns `{ok, view, seed, sky, previous_view}` for show, `{ok, view}` for hide.
+        Returns `{ok, view, seed, previous_view}` for show, `{ok, view}` for hide.
         Show uses tonight's seed, the same one sleep mode sends.
         """
-        body = {"sky": sky} if action == "show" else {}
-        return self.request("POST", f"/api/night/{_quote(action)}", body)
+        return self.request("POST", f"/api/night/{_quote(action)}", {})
 
     def idle(self, action: str) -> dict[str, Any]:
         """POST /api/idle/<action>: show, hide or sync the idle view.

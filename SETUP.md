@@ -11,11 +11,13 @@
 ## Running setup
 
 ```
-.\setup.ps1          # Windows: the setup window (the wizard in the Signal console)
-.\setup.ps1 --no-ui  # Windows: the same setup in the terminal
-.\setup.ps1 mail     # just one tool, in the terminal (set up or redo)
+.\setup.cmd          # Windows: the setup window (the wizard in the Signal console)
+.\setup.cmd --no-ui  # Windows: the same setup in the terminal
+.\setup.cmd mail     # just one tool, in the terminal (set up or redo)
 ./setup.sh           # Linux (the terminal setup; the window is Windows-only)
 ```
+
+On Windows you can also double-click `setup.cmd`. It runs `setup.ps1` past PowerShell's script policy, which blocks scripts on a new PC, so type the `.cmd` (a bare `.\setup` would pick the blocked `.ps1`).
 
 Or in Claude Code: `/setup`, "set up", "set up the whiteboard", "remove jobhunt". `/setup` opens the same window; say "in chat" (or `/setup --no-ui`) to do it in the conversation instead. The `setup` skill runs the same commands and only steps in when something fails.
 
@@ -23,19 +25,21 @@ Or in Claude Code: `/setup`, "set up", "set up the whiteboard", "remove jobhunt"
 
 `setup` first installs and builds the console (its own registry steps, so they count as progress), then opens it on the Setup tab. The wizard runs the same setup CLI behind each button, so the window and the terminal share one progress file:
 
-- A welcome with the intro and any missing programs, then a checklist of every tool with its platform. Each tool, and each optional step, can be skipped.
+- A welcome with the intro and any missing programs, then a checklist of every tool in four groups (Core, Everyday, Hardware, Extras) with its platform and what it costs to set up (`15 min, Google account`), plus **Pick all** and **None**. A tool that builds on one you didn't pick offers to add it (**Add Gmail too**). Each tool, and each optional step, can be skipped.
+- **Save picks and install** saves the picks and runs every pick's automatic steps (its required installs that need nobody) in one log, then names, per tool, the step it stopped at because it needs you. Optional steps (scheduled tasks, the Docker image) and browser sign-ins always wait for your own click. Each tool's screen has **Run the automatic steps** too.
 - One screen per picked tool: its steps with a status word and mark (`✓ done`, `– skipped`, `✗ failed`, `○ to do`) and a button each (Run, Yes/No, Mark done, a value to save, a settings form, or the copytone samples panel). Output shows live. If a step fails, **Hand to Claude** sends the error to your session in the Chat tab (or copies it when no session has claimed the console).
-- Steps that take a password or Windows Hello get **Open a terminal**, which runs `setup.ps1 <tool>` in a new window; the wizard never takes secrets.
+- Steps that take a password or Windows Hello get **Open a terminal**, which runs `setup.ps1 step <tool> <step>` (just that step) in a new window; the wizard never takes secrets. **Check again**, or coming back to the window, shows the result.
+- One step runs at a time: the button you clicked reads `Working…` and the others wait.
 - Settings forms are built from each tool's settings schema; placeholders are flagged until you replace them.
-- Permissions shows the full summary before **Write this**; then a summary of each tool's health, and an optional tour of the console's views and of GUIDE.md.
+- Permissions says in one plain line per tool what Claude may do without asking (the exact entries are under **Show exact entries**) before **Add to Claude Code**; then a summary of each tool's health, and an optional tour of the console's views and of GUIDE.md.
 
-Close it any time: it reopens at the first unfinished tool. The console's Tools tab shows each tool as Active, Down or Not set up later on, with a button that opens the wizard at that tool.
+Close it any time: it reopens at the first unfinished tool. The Tools list in the console's System tab shows each tool as Active, Down or Not set up later on, with a button that opens the wizard at that tool.
 
 Setup goes in this order:
 
 1. A short intro and a check for missing programs.
 2. A checklist of tools with their platform. Pick the ones you want; the rest are skipped and get nothing.
-3. Each tool's steps: install, config, sign-ins, settings. Optional steps say their default; press Enter to take it or `s` to skip.
+3. Each tool's steps: install, config, sign-ins, settings. Required installs just run; other steps ask first. Optional steps say their default; press Enter to take it or `s` to skip.
 4. One summary of what it will add to Claude Code (MCP servers, permission rules, hooks). You confirm once.
 5. A check of every tool you picked, then an optional tour.
 
@@ -58,7 +62,7 @@ setup config jobhunt --list  # as JSON (incl. `Tailor resume`, Windows only)
 setup config mail-digest --set RunTimes=07:00,18:00
 ```
 
-(Run these as `.\setup.ps1 config ...`, or ask Claude to "change the digest time".) A change that affects a scheduled task re-registers it.
+(Run these as `.\setup.cmd config ...`, or ask Claude to "change the digest time".) A change that affects a scheduled task re-registers it.
 
 ## What setup writes
 

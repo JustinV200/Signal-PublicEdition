@@ -4,8 +4,10 @@
   min-width: 0;
 }
 
+/* 12px between blocks: under the chat's 16px between messages, so a reply's
+   paragraphs read as one message. */
 .body > * + * {
-  margin-top: 0.6em;
+  margin-top: var(--sp-5);
 }
 
 .body h1,
@@ -16,7 +18,7 @@
 .body h6 {
   font-weight: 600;
   line-height: 1.4;
-  /* Relative to the body size so the 16 / 15 / 14 steps scale with it at 4K. */
+  /* Relative to the body size so h1's +2px step scales with it at 4K. */
   font-size: var(--font-body);
 }
 
@@ -24,24 +26,25 @@
   font-size: calc(var(--font-body) + 2px);
 }
 
+/* A 1px size step does not read in mono, so h2 differs by case and tracking. */
 .body h2 {
-  font-size: calc(var(--font-body) + 1px);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-heading);
 }
 
-.body > :is(h1, h2, h3, h4, h5, h6):not(:first-child) {
-  margin-top: 0.9em;
+/* A heading sits closer to its section than to the block above it. */
+.body > :is(h1, h2, h3, h4, h5, h6) + * {
+  margin-top: var(--sp-2);
 }
 
 .body strong {
   font-weight: 600;
 }
 
+/* Code blocks are the global .panel (components.tsx); only type and scroll here. */
 .body pre {
-  background: var(--bg-2);
-  border: 1px solid var(--rule);
-  padding: 12px;
   font-size: var(--font-small);
-  line-height: 1.5;
+  line-height: 20px;
   overflow-x: auto;
 }
 

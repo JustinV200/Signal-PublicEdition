@@ -6,7 +6,7 @@ A stdio MCP server, run with `sleepmode mcp`. It's named `sleepmode`, so Claude 
 
 | Tool | Does |
 |---|---|
-| `sleep_mode_on(wake_at="", night_sky=True)` | `SleepMode.sleep`: monitors off or black, the night sky (or black) on the projector, the optional wake task. Called again while on, it updates the sleep; `""` then keeps the wake time. |
+| `sleep_mode_on(wake_at="")` | `SleepMode.sleep`: monitors off or black, the night sky on the projector, the optional wake task. Called again while on, it updates the sleep; `""` then keeps the wake time. |
 | `sleep_mode_off()` | `SleepMode.wake`: everything back. Safe when already awake. |
 | `sleep_mode_status()` | `SleepMode.status`: on or off, the wake time, each display, keeper health. Read-only. |
 

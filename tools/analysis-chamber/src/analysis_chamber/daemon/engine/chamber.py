@@ -1,9 +1,10 @@
 """Chamber: the daemon's run registry and the operations behind each HTTP route.
 
 Runs live in memory (seeded at startup by scanning both roots) and on disk in
-their manifests. A new run starts under private_root with personal unset; at
-approval a non-personal run moves to analyses_root (DESIGN.md "Where a run
-lives"). Every write goes through run_state.persist, which runs the leak guard.
+their manifests. A new run starts under private_root with personal unset and an
+opaque id; at approval a non-personal run moves to analyses_root and is renamed to a
+readable id (DESIGN.md "Where a run lives"). Every write goes through
+run_state.persist, which runs the leak guard.
 """
 
 import asyncio
@@ -14,7 +15,11 @@ from typing import Any
 from analysis_chamber.config import ChamberConfig
 from analysis_chamber.daemon.backend import Backend
 from analysis_chamber.daemon.engine.pipeline import drive_run, record_cancel
-from analysis_chamber.daemon.engine.placement import check_new_run, move_to_analyses
+from analysis_chamber.daemon.engine.placement import (
+    check_new_run,
+    fits_run_dir_limit,
+    move_to_analyses,
+)
 from analysis_chamber.daemon.engine.run_state import (
     TERMINAL_STATUSES,
     ChamberError,
@@ -24,13 +29,16 @@ from analysis_chamber.daemon.engine.run_state import (
 )
 from analysis_chamber.daemon.engine.scheduler import Scheduler
 from analysis_chamber.daemon.engine.views import brief_view, status_view
-from analysis_chamber.guard import LeakError
+from analysis_chamber.guard import LeakError, is_under
 from analysis_chamber.runs import (
     Manifest,
+    ManifestError,
     Status,
     create_run_dir,
+    make_opaque_id,
     make_run_id,
     scan_runs,
+    write_manifest,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +62,9 @@ class Chamber:
         self._config = config
         self._backend = backend
         self._runs: dict[str, RunState] = {}
+        # Old opaque id -> new readable id, for a run renamed at approval, so a caller
+        # still holding the id from /start keeps working until the daemon restarts.
+        self._renamed: dict[str, str] = {}
         self._scheduler = Scheduler(config, lambda run: drive_run(run, config, backend))
 
     def resume(self) -> None:
@@ -77,8 +88,11 @@ class Chamber:
         await self._scheduler.shutdown()
 
     async def start(self, question: str) -> dict[str, Any]:
-        """Create a run under private_root and draft its plan (an agent turn)."""
-        run_id = make_run_id(question, date.today(), self._taken_ids())
+        """Create a run under private_root and draft its plan (an agent turn).
+
+        The id is opaque: whether the run is personal isn't known until approval.
+        """
+        run_id = make_opaque_id(date.today(), self._taken_ids())
         manifest = Manifest(run_id, question)
         run_dir = check_new_run(manifest, self._config)  # length and leak guard first
         run = RunState(create_run_dir(run_dir.parent, run_id), manifest)
@@ -100,6 +114,7 @@ class Chamber:
         run = self._get(run_id)
         async with run.turn_lock:
             self._require(run, Status.AWAITING_APPROVAL)
+            run_id = run.manifest.id  # the caller may have sent a pre-rename id
             if not run.manifest.plan_text.strip():
                 raise ChamberError(f"run {run_id} has no plan yet")
             if edits and edits.strip():
@@ -111,7 +126,7 @@ class Chamber:
             self._scheduler.enqueue(run)
         manifest = run.manifest
         return {
-            "run_id": run_id,
+            "run_id": manifest.id,  # the readable id, if the run was renamed
             "status": manifest.status.value,
             "queue_position": manifest.queue_position,
         }
@@ -185,25 +200,62 @@ class Chamber:
         return plan
 
     def _place(self, run: RunState, personal: bool) -> None:
-        """Set the personal flag and move a non-personal run into analyses_root."""
-        run.manifest.personal = personal
-        if not personal:
+        """Set the personal flag; a non-personal run is renamed to a readable id and moved
+        into analyses_root. A personal run keeps its opaque id."""
+        manifest = run.manifest
+        manifest.personal = personal
+        # Already under analyses_root: a crash after the rename but before persist left it
+        # there, so re-approval must not rename it again. A personal answer for it fails at
+        # persist's leak guard, as for any personal run outside private_root.
+        already_placed = is_under(run.run_dir, self._config.analyses_root)
+        if not personal and not already_placed:
+            old_id = manifest.id
+            new_id = make_run_id(manifest.question, date.today(), self._taken_ids())
+            if not fits_run_dir_limit(self._config.analyses_root / new_id):
+                new_id = old_id  # the readable name would break the path limit: stay opaque
+            manifest.id = new_id  # the leak guard and messages see the new id
+            renamed = new_id != old_id
             try:
-                run.run_dir = move_to_analyses(run.run_dir, run.manifest, self._config)
-            except (LeakError, ChamberError):
-                run.manifest.personal = None  # still in private_root, still unapproved
+                # With a new id, the manifest carries it before the folder does. A crash after
+                # the rename leaves a matching folder (persist then never ran, so the run is
+                # re-approved in place). A crash before it leaves an opaque folder with a slug
+                # id; scan_runs resets that to the opaque id, private and unapproved.
+                # With no id change nothing needs syncing, and writing personal=False under
+                # private_root would let a crash reload it as non-personal there (scan_runs
+                # can't spot it, the id matches). So the manifest is written only by persist,
+                # after the move.
+                if renamed:
+                    write_manifest(run.run_dir, manifest)
+                run.run_dir = move_to_analyses(run.run_dir, manifest, self._config, new_id)
+            except (LeakError, ChamberError, ManifestError):
+                manifest.personal, manifest.id = None, old_id  # still private, still unapproved
+                if renamed:
+                    self._restore_manifest(run)
                 raise
+            if renamed:
+                self._runs[new_id] = self._runs.pop(old_id)
+                self._renamed[old_id] = new_id
         run.manifest.status = Status.QUEUED
         persist(run, self._config)
+
+    @staticmethod
+    def _restore_manifest(run: RunState) -> None:
+        """Put the rolled-back manifest on disk; if even that fails, log it (the caller is
+        already raising the real error)."""
+        try:
+            write_manifest(run.run_dir, run.manifest)
+        except ManifestError as error:
+            logger.error("couldn't restore run %s's manifest: %s", run.manifest.id, error)
 
     def _taken_ids(self) -> set[str]:
         # Folder names too: a folder with an unreadable manifest still blocks its id.
         roots = (self._config.analyses_root, self._config.private_root)
         folders = {path.name for root in roots if root.is_dir() for path in root.iterdir()}
-        return folders | set(self._runs)
+        # Renamed runs' old opaque ids too: _get still resolves them, so they can't be reissued.
+        return folders | set(self._runs) | set(self._renamed)
 
     def _get(self, run_id: str) -> RunState:
-        run = self._runs.get(run_id)
+        run = self._runs.get(self._renamed.get(run_id, run_id))
         if run is None:
             raise ChamberError(f"no run {run_id!r}")
         return run

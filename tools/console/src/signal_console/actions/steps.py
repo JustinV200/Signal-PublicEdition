@@ -10,6 +10,7 @@ It frees its lock once the hub is spawned, so Stop works while the hub loads.
 """
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,8 @@ from pathlib import Path
 from signal_console.actions.plans import HubStep, Step, WhiteboardStep
 from signal_console.actions.whiteboard_cli import StepFailed, run_whiteboard
 from signal_console.hub import HubError, HubRecord, start_hub, stop_hub, wait_for_hub
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -64,12 +67,20 @@ async def _run_hub(
             # The wait only polls, so a Stop click may run during it.
             unlock()
             if await asyncio.to_thread(tools.wait_for_hub, state_dir, record):
-                return f"Voice hub ready (pid {record.pid})."
-            return f"Voice hub still starting after a minute (pid {record.pid}); see hub.log."
+                return "Voice is running."
+            return "Voice is still starting after a minute."
         stopped = await asyncio.to_thread(tools.stop_hub, state_dir)
-    except (HubError, OSError) as error:
+    except HubError as error:
         raise StepFailed(str(error)) from error
-    return "Voice hub stopped." if stopped else "No voice hub the console can stop is running."
+    except OSError as error:
+        # The error's path is local detail: the server's log keeps it, Chat gets plain words.
+        log.warning("voice hub start or stop failed: %s", error)
+        reason = error.strerror or "a system error"  # None for an OSError made from one message
+        verb = "start" if step.start else "stop"
+        raise StepFailed(
+            f"Couldn't {verb} Voice ({reason}). Try {verb.title()} voice again."
+        ) from error
+    return "Voice stopped." if stopped else "Voice isn't running, so there was nothing to stop."
 
 
 async def _run_whiteboard(step: WhiteboardStep, tools: ActionTools) -> str:

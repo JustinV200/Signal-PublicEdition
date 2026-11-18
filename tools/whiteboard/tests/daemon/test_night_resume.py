@@ -16,7 +16,7 @@ pytestmark = pytest.mark.asyncio
     ("state", "expected"),
     [
         # 01:12 belongs to the evening before: same seed sleep mode used.
-        ({"is_asleep": True, "since": "2026-10-25T01:12:00", "night_sky": True}, (20261024, True)),
+        ({"is_asleep": True, "since": "2026-10-25T01:12:00"}, 20261024),
         ({"is_asleep": False, "since": "2026-10-25T01:12:00"}, None),
         ("not json", None),
         (None, None),
@@ -29,7 +29,7 @@ async def test_resume_night_follows_sleep_modes_state(tmp_path, state, expected)
     board = BoardController(SceneStore(tmp_path / "scene.json"))
     await resume_night(board, state_file)
     night = board.scene.night
-    assert ((night.seed, night.sky) if night else None) == expected
+    assert (night.seed if night else None) == expected
 
 
 async def test_resume_night_retries_a_read_mid_replace(tmp_path, monkeypatch) -> None:

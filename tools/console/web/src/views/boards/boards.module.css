@@ -1,18 +1,5 @@
-/* Boards view: header and hint, then the list on the left and the preview
-   panel on the right (stacked when narrow). */
-.view {
-  padding: 14px 0 18px;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 3ch;
-  color: var(--fg-2);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-}
+/* Boards view: the header, then the list on the left and the preview panel
+   (the global .panel) on the right (stacked when narrow). */
 
 .value {
   color: var(--fg);
@@ -26,13 +13,7 @@
   margin-left: auto;
 }
 
-.hint {
-  color: var(--fg-3);
-  font-size: var(--font-small);
-  padding: 8px 0 12px;
-}
-
-/* The whiteboard-off note under the hint: quiet, but a shade brighter than the hint. */
+/* The whiteboard-off and night-view notes under the header. */
 .note {
   color: var(--fg-2);
   font-size: var(--font-small);
@@ -68,8 +49,10 @@
   border-bottom: 0;
 }
 
+/* --bg-3, not --bg-2: --bg-2 on --bg was 1.05:1, too faint to see. Selection
+   matches it, but the selected row also has the `▸`. */
 .row:hover {
-  background: var(--bg-2);
+  background: var(--bg-3);
 }
 
 .selected,
@@ -98,17 +81,16 @@
   font-size: var(--font-small);
 }
 
+/* The empty state's place under the fixed rows, on their text column. */
 .empty {
-  color: var(--fg-3);
   padding: 5px 1ch;
 }
 
-/* Preview panel. */
+/* Preview panel. Sticky, so it and its buttons stay in view while a long list
+   scrolls the view (in the two-column layout; stacked, it sits under the list). */
 .preview {
-  background: var(--bg-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  padding: 12px 2ch 14px;
+  position: sticky;
+  top: 12px;
 }
 
 .previewName {
@@ -138,8 +120,9 @@
   padding-top: 12px;
 }
 
+/* A consequence ("replacing what is showing"), so muted, never faint. */
 .caption {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: var(--font-small);
   padding-top: 6px;
 }

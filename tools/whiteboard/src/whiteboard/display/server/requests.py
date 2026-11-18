@@ -91,15 +91,18 @@ def parse_look(body: dict[str, Any]) -> bool:
     return require_bool(body.get("clean", True), "clean")
 
 
-def parse_night(body: dict[str, Any], now: datetime) -> tuple[int, bool]:
-    """Parse `{seed?, sky?}` for POST /api/night/show. Returns (seed, sky).
+def parse_night(body: dict[str, Any], now: datetime) -> int:
+    """Parse `{seed?}` for POST /api/night/show and return the seed.
 
-    tools/sleepmode sends both. Left out, `seed` is tonight's (night_seed) and `sky`
-    true (the night sky; false is a plain black page).
+    tools/sleepmode sends it; left out, it's tonight's (night_seed). A "sky" key is
+    accepted and ignored: older sleepmode processes still running send it, and the
+    night view is always the sky now.
+
+    TODO: drop "sky" once no sleepmode process started before the black-page option
+    went (2026-11-18) can still be running (after a wake and an MCP restart).
     """
     check_keys(body, ("seed", "sky"), "night request")
-    seed = parse_seed(body["seed"]) if "seed" in body else night_seed(now)
-    return seed, require_bool(body.get("sky", True), "sky")
+    return parse_seed(body["seed"]) if "seed" in body else night_seed(now)
 
 
 def night_seed(now: datetime) -> int:

@@ -1,4 +1,5 @@
-"""Wiring writes only finished, chosen tools, keeps the user's own settings and backs them up."""
+"""Wiring writes only finished, chosen tools, keeps the user's own settings and backs them up;
+wired_tools only reads which are in."""
 
 import dataclasses
 import json
@@ -120,6 +121,33 @@ def test_a_second_wire_changes_nothing_and_keeps_other_keys(tmp_path: Path) -> N
     assert "usage.statusline" in user["statusLine"]["command"]
 
 
+def test_wired_only_reads_and_needs_every_server_and_hook(tmp_path: Path) -> None:
+    def snapshot() -> dict[Path, bytes]:
+        return {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+    def wired() -> set[str]:
+        before = snapshot()
+        found = wiring.wired_tools(tmp_path, registry.load(), data, "windows")
+        assert snapshot() == before  # read only: no file written, made or removed
+        return found
+
+    _repo(tmp_path)
+    data = progress.load(tmp_path)
+    _finish(data, "brief")
+    assert wired() == set()  # finished, but wire never ran
+    tools = registry.load()
+    wiring.apply_plan(tmp_path, tools, wiring.build_plan(tools, data, "windows"), "windows")
+    assert wired() == {"brief"}
+    local = tmp_path / ".claude" / "settings.local.json"
+    hooks = json.loads(local.read_text()).pop("hooks")
+    local.write_text(json.dumps({"permissions": {}}))
+    assert wired() == set()  # its server is there, its hook isn't
+    (tmp_path / ".claude" / "settings.json").write_text(json.dumps({"hooks": hooks}))
+    assert wired() == {"brief"}  # a hook in the checked-in project settings counts
+    (tmp_path / ".mcp.json").write_text("{not json")
+    assert wired() == set()
+
+
 def test_browser_auto_approve_follows_its_steps() -> None:
     data = progress.load(Path("nowhere"))
     _finish(data, "browser")
@@ -130,3 +158,32 @@ def test_browser_auto_approve_follows_its_steps() -> None:
     progress.set_step(data, "browser", "auto-approve", progress.SKIPPED)
     plan = wiring.build_plan(registry.load(), data, "windows")
     assert plan.mcp_servers == ("browser",) and plan.allow == ()
+    # The window splits at the gap: the exact entries come after it.
+    lines = wiring.summary_lines(plan)
+    assert "  nothing" in lines[lines.index("") :]
+
+
+@pytest.mark.parametrize(
+    ("tool_id", "granting_step"),
+    [("browser", "auto-approve"), ("mail-digest", "schedule"), ("jobhunt", "schedule")],
+)
+def test_consent_words_show_only_once_the_granting_step_is_done(tool_id, granting_step) -> None:
+    tool = registry.by_id(tool_id)
+    data = progress.load(Path("nowhere"))
+    _finish(data, tool_id)
+    assert wiring.build_plan(registry.load(), data, "windows").consent == (
+        f"{tool.name}: {tool.consent}",
+    )
+    progress.set_step(data, tool_id, granting_step, progress.SKIPPED)
+    (line,) = wiring.build_plan(registry.load(), data, "windows").consent
+    assert line.startswith(f"{tool.name}: ") and tool.consent not in line
+
+
+def test_every_tool_that_grants_something_has_consent_words() -> None:
+    def adds(tool: registry.Tool) -> bool:
+        granting = any(s.permissions or s.unattended_claude for s in tool.steps)
+        return bool(tool.permissions or tool.hooks or granting)
+
+    assert [t.id for t in registry.load() if adds(t) and not t.consent] == []
+    # One line each: the page and the terminal show it as a single line.
+    assert [t.id for t in registry.load() if "\n" in t.consent] == []

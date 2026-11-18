@@ -67,7 +67,8 @@ Path values expand environment variables (`%VAR%`, `$VAR`, `${VAR}`) and resolve
   - bad container items: `finished_phases` items must be Phase values; `sessions` and `outputs` map str -> str; `timings` maps phase values -> {str: str}; `installs` items are str -> str objects with at least `package` and `version`; `sources` items are objects with string keys.
 - `read_manifest(run_dir: Path) -> Manifest`. Raises `ManifestError` if `manifest.json` is missing, unreadable, not JSON or invalid.
 - `write_manifest(run_dir: Path, manifest: Manifest) -> Manifest`. Atomic (`signal_jsonstate.write_json_atomic`), sets `updated_at` to now, and **returns the written copy** without changing the argument. Raises `ManifestError`. Only one task may write a given run's manifest at a time (the temp file name is per process), so in the daemon each run's writes go through that run's own task.
-- `make_run_id(question: str, today: date, taken: set[str]) -> str`: `<YYYY-MM-DD>-<slug>`, slug lowercase ASCII words joined by `-`, cut to 40 chars, `run` if empty; `-2`, `-3`, ... when taken.
+- `make_opaque_id(today: date, taken: set[str]) -> str`: `<YYYY-MM-DD>-p-<4 hex>`, random, no question words. Every run gets one at `/start`.
+- `make_run_id(question: str, today: date, taken: set[str]) -> str`: `<YYYY-MM-DD>-<slug>`, used only at approval of a non-personal run, slug lowercase ASCII words joined by `-`, cut to 40 chars, `run` if empty; `-2`, `-3`, ... when taken.
 - `create_run_dir(root: Path, run_id: str) -> Path`: makes `<root>/<run_id>/` with `RUN_SUBDIRS` (`data/raw`, `data/clean`, `extracts`, `code`, `figures`, `models`) and a `.gitignore` for `data/raw/ data/clean/ models/ .venv/ __pycache__/ .ipynb_checkpoints/`. Raises `FileExistsError` if it exists.
 - `scan_runs(roots: list[Path]) -> list[tuple[Path, Manifest]]`: every `*/manifest.json` one level under each root, sorted by folder name per root. Missing roots are skipped; unreadable manifests, and manifests whose `id` isn't the folder name, are skipped with a logged warning.
 - `move_run(run_dir: Path, dest_root: Path) -> Path`: moves the folder into `dest_root` keeping its name. Raises `FileExistsError` if the target exists.
@@ -75,7 +76,7 @@ Path values expand environment variables (`%VAR%`, `$VAR`, `${VAR}`) and resolve
 
 ### Where a run lives
 
-A new run (phase plan, `personal=None`) is always created under **`private_root`**, outside the repo, because the user hasn't said yet whether it's personal. At approval the daemon sets `personal` from the user's answer. If it's `False`, the daemon moves the run with `move_run(run_dir, config.analyses_root)` and calls `check_run_location` on the new folder. If it's `True`, the run stays in `private_root`. The daemon calls `check_run_location` before it writes into a run folder. The daemon never commits.
+A new run (phase plan, `personal=None`) is always created under **`private_root`**, outside the repo, because the user hasn't said yet whether it's personal. At approval the daemon sets `personal` from the user's answer. If it's `False`, the daemon renames the run to a readable `make_run_id` id (folder and `manifest.id`; it stays opaque if the readable path would pass the 100-character limit) while moving it into `analyses_root`, and calls `check_run_location` on the new folder. If it's `True`, the run stays in `private_root` with its opaque id, so a personal question's words never reach an id, folder name, log or notice. `/approve` returns the new `run_id`; the old one keeps working until the daemon restarts. The daemon calls `check_run_location` before it writes into a run folder. The daemon never commits.
 
 ## Built: guard
 

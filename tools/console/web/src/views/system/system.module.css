@@ -1,0 +1,23 @@
+/* System view: the space between its groups, each group header's words and
+   buttons, and the Appearance buttons. Every group header is the shared
+   .view-header; the group bodies keep their own packages' styles. */
+
+.section {
+  margin-top: var(--sp-7);
+}
+
+.meta {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+}
+
+.actions {
+  display: inline-flex;
+  gap: 1ch;
+  margin-left: auto;
+}
+
+.buttons {
+  display: flex;
+  gap: 1ch;
+}

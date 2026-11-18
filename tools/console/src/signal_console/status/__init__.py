@@ -5,9 +5,14 @@ from signal_console.status.devices import DeviceReader
 from signal_console.status.hub_log import HubLine, parse_hub_line
 from signal_console.status.log_tail import LogTail
 from signal_console.status.voice import is_hub_listening
-from signal_console.status.whiteboard_api import WhiteboardTarget, find_whiteboard
+from signal_console.status.whiteboard_api import (
+    WHITEBOARD_DAEMON_FILE,
+    WhiteboardTarget,
+    find_whiteboard,
+)
 
 __all__ = [
+    "WHITEBOARD_DAEMON_FILE",
     "BoardStatus",
     "DeviceReader",
     "HubLine",

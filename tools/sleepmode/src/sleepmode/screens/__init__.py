@@ -5,18 +5,18 @@ from sleepmode.screens.ddc import POWER_MODE_VCP, POWER_ON, DdcError
 from sleepmode.screens.power import Ddc, ScreenPower
 from sleepmode.screens.projector import split_projector
 from sleepmode.screens.results import (
-    BLACK_PAGE,
     BLACK_WINDOW,
     DDC_OFF,
+    LEGACY_METHODS,
     METHODS,
     NIGHT_SKY,
     MonitorResult,
 )
 
 __all__ = [
-    "BLACK_PAGE",
     "BLACK_WINDOW",
     "DDC_OFF",
+    "LEGACY_METHODS",
     "METHODS",
     "NIGHT_SKY",
     "POWER_MODE_VCP",

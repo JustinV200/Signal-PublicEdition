@@ -1,5 +1,5 @@
 // The night view's renderer: a dim, seeded night sky for the projector while sleep mode
-// runs (tools/sleepmode asks for it with POST /api/night/show {seed, sky}). It draws
+// runs (tools/sleepmode asks for it with POST /api/night/show {seed}). It draws
 // into one canvas inside a container at a capped frame rate and stops cleanly. What
 // shows is a pure function of the seed and the clock, so one night always looks the
 // same: no network, no model, no Math.random(). The sky is built in sky.js, the moon in
@@ -25,18 +25,17 @@ const running = new WeakMap();
 
 /**
  * Show the night view in `container` (a positioned block element) and return a handle
- * {stop()}. `seed` is the night's integer (YYYYMMDD from sleepmode); `sky` false means
- * plain black: nothing is added and no timer runs. stop() removes the canvas and every
- * listener and can be called more than once. Throws TypeError on a bad container or seed.
+ * {stop()}. `seed` is the night's integer (YYYYMMDD from sleepmode). stop() removes the
+ * canvas and every listener and can be called more than once. Throws TypeError on a bad
+ * container or seed.
  */
-export function startNight(container, { seed, sky: showSky = true } = {}) {
+export function startNight(container, { seed } = {}) {
   if (!(container instanceof Element)) {
     throw new TypeError("the night view needs a container element");
   }
-  // Built before the branch so a bad seed throws for plain black too.
   const scene = buildScene(seed);
   running.get(container)?.stop();
-  const handle = showSky ? startSky(container, scene) : { stop() {} };
+  const handle = startSky(container, scene);
   running.set(container, handle);
   return handle;
 }

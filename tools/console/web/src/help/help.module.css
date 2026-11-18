@@ -1,11 +1,22 @@
-/* Help panel: a bordered block at the top of the view with two short lists. */
-.panel {
-  margin-top: 14px;
+/* Help panel and the tour bar: the global .panel above the view. Help's
+   three short blocks scroll inside its own box, so a long panel never
+   pushes the view off. */
+
+/* Help's frame shrinks inside the shell's band on a short window, so .help
+   stays the one box that scrolls and its bottom edge stays in view. */
+.helpFrame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.panel > * {
-  border-left: 2px solid var(--rule);
-  padding-left: 2ch;
+.help {
+  margin-top: var(--sp-5);
+  min-height: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .head {
@@ -16,13 +27,23 @@
   padding-bottom: 6px;
 }
 
+/* Each block's heading: an h2 in the body's size. */
 .title {
+  font-size: inherit;
   font-weight: 600;
 }
 
+/* The blocks after the first start a little lower. */
+.title:not(:first-child),
+.head:not(:first-child) {
+  padding-top: var(--sp-2);
+}
+
+/* The terms sit in the shared label column (less the panel's 2ch padding),
+   so the words start at the same x as Chat's text. */
 .list {
   display: grid;
-  grid-template-columns: 16ch 1fr;
+  grid-template-columns: calc(var(--label-col) - 2ch) minmax(0, 1fr);
   row-gap: 2px;
   padding-bottom: 6px;
 }
@@ -41,10 +62,6 @@
   overflow-wrap: anywhere;
 }
 
-.item kbd {
-  font: inherit;
-}
-
 .note {
   color: var(--fg-2);
   padding-bottom: 10px;
@@ -56,18 +73,45 @@
   }
 }
 
-/* The console tour bar: the same bordered block, with its buttons on the right. */
+/* The console tour bar: the same panel, marked by an accent rule on its left
+   (an inset shadow, like the server-down notice's) and the TOUR label. */
 .tour {
-  margin-top: 14px;
+  margin-top: var(--sp-5);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
-.tour > * {
-  border-left: 2px solid var(--accent);
-  padding-left: 2ch;
+/* The label and the buttons in two grid columns, so a longer tab name never
+   moves the buttons; below 720px the buttons get a row of their own under the
+   label, starting at its left edge. */
+.tourHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .tourButtons {
   display: inline-flex;
-  flex-wrap: wrap;
   gap: 1ch;
+}
+
+/* Next and Finish take one width, so End tour stays put at the last stop. */
+.tourButtons > :nth-child(2) {
+  min-width: 10ch;
+  justify-content: center;
+}
+
+/* A stop's words scroll in their own box past 30vh, so on a short window part
+   of the tab still shows below the bar and the buttons above never move. */
+.tourNote {
+  max-height: 30vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+@media (max-width: 720px) {
+  .tourHead {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+  }
 }

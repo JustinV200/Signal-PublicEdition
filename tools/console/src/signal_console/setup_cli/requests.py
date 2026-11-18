@@ -5,6 +5,10 @@ COMMANDS and its fields, and this builds the argv (a list, never a shell string)
 are checked by shape and can't start with '-', so nothing is read as a flag; free text
 goes in `--flag=value` form or on stdin. The setup CLI then validates ids against its
 registry (exit 2 for an unknown one).
+
+`setup verify` is not among them: its rows carry a failing check's raw `output`, which
+is for the setup skill in a terminal, not the page; the page reads health from
+`status --json`, which has no such field.
 """
 
 import re
@@ -15,12 +19,13 @@ from typing import Any
 _REGISTRY_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}$")
 # Setting ids: a key, or `<file>:<key>` for a placeholder the schema doesn't name.
 _SETTING_ID = re.compile(r"^[^\-=\x00-\x1f][^=\x00-\x1f]{0,199}$")
-_CONTROL = re.compile(r"[\x00-\x1f]")
+# C0, DEL and C1 control characters (C1 includes CSI, a terminal escape on its own).
+_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 MAX_VALUE_CHARS = 1000
 MAX_PATH_CHARS = 500
 MAX_PATHS = 50
 # Commands that only read (no progress, config or files written), keyed by command name.
-READ_ONLY = frozenset({"intro", "list", "plan", "status", "tour", "prereqs"})
+READ_ONLY = frozenset({"intro", "list", "plan", "status", "tour", "prereqs", "doc"})
 # Under the server's 64 KB body cap, with room for the JSON around it.
 MAX_PASTE_CHARS = 60_000
 SAMPLE_KINDS = ("email", "writing", "message", "code")
@@ -48,7 +53,8 @@ class SetupCall:
 def check_registry_id(body: dict[str, Any], field: str) -> str:
     """body[field] as a registry tool or step id. Raises SetupRequestError otherwise."""
     value = body.get(field)
-    if not isinstance(value, str) or not _REGISTRY_ID.match(value):
+    # fullmatch, not match: `$` also matches before a final newline, so "init\n" got through.
+    if not isinstance(value, str) or not _REGISTRY_ID.fullmatch(value):
         raise SetupRequestError(f"{field} must be a tool or step id")
     return value
 
@@ -86,7 +92,7 @@ def _config(body: dict[str, Any]) -> list[str]:
     if not isinstance(values, dict) or not values:
         raise SetupRequestError("set must be an object of setting id to value")
     for setting_id in values:
-        if not _SETTING_ID.match(setting_id):
+        if not _SETTING_ID.fullmatch(setting_id):
             raise SetupRequestError(f"bad setting id {setting_id!r}")
     return ["config", tool, *(f"--set={k}={_line(v, k)}" for k, v in values.items())]
 
@@ -147,11 +153,14 @@ def build_call(body: dict[str, Any]) -> SetupCall:
         return SetupCall(fixed[command], exclusive=command not in READ_ONLY)
     builders = {
         "prereqs": lambda: _joined("prereqs", _id_list(body, "tools"), "--tools"),
-        "verify": lambda: _joined("verify", _id_list(body, "tools")),
         "choose": lambda: ["choose", ",".join(_id_list(body, "tools"))],
+        # The picks' automatic steps: these tools, or every pick when none is named.
+        "auto": lambda: _joined("auto", _id_list(body, "tools")),
         "apply": lambda: _apply(body),
         "mark": lambda: _mark(body),
         "config": lambda: _config(body),
+        # A step's guide: ids only; the CLI opens just the file its registry names.
+        "doc": lambda: ["doc", check_registry_id(body, "tool"), check_registry_id(body, "step")],
     }
     if command == "samples":
         return _samples(body)

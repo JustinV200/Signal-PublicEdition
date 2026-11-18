@@ -7,9 +7,9 @@ const CLAUDE_PREFIX = "claude-";
 /** The server's word for a settings value it can't vouch for. */
 export const UNRECOGNISED = "unrecognised";
 
-export const NEXT_SESSION_NOTE = "applies to every new Signal session, not this one";
+export const NEXT_SESSION_NOTE = "applies to every new Claude session, not this one";
 export const SWITCH_NOW_HINT =
-  "To switch the running session, click the model name under the VS Code prompt box.";
+  "To switch this Claude session now, click the model name under the VS Code prompt box.";
 export const VOICE_NOTE = "applies on your next request";
 /** The pickers' placeholder while settings.local.json can't be read (never "use my user settings"). */
 export const UNREADABLE_LABEL = "can't read settings";
@@ -22,12 +22,12 @@ export function shortModel(model: string): string {
 
 /** `now: opus-5-5 · medium`, with `model unknown` / `effort unknown` for the gaps. */
 export function nowWords(now: ModelPick | null): string {
-  if (!now) return "now: no session has claimed the console";
+  if (!now) return "now: no Claude session";
   const model = now.model ? shortModel(now.model) : "model unknown";
   return `now: ${model} · ${now.effort ?? "effort unknown"}`;
 }
 
-/** One picker option: null is the orchestrator's "use my user settings". */
+/** One picker option: null is Claude's "use my user settings". */
 export function optionLabel(value: string | null): string {
   return value ?? "use my user settings";
 }

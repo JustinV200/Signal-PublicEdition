@@ -8,15 +8,24 @@ holds and sends as the X-Console-Token header on every /api call.
 
 A header, not a cookie: browsers send a 127.0.0.1 cookie to every port on
 127.0.0.1, so any local listener would receive it. A header only goes where the
-page's own script sends it. The server keeps the newest MAX_SESSIONS tokens in
-memory only, so a restart logs every page out and `console open` logs it in again.
+page's own script sends it. The server keeps SHA-256 digests of the newest
+MAX_SESSIONS tokens, never the tokens. With a digest file (the real server) they
+are saved on each login and loaded when SessionAuth is built, before the port
+opens, so an open page keeps working across a restart and never sees a 401 while
+the server starts.
 """
 
 import hmac
+import logging
 import secrets
 import time
 from collections import deque
 from collections.abc import Callable
+from pathlib import Path
+
+from signal_console.server.security.token_digests import load_digests, save_digests, token_digest
+
+log = logging.getLogger(__name__)
 
 SESSION_TOKEN_HEADER = "X-Console-Token"
 LOGIN_KEY_TTL_S = 60.0
@@ -40,16 +49,21 @@ def secrets_match(supplied: str, expected: str) -> bool:
 class SessionAuth:
     """Issues and redeems login keys, and checks page session tokens."""
 
-    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
-        """Start with no keys and no sessions.
+    def __init__(
+        self, digest_file: Path | None = None, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        """Start with no keys, and the sessions saved in `digest_file` (if any).
 
         Args:
+            digest_file: Where the token digests are saved; None keeps them in memory only.
             clock: Monotonic seconds, for key expiry (tests pass a fake).
         """
         self._clock = clock
+        self._digest_file = digest_file
         self._expiry_by_key: dict[str, float] = {}
-        # deque(maxlen) drops the oldest token when a new one goes in past the cap.
-        self._tokens: deque[str] = deque(maxlen=MAX_SESSIONS)
+        saved = load_digests(digest_file) if digest_file is not None else []
+        # deque(maxlen) drops the oldest digest when a new one goes in past the cap.
+        self._digests: deque[str] = deque(saved, maxlen=MAX_SESSIONS)
 
     def issue_login_key(self) -> str:
         """A new single-use login key, valid for LOGIN_KEY_TTL_S."""
@@ -67,14 +81,26 @@ class SessionAuth:
         if not self._redeem(supplied_key):
             return None
         token = secrets.token_urlsafe(SESSION_TOKEN_BYTES)
-        self._tokens.append(token)
+        self._digests.append(token_digest(token))
+        self._save_digests()
         return token
 
     def is_session_token(self, supplied: str) -> bool:
         """True if `supplied` is one of the live session tokens."""
-        # Check every token, so the time taken doesn't say which one matched.
-        results = [secrets_match(supplied, token) for token in self._tokens]
+        supplied_digest = token_digest(supplied)
+        # Check every digest, so the time taken doesn't say which one matched.
+        results = [secrets_match(supplied_digest, digest) for digest in self._digests]
         return any(results)
+
+    def _save_digests(self) -> None:
+        if self._digest_file is None:
+            return
+        # Runs in the event loop: two icacls runs per login (one per `console open`), cheap enough.
+        try:
+            save_digests(self._digest_file, list(self._digests))
+        except OSError:
+            # The new window still works; it just won't survive the next restart.
+            log.warning("couldn't save session digests to %s", self._digest_file, exc_info=True)
 
     def _redeem(self, supplied: str) -> bool:
         self._drop_expired()

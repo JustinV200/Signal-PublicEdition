@@ -1,4 +1,4 @@
-"""GET /api/camera/stream: the whiteboard webcam's live MJPEG stream, proxied for the Devices page.
+"""GET /api/camera/stream: the whiteboard webcam's live MJPEG stream, proxied for System's camera.
 
 The whiteboard daemon serves the stream only with its X-Signal-Token header.
 The console server adds that header itself, so the page never sees the

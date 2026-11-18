@@ -1,0 +1,123 @@
+/* The radar SVG. Everything is drawn in the phosphor accent at low alpha; the
+   blip shapes and words carry the meaning. Text is --font-small with a halo in
+   the page colour, and never glows or pulses: only the marks do. */
+.falloffCentre {
+  stop-color: var(--accent);
+  stop-opacity: 0.11;
+}
+
+.falloffRim {
+  stop-color: var(--accent);
+  stop-opacity: 0.02;
+}
+
+.face {
+  stroke: color-mix(in srgb, var(--accent) var(--scope-rim), transparent);
+  stroke-width: 1;
+}
+
+.grid {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) var(--scope-line), transparent);
+  stroke-width: 1;
+}
+
+/* The sector edges: a step brighter than the crosshair they lie on. */
+.boundaries {
+  stroke: color-mix(in srgb, var(--accent) var(--scope-rim), transparent);
+  stroke-width: 1;
+}
+
+.sweep {
+  fill: var(--accent);
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+.sweepEdge {
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* One turn per server keepalive (5 s, KEEPALIVE_S in the server's
+   routes/stream.py); linear and low-contrast so it never pulls the eye. The
+   view drops the class when the page is hidden or the stream is stale. */
+.sweeping {
+  animation: sweep 5s linear infinite;
+}
+
+/* Every line of text: the halo paints first, under the glyphs. */
+.text {
+  font-size: var(--font-small);
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Under text on the face: hides the grid lines between its words. */
+.plate {
+  fill: var(--bg);
+  opacity: 0.85;
+}
+
+.label {
+  fill: var(--fg);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+/* Waits on the owner: bold, and never hidden by a crowded face. */
+.urgent {
+  font-weight: 700;
+}
+
+.caption {
+  fill: var(--fg-3);
+}
+
+.sectorName {
+  fill: var(--fg-2);
+  letter-spacing: 0.08em;
+}
+
+.signal {
+  fill: var(--warn);
+  font-weight: 700;
+}
+
+.marks {
+  color: var(--accent);
+}
+
+/* The glow is on the mark alone, never its label. */
+.mark {
+  cursor: pointer;
+  filter: drop-shadow(0 0 3px var(--glow));
+}
+
+/* The triangle repeats the bold label; the colour only adds to the shape. */
+.urgentMark {
+  color: var(--warn);
+}
+
+/* An invisible disc around the mark, so a click needn't land on its few pixels. */
+.hit {
+  fill: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweeping {
+    animation: none;
+  }
+}

@@ -36,11 +36,11 @@ class SleepTools:
         # "awake" over a new sleep, leaving its screens dark with no keeper.
         self._lock = threading.Lock()
 
-    async def sleep_mode_on(self, wake_at: str = "", night_sky: bool = True) -> str:
+    async def sleep_mode_on(self, wake_at: str = "") -> str:
         """See descriptions.SLEEP_MODE_ON."""
         try:
             state = await asyncio.to_thread(
-                self._locked, self._sleep_mode.sleep, wake_at.strip() or None, night_sky
+                self._locked, self._sleep_mode.sleep, wake_at.strip() or None
             )
         except (ValueError, SleepModeError) as error:
             raise ToolError(str(error)) from error

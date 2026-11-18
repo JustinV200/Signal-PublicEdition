@@ -16,7 +16,7 @@ from signal_displays import Monitor
 from sleepmode.control.deps import SleepDeps
 from sleepmode.control.state import SleepState, load_state_quietly, save_state
 from sleepmode.schedule import SCHEDULER_FAILURES
-from sleepmode.screens import BLACK_PAGE, DDC_OFF, NIGHT_SKY, MonitorResult, split_projector
+from sleepmode.screens import DDC_OFF, NIGHT_SKY, MonitorResult, split_projector
 from sleepmode.whiteboard_link import WhiteboardUnavailableError
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,6 @@ def wake_up(deps: SleepDeps, reason: str, only_session: str | None) -> SleepStat
         is_asleep=False,
         session_id=previous.session_id if previous else "",
         since=previous.since if previous else None,
-        night_sky=previous.night_sky if previous else True,
         monitors=previous.monitors if previous else (),
         woke_at=deps.now(),
         woke_by=reason,
@@ -164,7 +163,7 @@ def _leave_night_view(deps: SleepDeps, previous: SleepState | None, notes: list[
         was_showing = (
             previous is not None
             and previous.is_asleep
-            and any(m.method in (NIGHT_SKY, BLACK_PAGE) for m in previous.monitors)
+            and any(m.method == NIGHT_SKY for m in previous.monitors)
         )
         if was_showing:
             notes.append(f"The whiteboard didn't leave its night view: {error}")

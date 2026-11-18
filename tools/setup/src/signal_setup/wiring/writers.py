@@ -96,10 +96,14 @@ def write_settings(root: Path, tools: tuple[Tool, ...], plan: Plan, platform: st
 
 
 def _with_statusline(settings: dict[str, Any], command: str) -> dict[str, Any]:
-    """`settings` pointing at usage's status line, unless it names a different one."""
+    """`settings` pointing at usage's status line, unless it names a different one.
+
+    Never changes `settings` itself: a change comes back as a new dict.
+    """
     existing = settings.get("statusLine", {}).get("command", "")
     if not existing or STATUSLINE_MODULE in existing:
-        settings["statusLine"] = {"type": "command", "command": command, "refreshInterval": 30}
+        statusline = {"type": "command", "command": command, "refreshInterval": 30}
+        return {**settings, "statusLine": statusline}
     return settings
 
 

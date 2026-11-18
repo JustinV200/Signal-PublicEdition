@@ -1,27 +1,23 @@
-// The voice buffer: the hub's state in words, Start and Stop buttons (the one
-// that does not apply is disabled with its reason; the one just clicked reads
-// "Working…" until the console has run it), the last click's outcome, a hint,
-// then the feed. A hub still loading reads "starting": Stop works, Start waits.
+// The voice buffer: Voice's state in words, one button whose label follows
+// it (Start voice when stopped, Stop voice while running or starting;
+// "Working…" only while its own action runs), then the feed. A click's
+// outcome shows on the shell's result strip (app/ResultStrip).
 import { useState } from "react";
 import type { RefObject } from "react";
+import { EmptyState } from "../../empty";
 import { NewPill, useFollow } from "../../scroll";
-import { usePendingActions, useStore } from "../../state";
-import { PhaseDot, toDotPhase } from "../../status";
+import { useConfirmGate, usePendingActions, useStore } from "../../state";
+import { PhaseDot, startedByWords, toDotPhase } from "../../status";
 import { toMs } from "../../time";
 import { Button } from "../../ui";
 import { FeedRow } from "./FeedRow";
-import { lastVoiceAction } from "./lastAction";
+import { voiceButton } from "./voiceButton";
 import styles from "./voice.module.css";
-
-const HINT =
-  "Start and Stop run at once in the console; the result shows above and in Chat. What the hub hears and says shows below.";
-const ALREADY_RUNNING = "already running";
-const STARTING = "starting";
-const NOT_RUNNING = "not running";
 
 /** The voice view inside the shared scrolling `<main>`. */
 export function VoiceView({ scrollRef }: { scrollRef: RefObject<HTMLElement | null> }) {
-  const { state, sender } = useStore();
+  const { state } = useStore();
+  const { request } = useConfirmGate();
   const pending = usePendingActions();
   const voice = state.server?.voice;
   const feed = state.voiceFeed;
@@ -30,11 +26,12 @@ export function VoiceView({ scrollRef }: { scrollRef: RefObject<HTMLElement | nu
 
   const running = voice?.running ?? false;
   const phase = toDotPhase(voice);
-  const lastAction = lastVoiceAction(state.messages);
+  const button = voiceButton(voice, pending);
+  const startedBy = startedByWords(voice?.startedBy);
 
   return (
-    <div className={`col ${styles.view}`}>
-      <div className={styles.header}>
+    <div className="frame view">
+      <div className="view-header">
         <span className="hud-label">Voice</span>
         <span className={styles.status}>
           <PhaseDot phase={phase} />
@@ -46,29 +43,18 @@ export function VoiceView({ scrollRef }: { scrollRef: RefObject<HTMLElement | nu
             "Stopped"
           )}
         </span>
-        {running && voice?.startedBy && (
-          <span className={styles.meta}>started by {voice.startedBy}</span>
-        )}
+        {running && startedBy && <span className={styles.meta}>{startedBy}</span>}
         <span className={styles.actions}>
-          <Button
-            onClick={() => void sender.runAction("voice.start")}
-            pending={pending.has("voice.start")}
-            disabledReason={phase === "starting" ? STARTING : running ? ALREADY_RUNNING : undefined}
-          >
-            Start voice
-          </Button>
-          <Button
-            onClick={() => void sender.runAction("voice.stop")}
-            pending={pending.has("voice.stop")}
-            disabledReason={running ? undefined : NOT_RUNNING}
-          >
-            Stop voice
+          <Button onClick={() => request(button.action)} pending={button.pending}>
+            {button.label}
           </Button>
         </span>
       </div>
-      {lastAction && <p className={styles.lastAction}>{lastAction}</p>}
-      <p className={styles.hint}>{HINT}</p>
-      {feed.length === 0 && <div className={styles.empty}>Nothing heard yet.</div>}
+      {feed.length === 0 && (
+        <EmptyState label="Nothing heard yet">
+          When Voice hears or says something, it shows here.
+        </EmptyState>
+      )}
       <div className={styles.feed}>
         {feed.map((event) => (
           <FeedRow key={event.id} event={event} live={toMs(event.at) >= mountedAt} />

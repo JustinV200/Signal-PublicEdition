@@ -4,7 +4,7 @@ The MCP server (stdio) and the `browser-tool` entry point.
 
 ## Public API (`from browser_tool.server import ...`)
 
-- `main(argv=None)` is the `browser-tool [--config PATH] [--backend local|docker]` entry point.
+- `main(argv=None)` is the `browser-tool [--config PATH] [--backend local|docker] [--check]` entry point. `--check` only loads the config and parses its host patterns as a start would, prints the setup tool's one-line JSON health summary and exits (`check.py`, `check_summary(path=None) -> (exit_code, summary)`: `config OK, N sites allowed`, exit 0, an empty allowlist passing with a fix; or `config problem: ...`, exit 2, for anything that would stop the server: a config error or a malformed `[policy]` or `[duo] code_relay_sites` pattern).
   - It logs to stderr, because stdout carries the MCP protocol.
   - It wires `DialogConfirmer` and, through `build_context`, the backend's pieces.
   - It exits with code 2 on a bad config.
@@ -62,6 +62,7 @@ While the current tab shows a Duo prompt, `click`, `click_at`, `drag`, `hover`, 
 ## Files
 
 - `main.py`: argument parsing and logging.
+- `check.py`: `--check`, the setup tool's health check (config plus host patterns, no browser).
 - `wiring.py`: `build_context` for each backend.
 - `app.py`: `build_server` and the server instructions.
 - `idle_close.py`: the quiet-spell timer.
@@ -70,4 +71,4 @@ While the current tab shows a Duo prompt, `click`, `click_at`, `drag`, `hover`, 
 
 ## Dependencies
 
-`mcp` (v2 `MCPServer`), `playwright` (error types) and `browser_tool.actions`, `backends`, `config`, `credentials`, `gates`.
+`mcp` (v2 `MCPServer`), `playwright` (error types) and `browser_tool.actions`, `backends`, `config`, `credentials`, `gates`, `policy` (the check's pattern parse).

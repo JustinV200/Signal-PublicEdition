@@ -1,0 +1,9 @@
+/* An inline shape mark: lowercase-letter sized, centred on the x-height, in
+   the surrounding text's colour (the shapes paint with currentColor). */
+.mark {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  vertical-align: middle;
+  overflow: visible;
+}

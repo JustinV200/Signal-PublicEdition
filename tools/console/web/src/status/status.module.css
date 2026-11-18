@@ -1,7 +1,8 @@
-/* Status line: a title row (app name and connection words, both inert, Help
-   on the right) over a row of bordered tabs. The active tab is filled,
-   brighter-bordered and bold. The small font sits on the rows, not the
-   column, so the column keeps the body's 96ch width. */
+/* Status line: a title row (the quiet app name, then the connection words in
+   --fg, both inert; Help on the right) over a row of bordered tabs, outlined
+   in --border like the buttons. The active tab is filled, accent-bordered and
+   bold. The small font sits on the rows, not the frame, so the frame keeps
+   the body's 132ch width. */
 .bar {
   border-bottom: 1px solid var(--rule);
   background: var(--bg-2);
@@ -16,11 +17,33 @@
   white-space: nowrap;
 }
 
+/* min-width: 0 lets the health pointer (its one shrinkable part) give way at
+   narrow widths, so Help itself never leaves the screen. */
 .help {
   display: flex;
   align-items: center;
   gap: 2ch;
+  min-width: 0;
   margin-left: auto;
+}
+
+/* The health pointer's slot: gone while it shows nothing, else it shortens to an
+   ellipsis when the row is full (it opens System, where the full row is). */
+.pointer {
+  display: flex;
+  min-width: 0;
+}
+
+.pointer:empty {
+  display: none;
+}
+
+/* Block, not ui's inline-flex: a flex box's loose text can't take an ellipsis. */
+.pointer button {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .freshness {
@@ -31,22 +54,54 @@
 }
 
 .appName {
-  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--fg-2);
 }
 
+/* min-width: 0 lets it shrink to the ellipsis at narrow widths (the full words are its
+   tooltip and the live region), so Refresh and Help never push the row off the screen. */
 .connection {
-  color: var(--fg-2);
+  min-width: 0;
+  color: var(--fg);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* The owner's away state (only shown when not Here), right-aligned before the Help
+   group: the words say it, 600 sets it apart. It never shrinks, so `Away` / `Asleep`
+   always shows and the connection words take the ellipsis; below 720px its end
+   (`.awayUntil`) drops out (the tooltip and System's YOU keep it). */
+.away {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* The away words take the free space's auto margin, so they sit right beside Help's group. */
+.away + .help {
+  margin-left: 0;
+}
+
+/* Read by screen readers only: the connection's live region (no clock in it). */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Wraps rather than scrolls, so no tab hides behind a scrollbar and nothing
+   clips the active tab's glow or focus ring. */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.8ch;
   padding-bottom: 8px;
   font-size: var(--font-small);
   white-space: nowrap;
-  overflow-x: auto;
 }
 
 .tab {
@@ -55,25 +110,23 @@
   gap: 1ch;
   height: var(--control-height);
   padding: 0 1.2ch;
-  color: var(--fg-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   transition:
     background-color 80ms linear,
     border-color 80ms linear;
 }
 
 .tab:hover {
-  color: var(--fg);
   background: var(--bg-3);
-  border-color: var(--fg-3);
+  border-color: var(--fg-2);
 }
 
 .tabActive {
-  color: var(--fg);
   background: var(--bg-3);
   border-color: var(--accent);
-  box-shadow: 0 0 8px var(--glow);
+  box-shadow: var(--glow-md);
 }
 
 .tabActive .tabName {
@@ -84,9 +137,16 @@
   color: var(--fg-2);
 }
 
-.hint {
-  font: inherit;
-  color: var(--fg-3);
+/* `◂ tour` on the tour's stop: the word says it, the accent only repeats it.
+   Shown at every width (the status words hide below 720px; this doesn't). */
+.tourMark {
+  color: var(--accent);
+}
+
+/* ui's triangle points right; the tour's marker points back at the tab name. */
+.pointLeft {
+  display: inline-block;
+  transform: scaleX(-1);
 }
 
 .sep {
@@ -97,21 +157,14 @@
   color: var(--warn);
 }
 
-/* Phase dot: 7px, filled with --ok (and glowing) while running, hollow when stopped. */
+/* Phase dot: ui's disc in --ok while running, its ring in --fg-3 when stopped. */
 .dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 6px var(--glow);
   margin-right: 0.6ch;
+  color: var(--ok);
 }
 
 .hollow {
-  background: none;
-  box-shadow: none;
-  border: 1px solid var(--fg-3);
+  color: var(--fg-3);
 }
 
 /* Speaking: three 2px bars in the dot's footprint. */
@@ -140,8 +193,15 @@
 
 @media (max-width: 720px) {
   .appName,
-  .tabStatus,
-  .hint {
+  .tabStatus {
     display: none;
+  }
+  .awayUntil {
+    display: none;
+  }
+  /* Tighter, so the away words' gap costs no room at phone widths: Help stays on screen. */
+  .titleRow,
+  .help {
+    gap: 1ch;
   }
 }

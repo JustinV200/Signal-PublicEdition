@@ -1,4 +1,4 @@
-"""The page's JSON routes: /api/login, /api/state, /api/send and /api/action.
+"""The page's JSON routes: /api/login, /api/state, /api/health, /api/send and /api/action.
 
 /api/send goes to the orchestrator; /api/action runs a button in the server itself.
 
@@ -6,28 +6,33 @@ The guard (server/security) has already checked Host, Origin and, except for
 login, the X-Console-Token header.
 """
 
+import asyncio
 import json
 
 from aiohttp import web
 
 from signal_console.actions import SAVE_ACTIONS, ActionError, plan_action
+from signal_console.health import health_rows
 from signal_console.orchestrator import RequestError, chat_request
 from signal_console.server.action_runner import ActionBusy
 from signal_console.server.routes.json_body import bad_request, read_json_object
-from signal_console.server.security import LOGIN_PATH
+from signal_console.server.security import HTTP_UNAUTHORIZED, LOGIN_PATH, signed_out_body
 from signal_console.server.services import SERVICES_KEY
+
+BAD_LOGIN_KEY = "that login key is wrong, used or expired"
 
 
 def add_api_routes(app: web.Application) -> None:
     """Register the page's JSON routes."""
     app.router.add_post(LOGIN_PATH, login)
     app.router.add_get("/api/state", state)
+    app.router.add_get("/api/health", health)
     app.router.add_post("/api/send", send)
     app.router.add_post("/api/action", action)
 
 
 async def login(request: web.Request) -> web.Response:
-    """`{key}` (a one-time key from `console open`) -> 200 `{token}`, else 401.
+    """`{key}` (a one-time key from `console open`) -> 200 `{token}`, else 401 (signed_out_body).
 
     The page sends the token as X-Console-Token on every other /api call.
     """
@@ -35,16 +40,25 @@ async def login(request: web.Request) -> web.Response:
     key = (await read_json_object(request)).get("key")
     token = auth.log_in(key) if isinstance(key, str) else None
     if token is None:
-        return web.json_response(
-            {"error": "that login key is wrong, used or expired; run `console open` again"},
-            status=401,
-        )
+        # Its own reason, so an expired key doesn't read as the generic "not signed in".
+        return web.json_response(signed_out_body(BAD_LOGIN_KEY), status=HTTP_UNAUTHORIZED)
     return web.json_response({"token": token})
 
 
 async def state(request: web.Request) -> web.Response:
     """The orchestrator, voice and board status."""
     return web.json_response(await request.app[SERVICES_KEY].status.snapshot())
+
+
+async def health(request: web.Request) -> web.Response:
+    """`{rows: [{id, name, level, state, words, fix, command}]}`: what `console doctor` prints.
+
+    Local reads only, in a thread (the process table scan takes tens of ms). No
+    row carries a socket name, key or token.
+    """
+    paths = request.app[SERVICES_KEY].health
+    rows = await asyncio.to_thread(health_rows, paths)
+    return web.json_response({"rows": [row.as_json() for row in rows]})
 
 
 async def send(request: web.Request) -> web.Response:

@@ -51,8 +51,17 @@ def remove_account(args: argparse.Namespace) -> int:
 
 
 def search(args: argparse.Namespace) -> int:
-    """`mail search ACCOUNT QUERY [--max N]`: print matching message summaries as JSON."""
-    _print_json(build_service().search(args.account, args.query, args.max))
+    """`mail search ACCOUNT QUERY [--max N] [--paged | --page-token T]`: print summaries as JSON.
+
+    The default output is a bare list (mail-digest parses it). --paged or --page-token prints
+    the {messages, next_page_token?, estimated_total?} envelope instead.
+    """
+    service = build_service()
+    if args.paged or args.page_token:
+        result = service.search_page(args.account, args.query, args.max, args.page_token)
+    else:
+        result = service.search(args.account, args.query, args.max)
+    _print_json(result)
     return EXIT_OK
 
 

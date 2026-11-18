@@ -11,6 +11,8 @@ Takes a question, drafts a plan for the user to check, then collects data (web, 
 
 `register.ps1` sets up everything (venv, analysis kit, at-login daemon task, `.mcp.json` entry, private folder); `-TaskOnly` registers just the scheduled task, which is what the setup tool uses. Undo with `unregister.ps1`.
 
+`uv run --project tools/analysis-chamber --frozen --no-sync analysis-chamber check` is the setup tool's health check: whether the kit is built and the daemon answers, as one JSON line. It never starts the daemon.
+
 ## Tests
 
 From this folder: `uv run --frozen pytest`, `uv run --frozen ruff check .` and `uv run --frozen ruff format --check .`.

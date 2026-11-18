@@ -53,7 +53,12 @@ STYLE_KEYS: tuple[str, ...] = ("color", "stroke_width", "font_size", "rough", "o
 # Patches may move, resize, restyle or re-content an item, but not change what it is.
 PATCHABLE_KEYS: tuple[str, ...] = ("x", "y", "w", "h", "content", "style")
 SCENE_KEYS: tuple[str, ...] = ("items", "board_quad", "view", "night")
-NIGHT_KEYS: tuple[str, ...] = ("seed", "sky", "previous_view")
+NIGHT_KEYS: tuple[str, ...] = ("seed", "previous_view")
+# The night view used to have a plain black option; a scene.json saved then still has
+# its "sky" flag. It's accepted and ignored: the night view is always the sky now.
+# TODO: drop it once no scene.json written before the option went (2026-11-18) can
+# still be on disk, i.e. once the board's scene has been saved since.
+LEGACY_NIGHT_KEYS: tuple[str, ...] = ("sky",)
 # The night sky's generator (static/night/random.js, mulberry32) takes a 32-bit seed.
 MAX_NIGHT_SEED = 2**32 - 1
 
@@ -183,15 +188,14 @@ def night_from_dict(data: Any) -> NightView:
             isn't one of DAY_VIEWS.
     """
     data = require_object(data, "scene.night")
-    check_keys(data, NIGHT_KEYS, "scene.night")
+    check_keys(data, NIGHT_KEYS + LEGACY_NIGHT_KEYS, "scene.night")
     previous_view = data.get("previous_view")
     if previous_view not in DAY_VIEWS:
         raise SceneError(
             f"scene.night.previous_view must be one of {', '.join(DAY_VIEWS)}, "
             f"got {previous_view!r}"
         )
-    sky = require_bool(data.get("sky"), "scene.night.sky")
-    return NightView(parse_seed(data.get("seed")), sky, previous_view)
+    return NightView(parse_seed(data.get("seed")), previous_view)
 
 
 def parse_seed(value: Any) -> int:

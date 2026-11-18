@@ -1,10 +1,12 @@
 {
-  "_comment": "Signal's tool registry, read by the setup CLI (tools/setup) and the setup skill (.claude/skills/setup). Paths are relative to the repo root, where every command runs. {email} is the address the user gave in an 'email' step. Step kinds: run (a command), copy (an example config, kept if it already exists), manual (instructions the user follows), confirm (a yes/no choice), email (asks an address and writes it into source constants), env (asks a non-secret value for .env), settings (creates the tool's config files from their examples and asks its settings, from data/settings/<tool>.json; done only when no placeholder is left; 'group' picks an optional group such as the assignment checker), samples (copytone writing samples). 'terminal' steps need the user's own interactive terminal, so the agent never runs them. A step's mcp/permissions apply only once that step is done; a tool's apply once all its required steps are done.",
+  "_comment": "Signal's tool registry, read by the setup CLI (tools/setup) and the setup skill (.claude/skills/setup). Paths are relative to the repo root, where every command runs. {email} is the address the user gave in an 'email' step; {port} is the console's port (setup --port, default 8790). Step kinds: run (a command), copy (an example config, kept if it already exists), manual (instructions the user follows), confirm (a yes/no choice), email (asks an address and writes it into source constants), env (asks a non-secret value for .env), settings (creates the tool's config files from their examples and asks its settings, from data/settings/<tool>.json; done only when no placeholder is left; 'group' picks an optional group such as the assignment checker), samples (copytone writing samples). 'terminal' steps need the user's own interactive terminal, so the agent never runs them. 'opens_browser' steps open the user's browser to sign in, so someone must be there. 'Automatic' steps (required run and copy steps that are neither terminal nor opens_browser) are the ones `setup auto` runs unasked; optional steps always wait for their own click. 'group' (Core, Everyday, Hardware, Extras) and 'cost' (a few words: time, account, hardware) are how the setup window's Pick page lists a tool. A step's mcp/permissions apply only once that step is done; a tool's apply once all its required steps are done. 'verify' is a cheap read-only check: exit 0 passes, and its last stdout line may be one JSON object {words, fix, command} (tools/setup/README.md, Verify checks). 'fix' is the sentence a failed check shows when it gives none. 'consent' is one plain line for the consent page (setup plan, before the exact entries): what Claude may do without asking once the tool is added, shown once a granting part is done (its rules or hooks, or a done 'unattended_claude' step). Every tool with permissions, hooks or an 'unattended_claude' step has one. 'unattended_claude' marks a step that registers a scheduled Claude run with tools, which acts with nobody asked.",
   "tools": [
     {
       "id": "agents",
       "name": "Agent rules (AGENTS.md)",
       "description": "The rules every agent follows in this repo. Its one setting is when an agent stops and hands off to a fresh one as its context fills up.",
+      "group": "Core",
+      "cost": "1 min",
       "platforms": [
         "windows",
         "linux"
@@ -22,8 +24,11 @@
     },
     {
       "id": "brief",
-      "name": "Catch-up brief and away mode",
-      "description": "Sessions log what you should hear about; 'brief me' gives a ranked catch-up, and away mode tells sessions to keep working without you.",
+      "name": "Catch-up brief for when you're away",
+      "description": "Sessions log what you should hear about; 'brief me' gives a ranked catch-up, and while you're Away, sessions keep working without you.",
+      "consent": "Claude can log to the brief, read it, mark items handled and turn Away on or off without asking each time. A hook adds the brief and the away rules to your prompts, reads the session's transcript, and marks items seen once Claude has passed them on.",
+      "group": "Core",
+      "cost": "1 min",
       "platforms": [
         "windows"
       ],
@@ -68,12 +73,16 @@
         "brief",
         "away",
         "status"
-      ]
+      ],
+      "fix": "Set the brief up again with setup brief."
     },
     {
       "id": "usage",
       "name": "Usage tracker",
       "description": "Keeps your 5-hour and weekly Claude usage and the running subagent count in one file, for the status line and the console.",
+      "consent": "Claude gets nothing new to do. A hook counts subagents as they start and stop.",
+      "group": "Core",
+      "cost": "1 min",
       "platforms": [
         "windows",
         "linux"
@@ -126,12 +135,16 @@
         "--no-sync",
         "usage",
         "show"
-      ]
+      ],
+      "fix": "Set the usage tracker up again with setup usage."
     },
     {
       "id": "contextmeter",
       "name": "Context meter",
       "description": "Tells every agent, subagents included, how full its context window is, and to hand off at the AGENTS.md threshold.",
+      "consent": "Claude gets nothing new to do. After each tool call a hook checks how full its context is, and tells it when the level changes.",
+      "group": "Core",
+      "cost": "1 min",
       "platforms": [
         "windows",
         "linux"
@@ -177,14 +190,17 @@
         "--no-sync",
         "python",
         "-I",
-        "-c",
-        "import contextmeter.hook"
-      ]
+        "-m",
+        "contextmeter.check"
+      ],
+      "fix": "Set the context meter up again with setup contextmeter."
     },
     {
       "id": "copytone",
       "name": "Writing in your voice (copytone)",
       "description": "Writes in your own style from your samples: Claude learns your voice from your own writing and drafts outbound text (emails, posts) in it.",
+      "group": "Everyday",
+      "cost": "10 min, your writing samples",
       "platforms": [
         "windows",
         "linux"
@@ -214,6 +230,9 @@
       "id": "console",
       "name": "Task console",
       "description": "A terminal-style window onto your main Claude Code session, with a Tasks page showing what each agent is doing.",
+      "consent": "Claude can update the Tasks page without asking each time. Hooks tell the console when each turn starts, ends (with Claude's last reply) or waits for you, and which model each session runs.",
+      "group": "Core",
+      "cost": "5 min, Node.js and Edge",
       "platforms": [
         "windows"
       ],
@@ -296,12 +315,29 @@
           ]
         },
         {
+          "id": "logon",
+          "title": "Start the console server at every login, and add the console to the Start menu (a Windows scheduled task and a shortcut)",
+          "kind": "run",
+          "optional": true,
+          "default": true,
+          "argv": [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/console/register.ps1",
+            "-Port",
+            "{port}"
+          ]
+        },
+        {
           "id": "claim",
           "title": "Claim your main session",
           "kind": "manual",
           "optional": true,
           "default": true,
-          "text": "From your main Claude Code session (not a plain terminal), run:\n  uv run --project tools/console --frozen --no-sync console claim --label \"orchestrator\"\nThe setup skill does this for you. Then open the console with:\n  uv run --project tools/console --frozen --no-sync console open",
+          "text": "Paste this into Claude Code (your main session, not a plain terminal):\n  Run this with your Bash tool: uv run --project tools/console --frozen --no-sync console claim\nThe setup skill does this for you. Then open the console with:\n  uv run --project tools/console --frozen --no-sync console open",
           "doc": "tools/console/README.md"
         }
       ],
@@ -313,13 +349,18 @@
         "--frozen",
         "--no-sync",
         "console",
-        "--help"
-      ]
+        "doctor",
+        "--summary-json"
+      ],
+      "fix": "Set the console up again with setup console."
     },
     {
       "id": "audiohub",
-      "name": "Voice hub and music control",
+      "name": "Voice and music control",
       "description": "Speaks agents' notifications aloud in order, and plays, pauses and searches music (Spotify, or any app in the Windows media controls).",
+      "consent": "Claude can speak to you and control your music (play, pause, skip, queue, volume, liked songs, search, what's playing) without asking each time.",
+      "group": "Hardware",
+      "cost": "large download, speakers",
       "platforms": [
         "windows"
       ],
@@ -403,14 +444,17 @@
         "--frozen",
         "--no-sync",
         "audiohub",
-        "music",
-        "status"
-      ]
+        "check"
+      ],
+      "fix": "Set the voice hub up again with setup audiohub."
     },
     {
       "id": "browser",
       "name": "Gated web browser",
       "description": "Lets Claude drive a dedicated Edge profile on sites you allow. Purchases, sends and deletes always wait for your OK.",
+      "consent": "Claude can drive the browser without asking each time. Purchases, sends and deletes still wait for your OK, unless you turned that off in its settings (for an action or a site).",
+      "group": "Everyday",
+      "cost": "5 min, Edge",
       "platforms": [
         "windows"
       ],
@@ -441,7 +485,7 @@
         },
         {
           "id": "auto-approve",
-          "title": "Auto-approve browser actions in Claude Code, so it doesn't ask before every click? The browser's own purchase, send and delete confirmations stay on either way.",
+          "title": "Auto-approve browser actions in Claude Code, so it doesn't ask before every click? The browser's own purchase, send and delete confirmations stay on either way, unless you turned them off in its settings.",
           "kind": "confirm",
           "optional": true,
           "default": true,
@@ -489,15 +533,17 @@
         "tools/browser",
         "--frozen",
         "--no-sync",
-        "python",
-        "-c",
-        "import browser_tool"
-      ]
+        "browser-tool",
+        "--check"
+      ],
+      "fix": "Set the browser up again with setup browser."
     },
     {
       "id": "vault",
       "name": "Password vault",
       "description": "Lets the browser log in to your accounts without any password reaching the model. Unlocks with Windows Hello.",
+      "group": "Everyday",
+      "cost": "2 min, Windows Hello",
       "platforms": [
         "windows"
       ],
@@ -550,15 +596,18 @@
         "tools/vault",
         "--frozen",
         "--no-sync",
-        "python",
-        "-c",
-        "import vault"
-      ]
+        "vault",
+        "list"
+      ],
+      "fix": "Create the vault again with setup vault."
     },
     {
       "id": "mail",
       "name": "Gmail",
       "description": "Search, read and draft mail in your Gmail accounts. Sending needs you to click Allow on your PC.",
+      "consent": "Claude can search, read and draft mail without asking each time. Sending still asks.",
+      "group": "Everyday",
+      "cost": "15 min, Google account",
       "platforms": [
         "windows"
       ],
@@ -626,7 +675,8 @@
             "personal",
             "--email",
             "{email}"
-          ]
+          ],
+          "opens_browser": true
         },
         {
           "id": "more-accounts",
@@ -646,13 +696,16 @@
         "--frozen",
         "--no-sync",
         "mail",
-        "accounts"
-      ]
+        "check"
+      ],
+      "fix": "Set Gmail up again with setup mail."
     },
     {
       "id": "calendar",
       "name": "Google Calendar (read-only)",
       "description": "Reads your calendars for the agenda and the idle whiteboard. It can't change anything.",
+      "group": "Everyday",
+      "cost": "5 min, after Gmail",
       "platforms": [
         "windows"
       ],
@@ -697,7 +750,8 @@
             "add",
             "--email",
             "{email}"
-          ]
+          ],
+          "opens_browser": true
         },
         {
           "id": "settings",
@@ -734,12 +788,16 @@
         "agenda",
         "--days",
         "1"
-      ]
+      ],
+      "fix": "Set the calendar up again with setup calendar."
     },
     {
       "id": "mail-digest",
       "name": "Daily mail digest",
       "description": "Every morning, reads new mail, speaks what matters and emails you a short digest.",
+      "consent": "Its scheduled task runs Claude on its own every day at the times you chose (07:00 unless you changed it), locked down: it reads your mail by message id (whole threads included) and any file in life/, and edits your inbox, this week's plan and course READMEs there without asking; anything else is denied.",
+      "group": "Everyday",
+      "cost": "2 min, a daily Claude run",
       "platforms": [
         "windows"
       ],
@@ -784,7 +842,8 @@
             "Bypass",
             "-File",
             "tools/mail-digest/register.ps1"
-          ]
+          ],
+          "unattended_claude": true
         },
         {
           "id": "checker",
@@ -820,15 +879,18 @@
         "tools/mail-digest",
         "--frozen",
         "--no-sync",
-        "python",
-        "-c",
-        "import mail_digest"
-      ]
+        "mail-digest",
+        "status"
+      ],
+      "fix": "Set the mail digest up again with setup mail-digest."
     },
     {
       "id": "sessions",
       "name": "Background Claude sessions",
       "description": "Starts and drives headless Claude Code sessions in your other git repos, and lists past sessions to resume.",
+      "consent": "Claude can list your sessions and repos and check on a session without asking. Starting or messaging a session still asks.",
+      "group": "Extras",
+      "cost": "1 min",
       "platforms": [
         "windows"
       ],
@@ -870,18 +932,24 @@
       "verify": [
         "uv",
         "run",
+        "--env-file",
+        ".env",
         "--project",
         "tools/sessions",
         "--frozen",
         "--no-sync",
         "sessions",
-        "--help"
-      ]
+        "check"
+      ],
+      "fix": "Add it to Claude Code (setup wire, which also creates .env), or set background sessions up again with setup sessions."
     },
     {
       "id": "whiteboard",
       "name": "Projector whiteboard",
       "description": "A projector and webcam turn a physical whiteboard into one Claude can see and draw on.",
+      "consent": "Claude can look at, draw on and clear the board, save, load and delete saved boards, switch its views (to-do list, tasks, idle, night sky), calibrate and realign it, and tick items in your weekly plan without asking each time.",
+      "group": "Hardware",
+      "cost": "needs a projector and webcam",
       "platforms": [
         "windows"
       ],
@@ -960,7 +1028,7 @@
         },
         {
           "id": "schedule",
-          "title": "Morning keynotes and TODO refresh at 06:00 (a Windows scheduled task; uses the optional life/ folder)",
+          "title": "Morning keynotes and to-do list refresh at 06:00 (a Windows scheduled task; uses the optional life/ folder)",
           "kind": "run",
           "optional": true,
           "default": false,
@@ -982,13 +1050,17 @@
         "--frozen",
         "--no-sync",
         "whiteboard",
-        "--help"
-      ]
+        "status"
+      ],
+      "fix": "Check tools/whiteboard/whiteboard.toml, or set the whiteboard up again with setup whiteboard."
     },
     {
       "id": "analysis-chamber",
       "name": "Analysis chamber",
       "description": "Takes a question, drafts a plan for you to check, then collects data, analyses it, has a fresh critic review the work and leaves a report and an agent for follow-up questions.",
+      "consent": "Claude can start an analysis, check on it, list runs and ask follow-up questions without asking each time. Each start or question runs its own Claude with permission checks off, which can run commands and read and write files on this PC to draft the plan or answer; its hooks try to block sends and, for a run you keep personal, writes into this repo. Approving a plan still asks.",
+      "group": "Extras",
+      "cost": "large download (pandas, torch)",
       "platforms": [
         "windows"
       ],
@@ -1066,13 +1138,17 @@
         "--frozen",
         "--no-sync",
         "analysis-chamber",
-        "--help"
-      ]
+        "check"
+      ],
+      "fix": "Check tools/analysis-chamber/config.toml, or set it up again with setup analysis-chamber."
     },
     {
       "id": "sleepmode",
       "name": "Sleep mode",
       "description": "Darkens every screen and turns RGB lights off while the PC and agents keep running.",
+      "consent": "Claude can turn sleep mode on and off without asking each time.",
+      "group": "Hardware",
+      "cost": "1 min",
       "platforms": [
         "windows"
       ],
@@ -1124,12 +1200,16 @@
         "--no-sync",
         "sleepmode",
         "status"
-      ]
+      ],
+      "fix": "Set sleep mode up again with setup sleepmode."
     },
     {
       "id": "jobhunt",
       "name": "Job-application runner",
       "description": "A scheduled headless Claude run that finds jobs matching your profile and applies through the browser tool, following your runbook.",
+      "consent": "Its scheduled task runs Claude on its own four times a day with every permission check off: it finds jobs and applies through its own browser profile (any site; it signs up and types passwords there, and only purchases and saved-login fills ask), and it can run commands and edit files without asking.",
+      "group": "Extras",
+      "cost": "30 min, a profile and resume",
       "platforms": [
         "windows"
       ],
@@ -1165,7 +1245,8 @@
             "Bypass",
             "-File",
             "tools/jobhunt/install-schedule.ps1"
-          ]
+          ],
+          "unattended_claude": true
         },
         {
           "id": "seed-profile",
@@ -1189,9 +1270,9 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "tools/jobhunt/run.ps1",
-        "-DryRun"
-      ]
+        "tools/jobhunt/status.ps1"
+      ],
+      "fix": "Set the job runner up again with setup jobhunt."
     }
   ]
 }

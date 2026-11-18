@@ -2,13 +2,13 @@
 
 Startup order: claim the port, then the API token, projector, scene, the TODO
 view's first sync from life/, the idle view's first read and its refresh loop, camera
-(optional), the aiohttp app, daemon.json, the Edge kiosk, then the change watcher,
-board agent and drift monitor. Claiming the
-port first means a second `serve` dies before it can overwrite .state/token or grab
-the camera. Every step registers
-its own cleanup on one AsyncExitStack, so a failure anywhere (or Ctrl+C, or
-POST /api/shutdown) unwinds in reverse: drift monitor, watcher, agent, kiosk, daemon.json,
-the stop event (ends open camera streams), HTTP server, camera, the idle loop, port.
+(optional), the aiohttp app, daemon.json, the Edge kiosk's watchdog (which opens the
+kiosk and reopens it whenever it's gone), then the change watcher, board agent and
+drift monitor. Claiming the port first means a second `serve` dies before it can
+overwrite .state/token or grab the camera. Every step registers its own cleanup on one
+AsyncExitStack, so a failure anywhere (or Ctrl+C, or POST /api/shutdown) unwinds in
+reverse: drift monitor, watcher, agent, kiosk watchdog, kiosk, daemon.json, the stop
+event (ends open camera streams), HTTP server, camera, the idle loop, port.
 """
 
 import asyncio
@@ -34,7 +34,13 @@ from whiteboard.daemon.camera_hooks import CameraHooks, HookContext
 from whiteboard.daemon.camera_stream import add_camera_stream_route
 from whiteboard.daemon.daemon_routes import add_daemon_routes
 from whiteboard.daemon.idle import IdleController, IdleFiles, add_idle_routes
-from whiteboard.daemon.kiosk_runner import find_projector_monitor, open_kiosk, projector_size
+from whiteboard.daemon.kiosk import (
+    KioskWatchdog,
+    add_kiosk_routes,
+    build_kiosk,
+    find_projector_monitor,
+    projector_size,
+)
 from whiteboard.daemon.loading_box import LoadingBox
 from whiteboard.daemon.night_resume import resume_night
 from whiteboard.daemon.realign import Realigner
@@ -108,6 +114,9 @@ async def run_daemon(settings: Settings, state_dir: Path = STATE_DIR) -> None:
         add_save_routes(app, SaveContext(board, SaveStore(state_dir / BOARDS_DIR), rig))
         add_todo_routes(app, todo)
         add_idle_routes(app, idle)
+        kiosk = build_kiosk(display, monitor, state_dir, token)
+        watchdog = KioskWatchdog(kiosk, lambda: board.hub.page_count) if kiosk else None
+        add_kiosk_routes(app, watchdog)
         add_camera_stream_route(app, camera.latest if camera else None, stop)
         await _serve_http(app, listener, stack)
         # Unwinds before the HTTP server, so open camera streams end at once on
@@ -118,7 +127,10 @@ async def run_daemon(settings: Settings, state_dir: Path = STATE_DIR) -> None:
         logger.info("whiteboard daemon listening on http://%s:%d", LOOPBACK_HOST, display.port)
         # Before the kiosk, so a daemon started mid-night never lights the board.
         await resume_night(board, SLEEPMODE_STATE_FILE)
-        open_kiosk(display, monitor, state_dir, stack, token)
+        if kiosk is not None and watchdog is not None:
+            stack.callback(kiosk.close)
+            # Stops before the kiosk closes (the stack unwinds in reverse), so it never reopens it.
+            watchdog.start(stack)
         if context is not None and realigner is not None:
             views = WatchedViews(todo, idle)
             await start_watching(context, realigner, settings, stack, views)

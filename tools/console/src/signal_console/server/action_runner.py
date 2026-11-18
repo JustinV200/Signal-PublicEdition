@@ -19,8 +19,8 @@ from signal_console.server.events import EventHub, new_event_id, now_iso
 # Shown for a bug rather than a known failure; the details go to the server log.
 UNEXPECTED_ERROR = "The console hit an unexpected error running this; see the server log."
 _BUSY_WORDS = {
-    "voice": "The voice hub is still being started or stopped; wait for that to finish.",
-    "board": "The board is still busy with the last button; wait for that to finish.",
+    "voice": "Voice is still starting or stopping; wait for that to finish.",
+    "board": "The whiteboard is still busy with the last button; wait for that to finish.",
 }
 
 log = logging.getLogger(__name__)

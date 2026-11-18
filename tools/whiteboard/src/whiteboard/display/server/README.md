@@ -5,7 +5,7 @@ The daemon's aiohttp app and the object that owns the live board.
 ## Public API (`from whiteboard.display.server import ...`)
 
 - `BoardController(store, projector_size=(1280, 720), fit_height=720)`: the scene, display mode and connected pages. Every change is saved, then broadcast. It lives in the `board/` subpackage, split into the scene side (`SceneBoard`) and the mode, flash and TODO side on top (see [board/README.md](board/README.md)).
-  - Async: `put_item`, `put_items(items, replace=False)` (one change for many items, e.g. a loaded board), `patch_item`, `remove_item`, `clear`, `set_fit(quad | None)`, `set_mode(mode, markers=())`, `highlight(Highlight)`, `set_view("items" | "todo")`, `set_todo(data, newly_done=())`, `show_night(seed, sky)`, `hide_night()`.
+  - Async: `put_item`, `put_items(items, replace=False)` (one change for many items, e.g. a loaded board), `patch_item`, `remove_item`, `clear`, `set_fit(quad | None)`, `set_mode(mode, markers=())`, `highlight(Highlight)`, `set_view("items" | "todo")`, `set_todo(data, newly_done=())`, `show_night(seed)`, `hide_night()`.
   - Under the night view, `set_view` and drawing only change the view it goes back to, `set_mode` refuses every mode but `normal` and `highlight` refuses outright (`NightViewError`). `hide_night()` outside the night view saves and sends nothing.
   - Putting or patching any item but the "thinking" box switches the view back to `items`, so Claude never draws out of sight.
   - The TODO data isn't saved (the daemon rebuilds it from `life/`); the view is, with the scene.
@@ -24,7 +24,7 @@ The daemon's aiohttp app and the object that owns the live board.
 | `GET /board` | the board page; `/static/...` serves its assets |
 | `GET /files?path=` | a PNG/JPEG under `tools/whiteboard/.state/` (snapshots, `image` items); 404 otherwise |
 | `GET /ws` | server → page: `{type: scene, items, board_quad, view, night, stage}`, `{type: mode, mode, markers}`, `{type: todo, todo, newly_done}`, `{type: highlight, x, y, w, h, seconds}`. A page that connects gets scene, mode and todo (with nothing newly done). Page → server: `{type: render_error, id, error}` (logged) |
-| `GET /api/scene` | `{ok, items, board_quad, view, night, stage}` (`night` is `{seed, sky, previous_view}` or null) |
+| `GET /api/scene` | `{ok, items, board_quad, view, night, stage}` (`night` is `{seed, previous_view}` or null) |
 | `POST /api/items` | an item → `{ok, id, item}` (creates, or replaces the same id) |
 | `PATCH /api/items/{id}` | any of `x, y, w, h, content, style` → `{ok, id, item}` |
 | `DELETE /api/items/{id}` | `{ok}`; 404 if unknown |
@@ -34,7 +34,7 @@ The daemon's aiohttp app and the object that owns the live board.
 | `POST /api/fit` | `{quad: [[x, y] x4] \| null}` → `{ok, stage}` |
 | `POST /api/look` | `{clean=true}` → the look hook's result + `items`, `stage`, `view` |
 | `POST /api/calibrate` | the calibrate hook's result |
-| `POST /api/night/show` | `{seed?, sky=true}` (sleep mode sends both; `seed` defaults to tonight's `YYYYMMDD`, nights running noon to noon) → `{ok, view: "night", seed, sky, previous_view}` |
+| `POST /api/night/show` | `{seed?}` (sleep mode sends it; it defaults to tonight's `YYYYMMDD`, nights running noon to noon; an older sleepmode's `sky` is ignored) → `{ok, view: "night", seed, previous_view}` |
 | `POST /api/night/hide` | body ignored → `{ok, view}`; outside the night view nothing changes |
 | `GET /api/status` | `{ok, mode, view, item_count, pages_connected, stage}` + the status hook's fields |
 

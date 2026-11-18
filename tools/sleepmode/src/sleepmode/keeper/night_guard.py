@@ -1,10 +1,12 @@
 """NightGuard: keeps the projector dark all night, retrying the whiteboard's night view.
 
-The projector starts under a black window. Every NIGHT_RETRY_S a check runs on a
-worker thread (an HTTP call on the keeper's thread could stall the input hooks long
-enough for Windows to drop them):
+The projector starts under a black window, the stop-gap while the whiteboard is down
+or starting. Every NIGHT_RETRY_S a check runs on a worker thread (an HTTP call on the
+keeper's thread could stall the input hooks long enough for Windows to drop them):
 - covered: if the night view isn't up, ask for it (the whiteboard may have started
-  since); once it's up, close the projector's black window;
+  since); if it's still not on a page, repair the whiteboard (start its daemon, or
+  have it reopen its kiosk) so the next check finds it; once it's up, close the
+  projector's black window;
 - uncovered: if the night view is gone (the daemon stopped, or its kiosk closed), put
   the black window back. The show is retried only on the next check, so a wake that
   has just hidden the night view isn't undone before the keeper exits.
@@ -41,10 +43,13 @@ class NightView:
     Attributes:
         is_showing: True if the night view is on the projector; may raise.
         show: Asks for the night view; may raise.
+        repair: Starts the whiteboard daemon if it's down, else asks it to reopen its
+            kiosk (whiteboard_link.repair_night_view); may raise.
     """
 
     is_showing: Callable[[], bool]
     show: Callable[[], None]
+    repair: Callable[[], None]
 
 
 def _in_daemon_thread(check: Callable[[], bool]) -> "Future[bool]":
@@ -115,6 +120,21 @@ class NightGuard:
             self._pending = None
 
     def _check(self, is_covered: bool) -> bool:
+        """Whether the night view is up, asking for it (and repairing) if the projector is covered.
+
+        Only a covered projector is repaired, so a wake that just hid the night view
+        never has the whiteboard started or its kiosk reopened behind it.
+        """
+        if self._is_up(is_covered):
+            return True
+        if is_covered:
+            try:
+                self._view.repair()
+            except Exception as error:  # the next check tries again
+                log.warning("couldn't repair the whiteboard's night view: %s", error)
+        return False
+
+    def _is_up(self, is_covered: bool) -> bool:
         """Whether the night view is up, asking for it first if the projector is covered."""
         try:
             if self._view.is_showing():

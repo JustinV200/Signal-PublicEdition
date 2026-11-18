@@ -7,6 +7,7 @@ have returns NEEDS_INPUT instead of guessing.
 
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -17,6 +18,9 @@ from signal_setup.samples import collect
 from signal_setup.steps.settings_step import NEEDS_INPUT
 from signal_setup.steps.settings_step import run as run_settings
 from signal_setup.wiring import set_constant, set_env_value
+
+# The argv field the console's port fills (the logon step's -Port {port}).
+PORT_FIELD = "{" + progress.PORT_ANSWER + "}"
 
 
 class Asker(Protocol):
@@ -34,8 +38,16 @@ class Asker(Protocol):
         """A typed value; None when there's no answer yet."""
 
 
-def _fill(argv: tuple[str, ...], answers: dict[str, str]) -> list[str]:
-    """`argv` with {email} and other answers filled in. Raises KeyError if one is missing."""
+def _fill(argv: tuple[str, ...], answers: dict[str, str], say: Callable[[str], None]) -> list[str]:
+    """`argv` with {email}, {port} and other answers filled in. Raises KeyError if one is missing.
+
+    A stored answer beats its default (progress.DEFAULT_ANSWERS). {port} is the checked
+    stored port (progress.stored_port: a bad one falls back to the default, with a note
+    via `say`), the same one the setup window opens on.
+    """
+    answers = {**progress.DEFAULT_ANSWERS, **answers}
+    if any(PORT_FIELD in arg for arg in argv):
+        answers[progress.PORT_ANSWER] = str(progress.stored_port(answers, say))
     return [arg.format(**answers) if "{" in arg else arg for arg in argv]
 
 
@@ -46,7 +58,7 @@ def _run(root: Path, step: Step, data: dict[str, Any], asker: Asker) -> str:
         asker.say("Missing: " + "; ".join(f"{p.name} ({p.hint})" for p in lacking))
         return progress.FAILED
     try:
-        argv = _fill(step.argv, data["answers"])
+        argv = _fill(step.argv, data["answers"], asker.say)
     except KeyError as missing_answer:
         asker.say(f"Answer the {missing_answer} step first.")
         return NEEDS_INPUT

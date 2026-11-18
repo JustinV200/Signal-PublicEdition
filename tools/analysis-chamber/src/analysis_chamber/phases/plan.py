@@ -1,7 +1,8 @@
 """The plan phase: the lead drafts (and on edits revises) the plan; nothing is collected.
 
 Plan turns use the plan options (the lead with no MCP servers), so they can't
-fetch or read Signal data before approval.
+fetch or read Signal data before approval. The prompt lists what the collect phase
+can use (generated from the real config), so the plan only names available sources.
 
 The personal-flag section is added here, not by the lead, so it always says
 the user must choose and names both storage locations (spec 7.1).
@@ -33,7 +34,8 @@ async def draft_plan(ctx: RunContext, agents: PhaseAgents) -> str:
     Raises:
         PhaseError: The lead turn failed.
     """
-    prompt = render("plan", question=ctx.manifest.question)
+    tools = agents.options.collect_tools(ctx)
+    prompt = render("plan", question=ctx.manifest.question, tools=tools)
     reply = await lead_turn(ctx, agents, prompt, plan_only=True)
     return _save_plan(ctx, reply)
 
@@ -58,7 +60,7 @@ def _save_plan(ctx: RunContext, reply: str) -> str:
         "## Personal\n\n"
         "The user must choose personal = yes or no (the lead doesn't suggest one).\n"
         f"- yes: the run stays in {config.private_root / run_id}, never committed or published.\n"
-        f"- no: the run moves to {config.analyses_root / run_id}."
+        f"- no: the run moves to {config.analyses_root}, renamed to a readable id."
     )
     plan = f"{reply.strip()}\n\n{personal}\n"
     (ctx.run_dir / PLAN_FILE).write_text(plan, encoding="utf-8")

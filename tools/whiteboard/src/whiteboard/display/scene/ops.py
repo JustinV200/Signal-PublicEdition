@@ -112,14 +112,14 @@ def show_drawn_items(scene: Scene, items: Sequence[Item]) -> Scene:
     return scene
 
 
-def show_night(scene: Scene, seed: int, sky: bool) -> Scene:
-    """Switch to the night view with this sky (`seed` from parse.parse_seed).
+def show_night(scene: Scene, seed: int) -> Scene:
+    """Switch to the night view with this night's sky (`seed` from parse.parse_seed).
 
-    Already showing, only the sky changes: the view to go back to stays the one
+    Already showing, only the seed changes: the view to go back to stays the one
     from before the night.
     """
     previous_view = scene.night.previous_view if scene.night is not None else scene.view
-    return dataclasses.replace(scene, view=NIGHT_VIEW, night=NightView(seed, sky, previous_view))
+    return dataclasses.replace(scene, view=NIGHT_VIEW, night=NightView(seed, previous_view))
 
 
 def hide_night(scene: Scene) -> Scene:

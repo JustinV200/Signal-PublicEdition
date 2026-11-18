@@ -34,9 +34,8 @@ async def resume_night(board: BoardController, sleep_state_file: Path) -> None:
         if state.get("is_asleep") is not True:
             return
         seed = night_seed(datetime.fromisoformat(state["since"]))
-        is_sky = state.get("night_sky") is not False
     except (StateFileError, ValueError, KeyError, TypeError, AttributeError) as error:
         logger.warning("Couldn't read sleep mode's state (%s); not resuming the night view", error)
         return
-    await board.show_night(seed, is_sky)
+    await board.show_night(seed)
     logger.info("sleep mode is on: starting on the night view (seed %d)", seed)

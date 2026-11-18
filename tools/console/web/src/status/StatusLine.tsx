@@ -1,167 +1,76 @@
-// The status line: the app name and the connection in words (inert text; the
-// claimed session's label is in its tooltip), how fresh the data is with the
-// Refresh button, and the Help button on the right; then the nine view tabs
-// (the one the console tour is showing is marked `◂ tour`).
-import type { ReactNode } from "react";
-import { boardViewWords, useStore } from "../state";
-import type { AppState, View } from "../state";
+// The status line: the quiet app name and the connection in words (inert text; the
+// full words and the claimed session's label are in its tooltip), the owner's
+// away state while not Here (`Away until Thu 17:00`, `Away`, `Asleep`), the pointer
+// to System while one of the console's checks isn't ok, how fresh the data is
+// with the Refresh button (only when stale or offline), and the Help button
+// on the right; then the tab row (TabRow), whose short status
+// words keep it to one row at 1280px and 1024px.
+import { Fragment } from "react";
+import { useStore } from "../state";
 import { useTicker } from "../time";
 import { Button } from "../ui";
+import { titleAwayWords } from "./awayWords";
+import { connectionWords } from "./connectionWords";
 import { Freshness } from "./Freshness";
-import { PhaseDot, toDotPhase } from "./PhaseDot";
+import { HealthPointer } from "./HealthPointer";
 import styles from "./status.module.css";
-import { Tab } from "./Tab";
-import { turnWords } from "./turnWords";
+import { TabRow } from "./tabs/TabRow";
+import { APP_NAME } from "./titleWords";
 
 const TICK_MS = 1000;
-const MS_PER_SECOND = 1000;
-const APP_NAME = "Signal console";
-const NO_SESSION_DETAIL = "No Claude Code session has claimed the console";
 
-interface ConnectionText {
-  /** Changes when the wording changes (not on every clock tick). */
-  key: string;
-  node: ReactNode;
-  /** Secondary detail for the tooltip. */
-  detail: string;
-  warn?: boolean;
+/** The connection words, each part after the first behind a faint `·`. */
+function ConnectionParts({ parts }: { parts: string[] }) {
+  return parts.map((part, index) => (
+    <Fragment key={index}>
+      {index > 0 && <span className={styles.sep}> · </span>}
+      {part}
+    </Fragment>
+  ));
 }
 
-function connectionText(state: AppState, now: number): ConnectionText {
-  const { connection, server } = state;
-  if (connection.status === "offline") {
-    const seconds = Math.max(0, Math.ceil((connection.retryAt - now) / MS_PER_SECOND));
-    const node = (
-      <>
-        Not connected <span className={styles.sep}>·</span> retrying in {seconds}s
-      </>
-    );
-    return { key: "offline", node, detail: "The console backend is not answering", warn: true };
-  }
-  if (!server) return { key: "connecting", node: "Connecting…", detail: "" };
-  if (!server.orchestrator.claimed) {
-    return { key: "none", node: "Not connected", detail: NO_SESSION_DETAIL, warn: true };
-  }
-  const detail = `Session: ${server.orchestrator.label}`;
-  const { turn } = server.orchestrator;
-  if (turn.state === "idle") return { key: "idle", node: "Connected to Claude", detail };
-  const node = (
-    <>
-      Connected to Claude <span className={styles.sep}>·</span> {turnWords(turn, now)}
-    </>
-  );
-  // Stale is a warning: worded, and in the warning colour as well.
-  return { key: turn.state, node, detail, warn: turn.state === "stale" };
-}
-
-/** The Tasks tab's words: `3 active · 1 needs you`, or `none active`. */
-function taskTabWords({ tasks }: AppState): string {
-  if (!tasks || tasks.active.length === 0) return "none active";
-  const needs = tasks.needsYou ? ` · ${tasks.needsYou} needs you` : "";
-  return `${tasks.active.length} active${needs}`;
-}
-
-/** The status line; a tab click switches the view, Help toggles the panel. */
-export function StatusLine() {
+/**
+ * The status line; Help toggles the panel.
+ *
+ * @param showSetupTab The Setup tab shows (the shell works it out from the picks).
+ */
+export function StatusLine({ showSetupTab }: { showSetupTab: boolean }) {
   const { state, dispatch } = useStore();
   const now = useTicker(TICK_MS);
-  const connection = connectionText(state, now);
-  const phase = toDotPhase(state.server?.voice);
-  const boardView = state.server?.board.view;
-  const tasksWords = taskTabWords(state);
-  const show = (view: View) => () => dispatch({ type: "view", view });
+  const connection = connectionWords(state, now);
+  const away = titleAwayWords(state.server?.away);
 
   return (
     <header className={styles.bar}>
-      <div className="col">
+      <div className="frame">
         <div className={styles.titleRow}>
-          <span className={`hud-label ${styles.appName}`}>{APP_NAME}</span>
-          <span
-            key={connection.key}
-            className={`${styles.connection} ${connection.warn ? styles.warn : ""}`}
-            title={connection.detail || undefined}
-          >
-            {connection.node}
+          <span className={styles.appName}>{APP_NAME}</span>
+          <span className={styles.connection} title={connection.title}>
+            <span key={connection.key} className={connection.warn ? styles.warn : undefined}>
+              <ConnectionParts parts={connection.parts} />
+            </span>
           </span>
+          {/* The live region speaks the state without its clock, so it isn't re-read every second. */}
+          <span role="status" className={styles.srOnly}>
+            {connection.spoken}
+          </span>
+          {away && (
+            <span className={styles.away} title={away.tooltip}>
+              {away.word}
+              {away.until && <span className={styles.awayUntil}>{away.until}</span>}
+            </span>
+          )}
           <span className={styles.help}>
+            <span className={styles.pointer}>
+              <HealthPointer />
+            </span>
             <Freshness now={now} />
             <Button onClick={() => dispatch({ type: "help", open: !state.helpOpen })}>
               {state.helpOpen ? "Close help" : "? Help"}
             </Button>
           </span>
         </div>
-        <div className={styles.tabs} role="tablist" aria-label="views">
-          <Tab
-            name="Scope"
-            hint="Ctrl+1"
-            active={state.view === "scope"}
-            onClick={show("scope")}
-            textKey="scope"
-          />
-          <Tab
-            name="Chat"
-            hint="Ctrl+2"
-            active={state.view === "chat"}
-            onClick={show("chat")}
-            textKey="chat"
-          />
-          <Tab
-            name="Voice"
-            hint="Ctrl+3"
-            active={state.view === "voice"}
-            onClick={show("voice")}
-            textKey={phase}
-          >
-            <PhaseDot phase={phase} />
-            {phase}
-          </Tab>
-          <Tab
-            name="Boards"
-            hint="Ctrl+4"
-            active={state.view === "boards"}
-            onClick={show("boards")}
-            textKey={boardView ?? "none"}
-          >
-            {boardView ? `showing ${boardViewWords(boardView)}` : "nothing showing"}
-          </Tab>
-          <Tab
-            name="Tasks"
-            hint="Ctrl+5"
-            active={state.view === "tasks"}
-            onClick={show("tasks")}
-            textKey={tasksWords}
-          >
-            {tasksWords}
-          </Tab>
-          <Tab
-            name="Devices"
-            hint="Ctrl+6"
-            active={state.view === "devices"}
-            onClick={show("devices")}
-            textKey="devices"
-          />
-          <Tab
-            name="Models"
-            hint="Ctrl+7"
-            active={state.view === "models"}
-            onClick={show("models")}
-            textKey="models"
-          />
-          <Tab
-            name="Tools"
-            hint="Ctrl+8"
-            active={state.view === "tools"}
-            onClick={show("tools")}
-            textKey="tools"
-          />
-          <Tab
-            name="Setup"
-            hint="Ctrl+9"
-            active={state.view === "setup"}
-            onClick={show("setup")}
-            textKey="setup"
-          />
-        </div>
+        <TabRow showSetupTab={showSetupTab} />
       </div>
     </header>
   );

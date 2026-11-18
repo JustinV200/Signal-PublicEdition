@@ -1,7 +1,7 @@
 // Reads one setup CLI answer (a read-only command such as `list`, `intro`,
 // `plan`, `tour` or `status`) when a view opens, parses it, and re-reads on
-// reload() or the status line's Refresh. Shared by the wizard's screens and
-// the Tools page.
+// reload() or the status line's Refresh. Shared by the wizard's screens,
+// System's tools list and the Setup tab rule (useSetupTab).
 import { useCallback, useEffect, useState } from "react";
 import { runSetup, UnauthorizedError } from "../../api";
 import type { SetupRequest } from "../../api";
@@ -18,13 +18,13 @@ export interface SetupQuery<T> {
 }
 
 /**
- * Runs `request` and keeps `parse(lines)` of its output. `key` must change
+ * Runs `request` and keeps `parse(lines, exit)` of its output. `key` must change
  * when `request` does (requests are objects, so they can't be the dependency).
  */
 export function useSetupQuery<T>(
   key: string,
   request: SetupRequest,
-  parse: (lines: string[]) => T,
+  parse: (lines: string[], exit: number) => T,
 ): SetupQuery<T> {
   const { state, dispatch } = useStore();
   const [data, setData] = useState<T | null>(null);
@@ -39,7 +39,7 @@ export function useSetupQuery<T>(
     runSetup(request)
       .then((result) => {
         if (cancelled) return;
-        setData(parse(result.lines));
+        setData(parse(result.lines, result.exit));
         setError(null);
       })
       .catch((failure: unknown) => {

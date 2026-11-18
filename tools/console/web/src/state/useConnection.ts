@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import type { Dispatch } from "react";
 import { connectEvents, getState, login } from "../api";
 import type { EventStream } from "../api";
-import type { Auth, StoreAction } from "./reducer";
+import type { Auth, StoreAction } from "./types";
 import { startSession, takeHashKey } from "./session";
 
 const MS_PER_SECOND = 1000;
@@ -32,8 +32,13 @@ function useSessionStart(auth: Auth, dispatch: Dispatch<StoreAction>, keyRef: Ke
         });
       }
       if (outcome.kind === "down") console.error("console backend unreachable", outcome.error);
+      if (outcome.kind === "out") {
+        const { reason, openCommand } = outcome;
+        dispatch({ type: "auth", auth: "out", reason, openCommand });
+        return;
+      }
       // `down` still opens the shell: the stream's backoff shows `offline` and keeps retrying.
-      dispatch({ type: "auth", auth: outcome.kind === "out" ? "out" : "in" });
+      dispatch({ type: "auth", auth: "in" });
     });
     return () => {
       cancelled = true;
@@ -48,11 +53,11 @@ function useEventStream(auth: Auth, dispatch: Dispatch<StoreAction>, refreshTick
     const stream = connectEvents({
       onEvent: (event) => dispatch({ type: "server", event, now: Date.now() }),
       onOnline: () => dispatch({ type: "connection", connection: { status: "online" } }),
-      onOffline: (retryInSeconds) =>
-        dispatch({
-          type: "connection",
-          connection: { status: "offline", retryAt: Date.now() + retryInSeconds * MS_PER_SECOND },
-        }),
+      onOffline: (retryInSeconds) => {
+        const now = Date.now();
+        const retryAt = now + retryInSeconds * MS_PER_SECOND;
+        dispatch({ type: "connection", connection: { status: "offline", retryAt, since: now } });
+      },
       onUnauthorized: () => dispatch({ type: "auth", auth: "out" }),
       onAlive: () => dispatch({ type: "alive", at: Date.now() }),
     });

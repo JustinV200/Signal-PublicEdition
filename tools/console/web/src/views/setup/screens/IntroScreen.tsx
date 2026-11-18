@@ -1,8 +1,10 @@
 // The first screen: the intro paragraph (tools/setup data/intro.txt via
 // `setup intro`, the same text the terminal setup and the README open with)
-// and the programs still missing (`setup prereqs`), with where to get them.
+// and the programs still missing (`setup prereqs`), with where to get them
+// (a URL there is a link).
 import { parsePrereqs, firstJson } from "../../../api";
-import { Button } from "../../../ui";
+import { LinkedText } from "../../../markdown";
+import { Button, Mark } from "../../../ui";
 import styles from "../setup.module.css";
 import { useSetupQuery } from "../useSetupQuery";
 
@@ -16,15 +18,21 @@ export function IntroScreen({ next }: { next: () => void }) {
     <section className={styles.screen}>
       <p className={styles.prose}>{intro.data ?? intro.error ?? "…"}</p>
       <h3 className={styles.subhead}>Programs</h3>
-      {missing.error && <p className={styles.note}>✗ {missing.error}</p>}
+      {missing.error && (
+        <p className={styles.note}>
+          <Mark shape="cross" /> {missing.error}
+        </p>
+      )}
       {missing.data?.length === 0 && (
-        <p className={styles.note}>✓ Everything the tools need is installed.</p>
+        <p className={styles.note}>
+          <Mark shape="check" /> Everything the tools need is installed.
+        </p>
       )}
       {missing.data && missing.data.length > 0 && (
         <ul className={styles.summary}>
           {missing.data.map((prereq) => (
             <li key={prereq.name}>
-              ! missing: {prereq.name} · get it from {prereq.getIt}
+              ! missing: {prereq.name} · get it from <LinkedText text={prereq.getIt} />
             </li>
           ))}
           <li className={styles.note}>Only the tools that use a missing program need it.</li>

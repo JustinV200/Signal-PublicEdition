@@ -13,11 +13,13 @@ from pathlib import Path
 import pytest
 
 from sleepmode.whiteboard_link import (
+    KIOSK_OPEN_PATH,
     SHOW_PATH,
     TOKEN_HEADER,
     NightViewClient,
     WhiteboardUnavailableError,
     night_seed,
+    repair_night_view,
 )
 
 TOKEN = "test-token"
@@ -27,7 +29,7 @@ class FakeDaemon(BaseHTTPRequestHandler):
     """Answers POSTs: 404 for unknown paths, ok:false for a wrong token, else ok:true.
     GET /api/status answers with `status`."""
 
-    routes = {"/api/night/show", "/api/night/hide"}
+    routes = {"/api/night/show", "/api/night/hide", "/api/kiosk/open"}
     token = TOKEN
     received: list[tuple[str, str | None, dict]] = []
     status: dict = {}
@@ -59,7 +61,7 @@ class FakeDaemon(BaseHTTPRequestHandler):
 def daemon_state(tmp_path: Path) -> Iterator[Path]:
     """A whiteboard .state/ folder pointing at a fake daemon that's running."""
     FakeDaemon.received = []
-    FakeDaemon.routes = {"/api/night/show", "/api/night/hide"}
+    FakeDaemon.routes = {"/api/night/show", "/api/night/hide", "/api/kiosk/open"}
     FakeDaemon.token = TOKEN
     FakeDaemon.status = {}
     server = ThreadingHTTPServer(("127.0.0.1", 0), FakeDaemon)
@@ -74,10 +76,10 @@ def daemon_state(tmp_path: Path) -> Iterator[Path]:
 
 def test_show_and_hide_send_the_contract(daemon_state: Path) -> None:
     client = NightViewClient(daemon_state)
-    client.show(20261019, sky=True)
+    client.show(20261019)
     client.hide()
     assert FakeDaemon.received == [
-        (SHOW_PATH, TOKEN, {"seed": 20261019, "sky": True}),
+        (SHOW_PATH, TOKEN, {"seed": 20261019}),
         ("/api/night/hide", TOKEN, {}),
     ]
 
@@ -99,7 +101,7 @@ def test_is_showing_needs_the_night_view_on_a_page(
 
 def test_a_restarted_daemon_is_followed_without_a_new_client(daemon_state: Path) -> None:
     client = NightViewClient(daemon_state)
-    client.show(1, sky=True)
+    client.show(1)
     FakeDaemon.token = "rotated"  # the daemon restarted with a new token
     (daemon_state / "token").write_text("rotated\n")
     client.hide()  # reads the files again, so no stale token
@@ -137,7 +139,24 @@ def _daemon_exited(state: Path) -> None:
 def test_every_failure_is_unavailable(daemon_state: Path, break_whiteboard) -> None:
     break_whiteboard(daemon_state)
     with pytest.raises(WhiteboardUnavailableError):
-        NightViewClient(daemon_state, timeout_s=1.0).show(1, sky=True)
+        NightViewClient(daemon_state, timeout_s=1.0).show(1)
+
+
+@pytest.mark.parametrize(
+    ("is_daemon_up", "starts", "posted"),
+    [
+        (False, 1, []),  # the daemon is down: start it
+        (True, 0, [(KIOSK_OPEN_PATH, TOKEN, {})]),  # up with no page: reopen its kiosk
+    ],
+)
+def test_repair_starts_a_down_daemon_or_reopens_the_kiosk(
+    daemon_state: Path, is_daemon_up: bool, starts: int, posted: list
+) -> None:
+    if not is_daemon_up:
+        (daemon_state / "daemon.json").unlink()
+    started = []
+    repair_night_view(NightViewClient(daemon_state), lambda: started.append(True) or True)
+    assert (len(started), FakeDaemon.received) == (starts, posted)
 
 
 def test_night_seed_changes_at_noon_not_midnight() -> None:

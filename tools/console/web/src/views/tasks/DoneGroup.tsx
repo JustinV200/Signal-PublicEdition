@@ -37,9 +37,7 @@ export function DoneGroup({ tasks }: { tasks: TaskInfo[] }) {
   return (
     <div className={styles.group}>
       <div className={styles.groupHead}>{`Done today: ${tasks.length}`}</div>
-      <div className={styles.groupNames}>
-        {taskNames(shown)}
-      </div>
+      <div className={styles.groupNames}>{taskNames(shown)}</div>
       {canToggle && (
         <Button expanded={open} onClick={toggle}>
           {open ? "Show fewer" : `Show all ${tasks.length} done`}

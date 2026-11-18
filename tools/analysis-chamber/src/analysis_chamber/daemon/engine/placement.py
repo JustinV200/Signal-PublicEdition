@@ -28,24 +28,20 @@ def check_new_run(manifest: Manifest, config: ChamberConfig) -> Path:
         LeakError: private_root breaks the leak guard (e.g. it's inside the repo).
     """
     for root in (config.private_root, config.analyses_root):
-        length = len(str(root / manifest.id))
-        if length > MAX_RUN_DIR_CHARS:
-            raise ChamberError(
-                f"run folder {root / manifest.id} is {length} characters; the limit is "
-                f"{MAX_RUN_DIR_CHARS} (Windows paths). Shorten the root in config.toml."
-            )
+        _check_length(root / manifest.id)
     run_dir = config.private_root / manifest.id
     check_run_location(manifest, run_dir, config)
     return run_dir
 
 
-def move_to_analyses(run_dir: Path, manifest: Manifest, config: ChamberConfig) -> Path:
-    """Rename a non-personal run's folder into analyses_root.
+def move_to_analyses(run_dir: Path, manifest: Manifest, config: ChamberConfig, new_id: str) -> Path:
+    """Rename a non-personal run's folder into analyses_root, under its readable `new_id`.
 
     Args:
         run_dir: The run's folder under private_root.
         manifest: The run, with personal already False.
         config: For analyses_root and the leak guard.
+        new_id: The readable id the run gets (its folder name); the caller sets manifest.id.
 
     Returns:
         The new folder.
@@ -55,7 +51,8 @@ def move_to_analyses(run_dir: Path, manifest: Manifest, config: ChamberConfig) -
         ChamberError: The roots are on different volumes, the destination exists,
             or the rename failed. The folder stays where it was.
     """
-    destination = config.analyses_root / run_dir.name
+    destination = config.analyses_root / new_id
+    _check_length(destination)
     check_run_location(manifest, destination, config)
     if _volume(run_dir) != _volume(config.analyses_root):
         raise ChamberError(
@@ -70,6 +67,21 @@ def move_to_analyses(run_dir: Path, manifest: Manifest, config: ChamberConfig) -
     except OSError as error:
         raise ChamberError(f"couldn't move run {manifest.id} to {destination}: {error}") from error
     return destination
+
+
+def fits_run_dir_limit(folder: Path) -> bool:
+    """True if the run folder's path is within MAX_RUN_DIR_CHARS."""
+    return len(str(folder)) <= MAX_RUN_DIR_CHARS
+
+
+def _check_length(folder: Path) -> None:
+    """Raise ChamberError if the run folder's path is over MAX_RUN_DIR_CHARS."""
+    if not fits_run_dir_limit(folder):
+        length = len(str(folder))
+        raise ChamberError(
+            f"run folder {folder} is {length} characters; the limit is "
+            f"{MAX_RUN_DIR_CHARS} (Windows paths). Shorten the root in config.toml."
+        )
 
 
 def _volume(path: Path) -> str:

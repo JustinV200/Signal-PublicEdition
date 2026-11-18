@@ -1,19 +1,28 @@
-/* Command palette: up to 8 matches rising above the input line. */
-.list {
+/* Command palette: the matches rising above the input line, 8 rows high, then
+   scrolling, with a `+ 9 more: keep typing` line under them when more match.
+   Only the top and bottom padding are set, so `.frame` keeps its side gutters:
+   `▸` then sits in the input's glyph column and each label lines up with typed text. */
+.panel {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 100%;
   background: var(--bg-2);
   border-top: 1px solid var(--rule);
-  padding: 6px 0;
+  padding-block: 6px;
+}
+
+/* `--rows` rows (VISIBLE_ROWS, set by Palette.tsx): each is a text row plus its 2px top and bottom. */
+.list {
+  max-height: calc(var(--rows) * (var(--row) + 4px));
+  overflow-y: auto;
 }
 
 .item {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 2px 0 2px 2ch;
+  padding: 2px 0;
   color: var(--fg-2);
   transition: background-color 80ms linear;
 }
@@ -33,9 +42,10 @@
   color: var(--accent);
 }
 
-.none {
-  color: var(--fg-3);
-  padding-left: 4ch;
+.none,
+.more {
+  color: var(--fg-2);
+  padding-left: 2ch;
 }
 
 @media (prefers-reduced-motion: reduce) {

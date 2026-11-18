@@ -2,6 +2,8 @@
 // a stale server or a proxy error page must not crash the UI, so every
 // payload passes through here before it reaches the store.
 import type {
+  CheckLevel,
+  ConsoleCheck,
   Delivery,
   DeliveryStatus,
   Message,
@@ -15,11 +17,13 @@ import type {
   TurnStatus,
   VoiceEvent,
 } from "./types";
-import { isDict, isTime, numberOrNull, stringOr } from "./parseFields";
+import { parseAway } from "./parseDevices";
+import { dictList, isDict, isTime, numberOrNull, stringOr } from "./parseFields";
 import type { Dict } from "./parseFields";
 import { parseTasksPayload } from "./parseTasks";
 
 const TURN_STATES: readonly TurnStateName[] = ["working", "agents", "idle", "stale", "unknown"];
+const CHECK_LEVELS: readonly CheckLevel[] = ["ok", "attention", "fail"];
 
 /** The orchestrator's turn; anything malformed (or an older server) reads as `unknown`. */
 function parseTurn(value: unknown): TurnStatus {
@@ -78,7 +82,10 @@ export function parseServerState(value: unknown): ServerState {
   return {
     orchestrator: {
       claimed: Boolean(orchestrator.claimed),
+      // An older server sends no `alive`: its claims must not all read as closed.
+      alive: orchestrator.alive !== false,
       label: typeof orchestrator.label === "string" ? orchestrator.label : "",
+      claimedAt: stringOr(orchestrator.claimedAt, null),
       turn: parseTurn(orchestrator.turn),
     },
     voice: {
@@ -97,9 +104,12 @@ export function parseServerState(value: unknown): ServerState {
           refresher: stringOr(save.refresher, null),
         })),
       view: typeof board.view === "string" ? board.view : null,
+      itemCount: typeof board.itemCount === "number" ? board.itemCount : null,
       online: Boolean(board.online),
     },
     models: parseModels(value.models),
+    away: parseAway(value.away),
+    openCommand: stringOr(value.openCommand, null),
   };
 }
 
@@ -182,4 +192,24 @@ export function parseToken(value: unknown): string {
   if (!isDict(value) || typeof value.token !== "string" || !value.token)
     throw new Error("login: missing token");
   return value.token;
+}
+
+/**
+ * Checks a GET /api/health body, `{rows: [...]}`. A row without a string id is
+ * dropped; an unknown level reads as `attention` (never a quiet ok), and a null
+ * `fix` or `command` as "".
+ */
+export function parseConsoleHealth(value: unknown): ConsoleCheck[] {
+  const rows = isDict(value) ? dictList(value.rows) : [];
+  return rows
+    .filter((row): row is Dict & { id: string } => typeof row.id === "string")
+    .map((row) => ({
+      id: row.id,
+      name: stringOr(row.name, row.id),
+      level: CHECK_LEVELS.find((level) => level === row.level) ?? "attention",
+      state: stringOr(row.state, ""),
+      words: stringOr(row.words, ""),
+      fix: stringOr(row.fix, ""),
+      command: stringOr(row.command, ""),
+    }));
 }

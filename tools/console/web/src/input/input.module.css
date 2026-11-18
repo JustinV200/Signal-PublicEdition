@@ -28,7 +28,6 @@
 }
 
 .textarea {
-  font: inherit;
   color: var(--fg);
   background: none;
   border: 0;
@@ -45,7 +44,9 @@
   color: var(--fg-3);
 }
 
+/* On the bottom row: the footer grows up as the field wraps, so they never move. */
 .buttons {
+  align-self: end;
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -53,12 +54,22 @@
   padding-left: 2ch;
 }
 
-/* Confirm mode: the question sits where the textarea was and takes the keys. */
+/* Confirm mode: the question (600) sits where the textarea was, then Yes / No. */
 .confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1ch 2ch;
   line-height: var(--row);
   outline: none;
 }
 
-.confirm .keys {
-  color: var(--fg-2);
+.question {
+  font-weight: 600;
+}
+
+.answers {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
 }

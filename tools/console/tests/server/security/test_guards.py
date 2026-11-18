@@ -2,6 +2,8 @@
 
 import pytest
 
+from signal_console.open_hint import open_command
+from signal_console.paths import TOOL_ROOT
 from signal_console.server import SESSION_TOKEN_HEADER
 
 OWN, EVIL = "own", "evil"
@@ -61,6 +63,27 @@ async def test_guard_admits_only_own_page_and_local_callers(
     assert response.status == expected
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
     assert "Access-Control-Allow-Origin" not in response.headers
+
+
+@pytest.mark.parametrize(
+    ("path", "body", "reason"),
+    [
+        ("/api/state", None, "not signed in"),  # no token
+        ("/api/login", {"key": "used-or-expired"}, "that login key is wrong, used or expired"),
+    ],
+)
+async def test_signed_out_body_is_the_reason_and_open_command_only(console, path, body, reason):
+    method = "GET" if body is None else "POST"
+    headers = {} if body is None else {"Origin": console.origin}
+    response = await console.client.request(method, path, headers=headers, json=body)
+    assert response.status == 401
+    assert await response.json() == {"error": reason, "openCommand": open_command()}
+    # The absolute project path is quoted, so a folder with a space in it still runs.
+    assert f'--project "{TOOL_ROOT}" ' in open_command()
+    raw = await response.text()
+    assert console.token not in raw and console.services.local_key not in raw
+    assert "Set-Cookie" not in response.headers
+    assert not any(name.startswith("Access-Control-") for name in response.headers)
 
 
 @pytest.mark.parametrize(

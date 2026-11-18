@@ -80,10 +80,14 @@ async def test_done_hits_all_three_channels() -> None:
 @pytest.mark.parametrize("personal", [True, None])
 async def test_personal_run_leaks_no_finding(personal: bool | None) -> None:
     fakes = Fakes()
-    await make(fakes).done(manifest(personal), FINDING, REPORT)
+    opaque = manifest(personal)
+    opaque.id = "2026-11-17-p-7f3a"  # the id a run gets at /start, whatever the question
+    await make(fakes).done(opaque, FINDING, REPORT)
+    await make(fakes).progress(opaque)
     text = fakes.entries[0].title + fakes.entries[0].detail + fakes.notes[0].text
-    assert "Revenue" not in text
-    assert RUN_ID in text
+    text += " ".join(" ".join(argv) for argv in fakes.commands)
+    assert "Revenue" not in text and "price" not in text.lower() and "revenue" not in text.lower()
+    assert "2026-11-17-p-7f3a" in text
 
 
 async def test_closed_only_removes_console_task() -> None:

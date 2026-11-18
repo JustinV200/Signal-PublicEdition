@@ -1,13 +1,14 @@
-/* `↓ N new` pill: sticks to the bottom edge of the scrolling view, right-aligned. */
+/* `↓ N new` pill: a strip stuck to the bottom edge of the scrolling view, the
+   button at its right. The strip itself ignores the pointer, so the rows it
+   overlaps stay clickable. */
 .pill {
   position: sticky;
   bottom: 6px;
-  display: block;
-  margin-left: auto;
-  width: fit-content;
-  font-size: var(--font-small);
-  color: var(--fg-2);
-  background: var(--bg-2);
-  border: 1px solid var(--rule);
-  padding: 1px 1ch;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.pill > * {
+  pointer-events: auto;
 }

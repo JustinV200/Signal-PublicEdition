@@ -34,12 +34,16 @@ class PhaseError(RuntimeError):
 class AgentOptionsFactory(Protocol):
     """Builds SDK options per role. The daemon passes
     `SimpleNamespace(lead=lead_options, plan=plan_options, critic=critic_options,
-    qa=qa_options)`."""
+    qa=qa_options, collect_tools=collect_tools_text)`."""
 
     def lead(self, ctx: RunContext) -> Any: ...
 
     def plan(self, ctx: RunContext) -> Any:
         """The lead's options with no MCP servers, so a plan turn can't collect."""
+        ...
+
+    def collect_tools(self, ctx: RunContext) -> str:
+        """Markdown list of what the collect phase can use, for the plan prompt."""
         ...
 
     def critic(self, ctx: RunContext) -> Any: ...

@@ -48,7 +48,8 @@ async def test_night_routes_need_the_token_and_answer_sleepmode(tmp_path: Path) 
         idle_hide = await (await client.post("/api/night/hide", json={}, headers=AUTH)).json()
         saved_by_idle_hide = (tmp_path / "scene.json").exists()
         bad_seed = await client.post("/api/night/show", json={"seed": True}, headers=AUTH)
-        body = {"seed": SEED, "sky": True}
+        # An older sleepmode still sends "sky"; it's ignored, never a 400.
+        body = {"seed": SEED, "sky": False}
         shown = await (await client.post("/api/night/show", json=body, headers=AUTH)).json()
         status = await (await client.get("/api/status", headers=AUTH)).json()
         box = {"x": 0, "y": 0, "w": 50, "h": 50}
@@ -63,7 +64,6 @@ async def test_night_routes_need_the_token_and_answer_sleepmode(tmp_path: Path) 
         "ok": True,
         "view": "night",
         "seed": SEED,
-        "sky": True,
         "previous_view": "items",
     }
     assert status["view"] == "night" and flash.status == 409
@@ -77,16 +77,18 @@ async def test_hiding_returns_to_the_view_it_hid_and_drawings_wait_under_it(
     board = BoardController(store)
     await board.put_item(item_from_dict(TEXT_ITEM))
     await board.set_view("todo")
-    await board.show_night(SEED, True)
-    # A restarted daemon comes back to the night view; showing it again (sky off, as
-    # "turn off the night sky" does) still goes back to the view from before the night.
+    await board.show_night(SEED)
+    # A restarted daemon comes back to the night view, even from a scene.json saved when
+    # it had a black option; showing it again still goes back to the view from before.
+    saved = json.loads(store.path.read_text(encoding="utf-8"))
+    store.path.write_text(json.dumps({**saved, "night": {**saved["night"], "sky": False}}))
     board = BoardController(store)
-    await board.show_night(SEED, False)
+    await board.show_night(SEED)
     assert board.scene.view == "night" and board.scene.night.previous_view == "todo"
     await board.hide_night()
     assert board.scene.view == "todo" and [item.id for item in board.scene.items] == ["t1"]
     # A drawing made under the night view stays hidden, then shows when the night ends.
-    await board.show_night(SEED, True)
+    await board.show_night(SEED)
     await board.put_item(item_from_dict({**TEXT_ITEM, "id": "t2"}))
     assert board.scene.view == "night"
     await board.hide_night()
@@ -125,7 +127,7 @@ async def test_nothing_watches_checks_or_flashes_while_the_night_view_shows(
     rig = CaptureRig(LitBoard(), set_mode, tmp_path, 0, 1, page_changed_s=board.page_changed_s)
     watcher = ChangeWatcher(rig, WatcherSettings(), on_board_changed)
     monitor = DriftMonitor(rig, AlignSettings(), realign, BoardActivity(lambda: -math.inf))
-    await board.show_night(SEED, True)
+    await board.show_night(SEED)
     assert board.page_changed_s() == math.inf
     # A whole night stepped on from the show, so the drift and marker checks fall due.
     night_s = 2 * AlignSettings().marker_check_s

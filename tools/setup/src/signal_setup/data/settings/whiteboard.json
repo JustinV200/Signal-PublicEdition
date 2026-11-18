@@ -30,7 +30,7 @@
       "file": "tools/whiteboard/schedule/schedule.psd1",
       "type": "times",
       "level": "basic",
-      "description": "When the morning run (keynotes, TODO refresh) starts",
+      "description": "When the morning run (keynotes, to-do list refresh) starts",
       "hint": "24-hour local times, comma-separated, e.g. 07:00, 18:00",
       "rerun": "schedule"
     },

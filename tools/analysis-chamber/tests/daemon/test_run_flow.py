@@ -1,6 +1,8 @@
 """Daemon run flow: plan check rules, the queue cap, startup resume and the leak guard."""
 
 import asyncio
+import re
+import secrets
 from dataclasses import replace
 from pathlib import Path
 
@@ -8,13 +10,16 @@ import pytest
 
 from analysis_chamber.daemon import DaemonClient, DaemonError, start_daemon
 from analysis_chamber.daemon.engine import Chamber, ChamberError
+from analysis_chamber.daemon.engine import chamber as engine_chamber
 from analysis_chamber.guard import LeakError, is_under
 from analysis_chamber.runs import (
     Manifest,
+    ManifestError,
     Phase,
     Status,
     create_run_dir,
     read_manifest,
+    scan_runs,
     write_manifest,
 )
 
@@ -158,8 +163,8 @@ async def test_run_location_and_publish_offer(
     daemon, client, phases, config, wait_until, personal: bool, report: dict, publish: bool
 ) -> None:
     phases.report.update(report)
-    run_id = (await call(client, "start", "my inbox habits"))["run_id"]
-    await call(client, "approve", run_id, personal=personal)
+    run_id = (await call(client, "start", "my inbox"))["run_id"]
+    run_id = (await call(client, "approve", run_id, personal=personal))["run_id"]  # may be renamed
     phases.gate.set()
     await wait_until(lambda: daemon.chamber.status(run_id)["status"] == "done")
 
@@ -189,6 +194,8 @@ async def test_failed_move_leaves_the_run_private_and_unapproved(
     assert status["status"] == "awaiting_approval" and status["personal"] is None
     assert status["run_dir"] == str(config.private_root / run_id)
     assert not (config.analyses_root / run_id).exists()
+    assert status["run_id"] == run_id  # the rollback restored the opaque id
+    assert read_manifest(config.private_root / run_id).id == run_id  # ...and on disk too
 
 
 @pytest.mark.asyncio
@@ -221,3 +228,79 @@ async def test_cut_off_plan_draft_fails_the_run(config, phases) -> None:
     (run,) = chamber.list_runs()["runs"]
     manifest = read_manifest(config.private_root / run["run_id"])
     assert manifest.status is Status.FAILED and manifest.last_error == "plan draft interrupted"
+
+
+# A personal question's words must never reach an id, folder name or notice; a non-personal run
+# is renamed to a readable id on approval, and the id from /start keeps working.
+@pytest.mark.parametrize("personal", [True, False])
+@pytest.mark.asyncio
+async def test_run_id_is_opaque_until_a_non_personal_approval_renames_it(
+    daemon, client, personal
+) -> None:
+    started = await call(client, "start", "My mortgage rate?")
+    opaque = started["run_id"]
+    assert re.fullmatch(r"\d{4}-\d\d-\d\d-p-[0-9a-f]{4}", opaque)
+    approved = await call(client, "approve", opaque, personal=personal)
+    if personal:
+        assert approved["run_id"] == opaque
+        assert (daemon.config.private_root / opaque).is_dir()
+        return
+    assert "mortgage" in approved["run_id"]
+    assert (daemon.config.analyses_root / approved["run_id"]).is_dir()
+    assert not (daemon.config.private_root / opaque).exists()
+    assert (await call(client, "status", opaque))["run_id"] == approved["run_id"]
+    assert read_manifest(daemon.config.analyses_root / approved["run_id"]).id == approved["run_id"]
+
+
+@pytest.mark.asyncio
+async def test_opaque_fallback_writes_no_nonpersonal_manifest_before_the_move(
+    daemon, client, monkeypatch
+) -> None:
+    opaque = (await call(client, "start", "rent prices"))["run_id"]
+    monkeypatch.setattr(engine_chamber, "fits_run_dir_limit", lambda _folder: False)
+    real_move, seen = engine_chamber.move_to_analyses, []
+
+    def spy(run_dir, *args):
+        seen.append(read_manifest(run_dir).personal)  # what a crash right now would reload
+        return real_move(run_dir, *args)
+
+    monkeypatch.setattr(engine_chamber, "move_to_analyses", spy)
+    approved = await call(client, "approve", opaque, personal=False)
+    assert seen == [None] and approved["run_id"] == opaque
+    assert read_manifest(daemon.config.analyses_root / opaque).personal is False
+
+
+@pytest.mark.asyncio
+async def test_renamed_runs_old_id_is_never_reissued_and_survives_a_failed_persist(
+    daemon, client, monkeypatch
+) -> None:
+    opaque = (await call(client, "start", "rent prices"))["run_id"]
+    # A crash after the rename (persist failing) must leave a folder scan_runs still accepts.
+    monkeypatch.setattr(engine_chamber, "persist", _raise_manifest_error)
+    with pytest.raises(DaemonError):
+        await call(client, "approve", opaque, personal=False)
+    monkeypatch.undo()
+    found = [m.id for _, m in scan_runs([daemon.config.analyses_root])]
+    assert len(found) == 1 and "rent-prices" in found[0]
+    # make_opaque_id must skip the renamed run's old id even when the generator repeats it.
+    tokens = iter([opaque.rsplit("-", 1)[1], "ffff"])
+    monkeypatch.setattr(secrets, "token_hex", lambda _n: next(tokens))
+    assert (await call(client, "start", "other"))["run_id"].endswith("-p-ffff")
+
+
+@pytest.mark.asyncio
+async def test_resume_rolls_back_a_crash_between_manifest_write_and_rename(config, phases) -> None:
+    opaque = "2026-11-01-p-abcd"
+    manifest = Manifest(
+        "2026-11-01-rent", "q", personal=False, status=Status.AWAITING_APPROVAL, plan_text="PLAN"
+    )
+    write_manifest(create_run_dir(config.private_root, opaque), manifest)
+    chamber = Chamber(config, phases.backend())
+    chamber.resume()
+    status = chamber.status(opaque)
+    assert status["status"] == "awaiting_approval" and status["personal"] is None
+    assert read_manifest(config.private_root / opaque).id == opaque
+
+
+def _raise_manifest_error(*_args) -> None:
+    raise ManifestError("disk full")

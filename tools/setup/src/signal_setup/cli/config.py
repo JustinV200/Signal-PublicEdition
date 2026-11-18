@@ -48,7 +48,7 @@ def list_settings(root: Path, tool_id: str) -> int:
                 "hint": s.hint,
                 "min": s.min,
                 "max": s.max,
-                "is_placeholder": settings.is_placeholder(value),
+                "is_placeholder": settings.is_placeholder(value, settings.is_prose_file(s.file)),
             }
         )
     print(json.dumps(rows, indent=2))

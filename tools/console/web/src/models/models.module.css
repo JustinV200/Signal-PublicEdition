@@ -1,39 +1,39 @@
-/* Models view: a header and a hint over the model strip, two small rows (a
-   HUD key, the words, the pickers, a note saying when a pick applies), then
-   the strip's own hint. */
-.view {
-  padding: 14px 0 18px;
-}
-
-.header {
-  display: flex;
-  align-items: baseline;
-  gap: 3ch;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.viewHint {
-  color: var(--fg-3);
-  font-size: var(--font-small);
-  padding: 8px 0 12px;
-}
-
+/* The model strip (System's MODELS group), in body text: two rows on one
+   grid (a HUD key, what runs now, the scope word, the model and effort
+   pickers each after its visible label), each row's note on a line of its own
+   under the pickers, then how to switch the running session. The rows are
+   `display: contents`, so their cells share the strip's columns. */
 .strip {
+  display: grid;
+  grid-template-columns: repeat(5, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4ch 1.6ch;
   padding: 2px 0 8px;
-  font-size: var(--font-small);
 }
 
 .row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4ch 1.2ch;
-  min-height: var(--control-height);
+  display: contents;
 }
 
 .key {
-  min-width: 14ch;
+  min-width: 8ch;
+}
+
+/* Label and picker; the picker fills the column, so both rows' pickers are one width. */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.field .select {
+  flex: 1 1 auto;
+}
+
+/* Under the pickers, from the scope word's column: never wrapped into the row. */
+.note {
+  grid-column: 3 / -1;
+  margin-bottom: var(--sp-2);
 }
 
 .now {
@@ -48,7 +48,6 @@
 .select {
   height: var(--control-height);
   padding: 0 0.6ch;
-  font: inherit;
   color: var(--fg);
   background: var(--bg-2);
   border: 1px solid var(--fg-3);
@@ -68,6 +67,11 @@
   cursor: not-allowed;
 }
 
+.hint,
+.problem {
+  grid-column: 1 / -1;
+}
+
 .hint {
   color: var(--fg-3);
   padding-top: 2px;
@@ -78,8 +82,27 @@
   padding-top: 4px;
 }
 
+/* Narrow: each row wraps on its own; the note keeps a line of its own. */
 @media (max-width: 720px) {
+  .strip {
+    display: block;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4ch 1.6ch;
+    margin-bottom: var(--sp-4);
+  }
   .key {
     min-width: 0;
+  }
+  .note {
+    flex-basis: 100%;
+  }
+  /* Voice's empty grid cells would only add gaps here. */
+  .now:empty,
+  .label:empty {
+    display: none;
   }
 }

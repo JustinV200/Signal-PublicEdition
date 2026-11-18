@@ -1,6 +1,6 @@
 """Public API of analysis_chamber.runs: run manifests, ids, folders and scanning."""
 
-from analysis_chamber.runs.ids import make_run_id
+from analysis_chamber.runs.ids import is_opaque_id, make_opaque_id, make_run_id
 from analysis_chamber.runs.layout import RUN_SUBDIRS, create_run_dir, move_run
 from analysis_chamber.runs.manifest import (
     REPORT_FORMATS,
@@ -24,6 +24,8 @@ __all__ = [
     "Phase",
     "Status",
     "create_run_dir",
+    "is_opaque_id",
+    "make_opaque_id",
     "make_run_id",
     "move_run",
     "read_manifest",

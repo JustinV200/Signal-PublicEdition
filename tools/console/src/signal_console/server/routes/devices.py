@@ -1,4 +1,4 @@
-"""The Devices page's routes: GET /api/devices (rows and away mode) and POST /api/away (the toggle).
+"""System's device routes: GET /api/devices (rows and away mode) and POST /api/away (the toggle).
 
 The guard has already checked Host, Origin and the X-Console-Token header.
 GET is a read like /api/state. POST /api/away is the one console control
@@ -46,7 +46,9 @@ async def away(request: web.Request) -> web.Response:
     except ValueError as error:
         raise bad_request(str(error)) from error
     except BriefLogError as error:
-        return web.json_response({"error": f"couldn't change away mode: {error}"}, status=503)
+        return web.json_response(
+            {"error": f"couldn't save whether you're away: {error}"}, status=503
+        )
     return web.json_response(block)
 
 

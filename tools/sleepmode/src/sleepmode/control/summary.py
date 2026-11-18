@@ -4,13 +4,12 @@ from datetime import datetime
 
 from sleepmode.control.machine import SleepStatus
 from sleepmode.control.state import SleepState
-from sleepmode.screens import BLACK_PAGE, BLACK_WINDOW, DDC_OFF, NIGHT_SKY, MonitorResult
+from sleepmode.screens import BLACK_WINDOW, DDC_OFF, NIGHT_SKY, MonitorResult
 
 _METHOD_TEXT = {
     DDC_OFF: "powered off over DDC/CI",
     BLACK_WINDOW: "black window",
     NIGHT_SKY: "night sky",
-    BLACK_PAGE: "black page",
 }
 _TIME_FORMAT = "%H:%M %a %d %b"
 WAKE_HINT = "say good morning, run `sleepmode wake`, or touch the mouse or keyboard"

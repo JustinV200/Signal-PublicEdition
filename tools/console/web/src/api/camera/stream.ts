@@ -1,9 +1,9 @@
-// The webcam's live view for the Devices page: GET /api/camera/stream with the
-// page's own X-Console-Token (the console server adds the whiteboard's token
-// upstream, so this page never holds it). Frames come out as blob: URLs for an
+// The webcam's live view for System's camera panel: GET /api/camera/stream
+// with the page's own X-Console-Token (the console server adds the
+// whiteboard's token upstream, so this page never holds it). Frames come out as blob: URLs for an
 // <img>; the caller revokes each one when the next replaces it. Closing aborts
 // the fetch, which ends the stream on the server and frees the camera's slot.
-import { errorMessage, rejectUnauthorized } from "../client";
+import { errorMessage, fetchOrExplain, rejectUnauthorized } from "../client";
 import { createMjpegParser } from "./mjpeg";
 import { authHeaders } from "../token";
 
@@ -19,7 +19,7 @@ export interface CameraHandlers {
 }
 
 async function readFrames(handlers: CameraHandlers, signal: AbortSignal): Promise<void> {
-  const response = await fetch(STREAM_PATH, {
+  const response = await fetchOrExplain(STREAM_PATH, {
     headers: authHeaders(),
     credentials: "same-origin",
     signal,

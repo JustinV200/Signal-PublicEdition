@@ -17,17 +17,17 @@ SLEEP_MODE_ON = """Turn sleep mode on: monitors off (or black), RGB lights off, 
 projector.
 
 Use it for "sleep mode", "goodnight", "sleep mode until 7", "lights out". Calling it again while
-sleep mode is on updates it, e.g. "turn off the night sky" is night_sky=false.
+sleep mode is on updates it (e.g. a new wake time). The night sky always shows; there's no
+black option.
 
 Args:
     wake_at: When the screens come back, e.g. "07:00", "7am", "6:30" or an ISO date-time like
         "2026-10-20T07:00". A clock time means its next occurrence. "" sets no wake time, or,
         while sleep mode is already on, keeps the one that's set.
-    night_sky: true (the default) shows a soft night sky on the projector, different every
-        night; false keeps the projector black.
 
 Returns what happened to each display and the lights, the wake time, and any problems (e.g. the
-whiteboard wasn't running, so the projector is just black)."""
+projector is black while it waits for the whiteboard, which sleep mode starts and repairs by
+itself)."""
 
 SLEEP_MODE_OFF = """Turn sleep mode off: the monitors, the RGB lights and the projector's usual
 view come back.

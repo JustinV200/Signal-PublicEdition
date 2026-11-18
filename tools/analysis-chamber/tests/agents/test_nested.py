@@ -24,6 +24,17 @@ EXPORTED = "export FRED_API_KEY\n"
 LOWER = "fred_api_key=old\n"
 
 
+def write_mcp_json(repo, *names):
+    """A .mcp.json in the fake repo with trivial stdio servers of these names."""
+    servers = {n: {"command": "x", "args": []} for n in names}
+    (repo / ".mcp.json").write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
+
+
+@pytest.fixture(autouse=True)
+def _mcp_json(ctx):
+    write_mcp_json(ctx.config.repo_root, "browser", "browser-docker", "mail")
+
+
 class FakeRunner:
     """AgentRunner that records calls and returns a canned TurnResult."""
 
@@ -172,6 +183,30 @@ async def test_signup_saves_checked_key_and_never_returns_it(
     assert "abcd1234" not in str(reply)
     assert (env.read_text() if env.exists() else None) == env_after
     assert (runner.calls == []) is (status == "exists")  # no session for a set name
+
+
+# Signup prefers the docker browser, falls back to the desktop one, fails safely with neither.
+@pytest.mark.parametrize(
+    ("configured", "chosen"),
+    [
+        (("browser", "browser-docker"), "browser-docker"),
+        (("browser",), "browser"),
+        ((), None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_signup_picks_one_browser(ctx, configured, chosen):
+    write_mcp_json(ctx.config.repo_root, "mail", *configured)
+    runner = FakeRunner(TurnResult("s", "", False, {"status": "needs_payment"}))
+    reply = await SdkSignup(ctx, runner, lambda session_id, directory: None)(
+        "FRED", "https://fred.org/s", "FRED_API_KEY"
+    )
+    if chosen is None:
+        assert reply["status"] == "failed" and runner.calls == []
+        return
+    options = runner.calls[0][0]
+    assert set(options.mcp_servers) == {"mail", chosen}  # exactly one browser starts
+    assert f"mcp__{chosen}__" in options.system_prompt
 
 
 @pytest.mark.asyncio

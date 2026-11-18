@@ -17,6 +17,7 @@ import psutil
 from aiohttp import web
 from signal_brief import BriefPaths
 
+from signal_console.health import HealthPaths
 from signal_console.models import ModelFiles
 from signal_console.paths import (
     DAEMON_FILE,
@@ -24,6 +25,7 @@ from signal_console.paths import (
     LOCAL_KEY_FILE,
     LOOPBACK_HOST,
     REPO_ROOT,
+    SESSION_DIGESTS_FILE,
     TASKS_FILE,
     USAGE_FILE_PATH,
     WHITEBOARD_STATE_DIR,
@@ -67,12 +69,17 @@ async def serve(port: int, state_dir: Path, web_dir: Path) -> None:
     events = EventHub(state_dir / HISTORY_FILE)
     async with aiohttp.ClientSession() as session:
         model_files = ModelFiles.for_repo(state_dir)
-        status = StatusWatcher(events, state_dir, session, model_files=model_files)
+        brief_paths = BriefPaths()
+        status = StatusWatcher(
+            events, state_dir, session, model_files=model_files, brief_paths=brief_paths
+        )
         dispatcher = Dispatcher(events, state_dir)
         tasks = TasksFeed(events, state_dir / TASKS_FILE, USAGE_FILE_PATH)
         services = Services(
             events,
-            SessionAuth(),
+            # Built (and its saved sessions loaded) before the port opens, so a page
+            # from before a restart is never refused while this server starts.
+            SessionAuth(state_dir / SESSION_DIGESTS_FILE),
             status,
             dispatcher,
             ActionRunner(events, state_dir, status),
@@ -81,9 +88,10 @@ async def serve(port: int, state_dir: Path, web_dir: Path) -> None:
             DeviceReader(session),
             session,
             WHITEBOARD_STATE_DIR,
-            BriefPaths(),
+            brief_paths,
             model_files,
             SetupRunner(default_prefix(REPO_ROOT), REPO_ROOT),
+            HealthPaths(state_dir=state_dir, web_dist_dir=web_dir),
         )
         runner = web.AppRunner(
             build_app(services, web_dir), access_log=None, shutdown_timeout=SHUTDOWN_TIMEOUT_S

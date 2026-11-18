@@ -31,10 +31,14 @@ class MailTools:
         return await _run(self._service.list_accounts)
 
     async def mail_search(
-        self, account: str, query: str = "", max_results: int = DEFAULT_MAX_RESULTS
+        self,
+        account: str,
+        query: str = "",
+        max_results: int = DEFAULT_MAX_RESULTS,
+        page_token: str = "",
     ) -> str:
         """See descriptions.MAIL_SEARCH."""
-        return await _run(self._service.search, account, query, max_results)
+        return await _run(self._service.search_page, account, query, max_results, page_token)
 
     async def mail_read(self, account: str, message_id: str) -> str:
         """See descriptions.MAIL_READ."""

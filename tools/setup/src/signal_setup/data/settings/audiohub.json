@@ -27,7 +27,7 @@
       "file": "tools/audiohub/audiohub.toml",
       "type": "float",
       "level": "basic",
-      "description": "Music volume while the hub speaks",
+      "description": "Music volume while Voice speaks",
       "hint": "0.0 to 1.0"
     },
     {

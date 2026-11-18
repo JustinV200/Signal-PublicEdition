@@ -24,7 +24,7 @@ export function MailPicker({ onKept }: MailPickerProps) {
   const [picked, setPicked] = useState<Set<number>>(new Set());
 
   const load = async () => {
-    const result = await runner.run({ command: "samples", action: "mail" });
+    const result = await runner.run({ command: "samples", action: "mail" }, "load");
     if (result?.exit !== 0) return;
     const found = parseMailSamples(firstJson(result.lines));
     setMails(found);
@@ -32,7 +32,7 @@ export function MailPicker({ onKept }: MailPickerProps) {
   };
   const keep = async () => {
     const numbers = [...picked].sort((a, b) => a - b);
-    const result = await runner.run({ command: "samples", action: "keep", numbers });
+    const result = await runner.run({ command: "samples", action: "keep", numbers }, "keep");
     const last = result ? jsonDocs(result.lines).at(-1) : undefined;
     if (result?.exit !== 0 || last === undefined) return;
     const { samples, target } = parseSampleCount(last);
@@ -49,7 +49,7 @@ export function MailPicker({ onKept }: MailPickerProps) {
   return (
     <div className={styles.form}>
       <div className={styles.controls}>
-        <Button onClick={() => void load()} pending={runner.running && !mails}>
+        <Button onClick={() => void load()} {...runner.button("load")}>
           From my sent mail
         </Button>
         <span className={styles.note}>needs the mail tool signed in</span>
@@ -73,7 +73,7 @@ export function MailPicker({ onKept }: MailPickerProps) {
           <div className={styles.controls}>
             <Button
               onClick={() => void keep()}
-              pending={runner.running}
+              {...runner.button("keep")}
               disabledReason={picked.size ? undefined : "tick at least one"}
             >
               Keep {picked.size} ticked

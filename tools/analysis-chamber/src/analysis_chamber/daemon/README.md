@@ -6,7 +6,7 @@ The contract is in [../../../DESIGN.md](../../../DESIGN.md).
 
 ## Public API
 
-`from analysis_chamber.daemon import serve, start_daemon, RunningDaemon, Backend, DaemonClient, DaemonError`
+`from analysis_chamber.daemon import serve, start_daemon, RunningDaemon, Backend, DaemonClient, DaemonError, DaemonNotRunningError`
 
 - `serve(config)`: rotating log in `log_dir/analysis-chamber.log`, puts the process in a
   kill-on-close Windows job (gpu's `KillOnCloseJob`; agent CLIs die with it), then runs
@@ -17,9 +17,9 @@ The contract is in [../../../DESIGN.md](../../../DESIGN.md).
   owner-only.
 - `Backend`: the injected phase functions and objects (`wiring.default_backend` is the real one).
   `make_hooks(on_update, notifier)` gets a per-run notifier that sends one closed notice per run.
-- `DaemonClient(state_dir)`: `start`, `approve`, `status`, `list`, `ask`, `cancel`, each a dict.
+- `DaemonClient(state_dir)`: `start`, `approve`, `status`, `list(timeout_s=30)`, `ask`, `cancel`, each a dict.
   `start`, `approve` and `ask` block for the agent turn (1 h timeout); the rest 30 s.
-  Raises `DaemonError` (not running, refused, dropped).
+  Raises `DaemonError` (not running, refused, dropped); not running (no `daemon.json`, or a refused connection) is its subclass `DaemonNotRunningError`.
 
 ## Layout
 

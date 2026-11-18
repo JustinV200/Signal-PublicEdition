@@ -12,6 +12,8 @@ from typing import Any
 
 # Step kinds the runner knows (see data/tools.json's _comment for what each does).
 STEP_KINDS = frozenset({"run", "copy", "manual", "confirm", "email", "env", "samples", "settings"})
+# The kinds that can run with nobody there: a command, or copying an example file.
+UNATTENDED_KINDS = frozenset({"run", "copy"})
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,8 @@ class Step:
     optional: bool = False
     default: bool = True
     terminal: bool = False
+    # Opens the owner's browser to sign in (mail and calendar `signin`): someone must be there.
+    opens_browser: bool = False
     argv: tuple[str, ...] = ()
     src: str = ""
     dst: str = ""
@@ -36,6 +40,19 @@ class Step:
     mcp: tuple[str, ...] = ()
     permissions: tuple[str, ...] = ()
     statusline: bool = False
+    # Registers a scheduled Claude run with tools (jobhunt's and mail-digest's `schedule`):
+    # it acts with nobody asked, so once done the consent page shows the tool's `consent`.
+    unattended_claude: bool = False
+
+    def is_automatic(self) -> bool:
+        """True when `setup auto` runs it unasked: a required run or copy step that needs nobody.
+
+        Optional run steps register scheduled tasks or build Docker images, so each waits
+        for its own click; terminal steps take a secret, and browser sign-ins need the owner.
+        """
+        return self.kind in UNATTENDED_KINDS and not (
+            self.optional or self.terminal or self.opens_browser
+        )
 
 
 @dataclass(frozen=True)
@@ -59,7 +76,16 @@ class Tool:
     description: str
     platforms: tuple[str, ...]
     steps: tuple[Step, ...]
+    # Where the setup window's Pick page lists it (Core, Everyday, Hardware, Extras), and
+    # what it costs to set up, in a few words ("15 min, Google account").
+    group: str = ""
+    cost: str = ""
+    # One plain line for the consent page: what Claude may do without asking once the
+    # tool's rules and hooks are added ("Claude can search, read and draft mail ...").
+    consent: str = ""
     verify: tuple[str, ...] = ()
+    # The sentence a failed verify shows when the check doesn't give its own fix.
+    fix: str | None = None
     prereqs: tuple[str, ...] = ()
     needs: tuple[str, ...] = ()
     mcp: tuple[str, ...] = ()
@@ -72,6 +98,10 @@ class Tool:
             if step.id == step_id:
                 return step
         raise KeyError(f"{self.id} has no step {step_id!r}")
+
+    def all_prereqs(self) -> tuple[str, ...]:
+        """The programs the tool and any of its steps need, by prereq name (may repeat)."""
+        return (*self.prereqs, *(name for step in self.steps for name in step.prereqs))
 
 
 def _tuples(raw: dict[str, Any], cls: type) -> dict[str, Any]:

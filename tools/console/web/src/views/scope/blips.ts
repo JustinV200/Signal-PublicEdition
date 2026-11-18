@@ -1,119 +1,138 @@
 // What the radar plots: the facts of the live state as blips (shape plus
-// label, never colour alone) and as the text readout beside the scope. Pure
-// functions of the store state, so the drawing stays dumb.
-import { boardViewWords, pendingRows } from "../../state";
-import type { AppState } from "../../state";
-import { toDotPhase, turnWords } from "../../status";
+// label, never colour alone), each in its subsystem's sector and opening that
+// subsystem's view. Claude sits at the centre; Voice, the board and their
+// pending requests sit at the time since they last did something; tasks at
+// their progress (taskBlips.ts). Pure functions of the store state, so the
+// drawing stays dumb. readout.ts words the same facts as text rows.
+import { boardViewWords, claudeLink, pendingRows } from "../../state";
+import type { AppState, LocalMessage, View } from "../../state";
+import { toDotPhase, turnCauseWords } from "../../status";
+import { toMs } from "../../time";
+import { ageRange, SECTORS } from "./radar";
+import type { Blip, Sector } from "./radar";
+import { taskBlips } from "./taskBlips";
 
-export type BlipShape = "disc" | "ring" | "square" | "diamond";
+// Pending requests sit either side of their subsystem's blip, these many degrees off its middle.
+const REQUEST_OFFSETS_DEG = [-25, 25, -38, 38];
 
-export interface Blip {
-  id: string;
-  shape: BlipShape;
-  label: string;
-  /** Degrees clockwise from the top. */
-  bearingDeg: number;
-  /** 0 at the centre, 1 on the outer ring. */
-  range: number;
-  /** Something is in flight: the blip pulses, `slow` while only agents run (static under reduced motion). */
-  pulse?: "normal" | "slow";
-}
-
-export interface ReadoutRow {
-  label: string;
-  value: string;
-}
-
-// Bearings are chosen so no two labels share a line: labels point away from
-// the side of the scope a blip sits on, towards the middle.
-const VOICE_BEARING = 330;
-const BOARD_BEARING = 120;
-const MID_RANGE = 0.55;
-const PENDING_RANGE = 0.85;
-const PENDING_FIRST_BEARING = 150;
-const PENDING_SPACING_DEG = 45;
-const MAX_PENDING_BLIPS = 4;
-const MAX_BLIP_LABEL = 24;
-
-function shorten(text: string): string {
-  return text.length > MAX_BLIP_LABEL ? `${text.slice(0, MAX_BLIP_LABEL - 1)}…` : text;
-}
-
-function orchestratorWords(state: AppState, now: number): string {
+/** Claude's session and turn in words; the readout shares it (and adds its own offline suffix). */
+export function claudeWords(state: AppState, now: number): string {
   const { server, connection } = state;
-  if (connection.status === "offline") return "not connected";
   if (!server) return "connecting";
-  if (!server.orchestrator.claimed) return "no session";
-  return turnWords(server.orchestrator.turn, now);
+  const link = claudeLink(server.orchestrator);
+  if (link === "none") return "no session";
+  if (link === "closed") return "session closed";
+  // Offline, the turn is as last known: its clock stops at the drop instead of counting on.
+  const at = connection.status === "offline" ? connection.since : now;
+  // With the cause, as the status line words it (`state unknown · turn hook missing`).
+  return turnCauseWords(server.orchestrator.turn, state.health.checks, at);
 }
 
-function voiceWords(state: AppState): string {
-  const voice = state.server?.voice;
-  if (!voice?.running) return "stopped";
-  const by = voice.startedBy ? ` · started by ${voice.startedBy}` : "";
-  return `running · ${toDotPhase(voice)}${by}`;
+/** What the projector shows in words, `off` while the whiteboard is; the radar and the readout share it. */
+export function boardWords(state: AppState): string {
+  const board = state.server?.board;
+  return board?.online ? boardViewWords(board.view) : "off";
 }
 
-/** The blips for the scope. */
-export function buildBlips(state: AppState, now: number): Blip[] {
+/** The view a button's row belongs to: Voice's buttons are `voice.*`, the rest are the whiteboard's. */
+export function actionView(row: LocalMessage): View {
+  return row.origin?.kind === "action" && row.origin.action.startsWith("voice.")
+    ? "voice"
+    : "boards";
+}
+
+// The radar's label says outright when the stream is down.
+function orchestratorWords(state: AppState, now: number): string {
+  return state.connection.status === "offline" ? "not connected" : claudeWords(state, now);
+}
+
+const middleOf = (sector: Sector) => (sector.fromDeg + sector.toDeg) / 2;
+const ageAt = (at: string | number | undefined, now: number) =>
+  at === undefined ? null : now - toMs(at);
+
+function claudeBlip(state: AppState, now: number): Blip {
   const { server, busySince } = state;
-  const claimed = server?.orchestrator.claimed ?? false;
-  const turnState = server?.orchestrator.turn.state;
+  // A disc only for a session that is claimed and still open.
+  const linked = server ? claudeLink(server.orchestrator) === "linked" : false;
   // Waiting on agents: a hollow mark with a slow pulse, beside the words.
-  const isWaitingOnAgents = claimed && turnState === "agents";
+  const isWaitingOnAgents = linked && server?.orchestrator.turn.state === "agents";
+  return {
+    id: "claude",
+    shape: linked && !isWaitingOnAgents ? "disc" : "ring",
+    label: `CLAUDE · ${orchestratorWords(state, now)}`,
+    bearingDeg: 0,
+    range: 0,
+    pulse: busySince !== null ? "normal" : isWaitingOnAgents ? "slow" : undefined,
+    view: "chat",
+    isLabelPinned: true,
+  };
+}
+
+// Voice and the board: a hollow ring while off; range from their last activity
+// (Voice's newest feed event, the board's newest button row).
+function subsystemBlips(state: AppState, now: number): Blip[] {
+  const { server } = state;
   const voiceRunning = server?.voice.running ?? false;
-  const blips: Blip[] = [
-    {
-      id: "claude",
-      shape: claimed && !isWaitingOnAgents ? "disc" : "ring",
-      label: claimed ? `CLAUDE · ${orchestratorWords(state, now)}` : "CLAUDE · no session",
-      bearingDeg: 0,
-      range: 0,
-      pulse: busySince !== null ? "normal" : isWaitingOnAgents ? "slow" : undefined,
-    },
+  const boardOn = server?.board.online ?? false;
+  const lastBoardRow = state.messages.findLast(
+    (row) => row.kind === "action" && actionView(row) === "boards",
+  );
+  return [
     {
       id: "voice",
       shape: voiceRunning ? "disc" : "ring",
       label: `VOICE · ${voiceRunning ? toDotPhase(server?.voice) : "stopped"}`,
-      bearingDeg: VOICE_BEARING,
-      range: MID_RANGE,
+      bearingDeg: middleOf(SECTORS.voice),
+      range: ageRange(ageAt(state.voiceFeed.at(-1)?.at, now)),
+      view: "voice",
     },
     {
       id: "board",
-      shape: "square",
-      label: `BOARD · ${boardViewWords(server?.board.view ?? null)}`,
-      bearingDeg: BOARD_BEARING,
-      range: MID_RANGE,
+      shape: boardOn ? "square" : "ring",
+      label: `BOARD · ${boardWords(state)}`,
+      bearingDeg: middleOf(SECTORS.board),
+      range: ageRange(ageAt(lastBoardRow?.at, now)),
+      view: "boards",
     },
   ];
-  // The same pending set as the buttons, so the scope and the views agree.
-  pendingRows(state.messages, now)
-    .slice(-MAX_PENDING_BLIPS)
-    .forEach((row, index) =>
-      blips.push({
-        id: row.id,
-        shape: "diamond",
-        label: shorten(row.text),
-        bearingDeg: PENDING_FIRST_BEARING + index * PENDING_SPACING_DEG,
-        range: PENDING_RANGE,
-        pulse: "normal",
-      }),
-    );
-  return blips;
 }
 
-/** The text readout beside the scope: the same facts in full. */
-export function buildReadout(state: AppState, now: number): ReadoutRow[] {
-  const { server } = state;
-  const session = server?.orchestrator.claimed ? ` (${server.orchestrator.label})` : "";
-  const pending = pendingRows(state.messages, now);
+// The same pending set as the buttons, so the scope and the views agree; each
+// beside its subsystem, at the time since it was sent.
+function requestBlips(state: AppState, now: number): Blip[] {
+  const used = { voice: 0, boards: 0 };
+  return pendingRows(state.messages, now).flatMap((row) => {
+    const view = actionView(row) === "voice" ? "voice" : "boards";
+    const offset = REQUEST_OFFSETS_DEG[used[view]++];
+    if (offset === undefined) return [];
+    const sector = view === "voice" ? SECTORS.voice : SECTORS.board;
+    return [
+      {
+        id: row.id,
+        shape: "diamond",
+        label: row.text,
+        bearingDeg: middleOf(sector) + offset,
+        range: ageRange(ageAt(row.at, now)),
+        pulse: "normal",
+        view,
+      } satisfies Blip,
+    ];
+  });
+}
+
+/**
+ * The blips for the scope, in label priority: Claude (its label has a fixed spot,
+ * so it goes first and nothing ever covers it), tasks that need the owner,
+ * Voice, the board, pending requests, then the other tasks (whose labels a
+ * crowded face hides first; the Tasks view lists them all).
+ */
+export function buildBlips(state: AppState, now: number): Blip[] {
+  const tasks = taskBlips(state.tasks);
   return [
-    { label: "Claude", value: `${orchestratorWords(state, now)}${session}` },
-    { label: "Voice hub", value: voiceWords(state) },
-    { label: "Board", value: boardViewWords(server?.board.view ?? null) },
-    {
-      label: "Pending",
-      value: pending.length === 0 ? "nothing waiting" : pending.map((row) => row.text).join("; "),
-    },
+    claudeBlip(state, now),
+    ...tasks.filter((blip) => blip.isUrgent),
+    ...subsystemBlips(state, now),
+    ...requestBlips(state, now),
+    ...tasks.filter((blip) => !blip.isUrgent),
   ];
 }

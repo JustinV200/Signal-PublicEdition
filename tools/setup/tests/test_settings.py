@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from signal_setup.steps import NEEDS_INPUT, run_step
 from signal_setup.steps.settings_step import run as run_settings
 
 REPO = Path(__file__).resolve().parents[3]
+RepoFile = Callable[[str], Path]  # the conftest `repo_file` fixture
 
 TOML = """# top comment
 [a]
@@ -78,18 +80,43 @@ def test_placeholder_patterns(value: object, expected: bool) -> None:
     assert settings.is_placeholder(value) is expected
 
 
-def _checker_root(tmp_path: Path) -> Path:
+def _checker_root(tmp_path: Path, repo_file: RepoFile) -> Path:
     """A repo copy with just the assignment checker's example configs."""
     for config_file in settings.load("mail-digest").files_in("checker"):
         (tmp_path / config_file.example).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(REPO / config_file.example, tmp_path / config_file.example)
+        shutil.copyfile(repo_file(config_file.example), tmp_path / config_file.example)
     return tmp_path
 
 
+def test_markdown_scan_skips_template_slots_in_prose(tmp_path: Path) -> None:
+    """Regression: the jobhunt runbook's prose bullets ("- Result: ... <message id> ...")
+    read as placeholders left, so jobhunt's check never ran."""
+    folder = tmp_path / "life/areas/job-search"
+    folder.mkdir(parents=True)
+    (folder / "profile.md").write_text("- Name: Sam\n", encoding="utf-8")
+    (folder / "runbook.md").write_text(
+        "- Applications per run: <a number>\n"
+        "- Result: append `email <gmail message id> <subject>: verified` to its notes\n"
+        "- Home city: <your city>, <your state>\n"
+        "- Signature: Best, TODO(owner)\n",
+        encoding="utf-8",
+    )
+
+    found = settings.leftovers(tmp_path, settings.load("jobhunt"), "")
+    # AGENTS.md is Markdown too, but read with md_marked, so not in prose mode.
+    assert not settings.is_prose_file("AGENTS.md")
+
+    assert [s.id for s in found] == [
+        "Applications per run",
+        "life/areas/job-search/runbook.md:Home city",
+        "life/areas/job-search/runbook.md:Signature",
+    ]
+
+
 def test_checker_step_needs_input_until_the_agent_sets_every_placeholder(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], repo_file: RepoFile
 ) -> None:
-    root, tool = _checker_root(tmp_path), registry.by_id("mail-digest")
+    root, tool = _checker_root(tmp_path, repo_file), registry.by_id("mail-digest")
     data = progress.load(root)
     assert run_step(root, tool, tool.step("checker"), data, AgentAsker(None, None)) == NEEDS_INPUT
     assert "moodle.base" in settings.tool_leftovers(root, tool, data)
@@ -118,9 +145,9 @@ def test_checker_step_needs_input_until_the_agent_sets_every_placeholder(
 
 
 def test_mark_refuses_done_for_a_settings_step_with_placeholders_left(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], repo_file: RepoFile
 ) -> None:
-    root, tool = _checker_root(tmp_path), registry.by_id("mail-digest")
+    root, tool = _checker_root(tmp_path, repo_file), registry.by_id("mail-digest")
     run_step(root, tool, tool.step("checker"), progress.load(root), AgentAsker(None, None))
     capsys.readouterr()
     assert agent.mark(root, "mail-digest", "checker", progress.DONE) == 3
@@ -179,24 +206,25 @@ def test_changed_schedule_setting_reruns_a_done_schedule_step(tmp_path: Path) ->
     assert "IntervalMinutes  = 15" in schedule.read_text("utf-8")
 
 
-def test_every_schema_key_is_in_its_example() -> None:
+# One case per tool, so a tool whose files this checkout lacks skips alone.
+@pytest.mark.parametrize("tool", registry.load(), ids=lambda tool: tool.id)
+def test_every_schema_key_is_in_its_example(tool: registry.Tool, repo_file: RepoFile) -> None:
     """Guards drift: a renamed config key would silently stop being settable."""
-    for tool in registry.load():
-        schema = settings.load(tool.id)
-        steps = {s.group for s in tool.steps if s.kind == "settings"}
-        assert (schema is None) == (not steps), tool.id
-        for setting in schema.settings if schema else ():
-            config_file = next(f for f in schema.files if f.path == setting.file)
-            assert setting.group in steps, setting.id
-            path = REPO / (config_file.example or config_file.path)
-            text = path.read_text("utf-8")
-            name = setting.key.rpartition(".")[2]
-            commented = re.search(rf"^\s*#\s*{re.escape(name)}\s*=", text, re.M)
-            assert for_path(path).read(text, setting.key) is not None or commented, setting.id
+    schema = settings.load(tool.id)
+    steps = {s.group for s in tool.steps if s.kind == "settings"}
+    assert (schema is None) == (not steps), tool.id
+    for setting in schema.settings if schema else ():
+        config_file = next(f for f in schema.files if f.path == setting.file)
+        assert setting.group in steps, setting.id
+        path = repo_file(config_file.example or config_file.path)
+        text = path.read_text("utf-8")
+        name = setting.key.rpartition(".")[2]
+        commented = re.search(rf"^\s*#\s*{re.escape(name)}\s*=", text, re.M)
+        assert for_path(path).read(text, setting.key) is not None or commented, setting.id
 
 
-def test_context_handoff_threshold_rewrites_agents_md(tmp_path: Path) -> None:
-    shutil.copyfile(REPO / "AGENTS.md", tmp_path / "AGENTS.md")
+def test_context_handoff_threshold_rewrites_agents_md(tmp_path: Path, repo_file: RepoFile) -> None:
+    shutil.copyfile(repo_file("AGENTS.md"), tmp_path / "AGENTS.md")
     setting = settings.find(tmp_path, settings.load("agents"), "context-handoff-percent")
 
     settings.set_value(tmp_path, setting, "60")
@@ -208,11 +236,12 @@ def test_context_handoff_threshold_rewrites_agents_md(tmp_path: Path) -> None:
     assert text.count("<!-- setting:") == 1  # nothing else in the file changed shape
 
 
-def test_markdown_bool_setting_is_written_as_yes_or_no(tmp_path: Path) -> None:
+def test_markdown_bool_setting_is_written_as_yes_or_no(tmp_path: Path, repo_file: RepoFile) -> None:
     """The runbook is prose the run reads: a bool is written yes/no and read back as a bool."""
+    example = repo_file("tools/jobhunt/templates/runbook.example.md")
     runbook = tmp_path / "life/areas/job-search/runbook.md"
     runbook.parent.mkdir(parents=True)
-    shutil.copyfile(REPO / "tools/jobhunt/templates/runbook.example.md", runbook)
+    shutil.copyfile(example, runbook)
     setting = settings.find(tmp_path, settings.load("jobhunt"), "Tailor resume")
 
     settings.set_value(tmp_path, setting, "yes")

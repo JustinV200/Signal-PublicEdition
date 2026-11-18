@@ -3,10 +3,13 @@
 The orchestrator runs these from the repo root whenever a task changes state
 (spawned, sent to review, PASS, needs the owner). They write
 .state/tasks.json through signal_tasks, which checks every field; a bad one
-prints one line and exits 1 (cli/main.py), writing nothing.
+prints one line and exits 1 (cli/main.py), writing nothing. `set` also claims
+the console for its caller when no open session holds it (orchestrator/auto_claim.py).
 """
 
 import argparse
+import os
+import sys
 from datetime import datetime
 
 from signal_tasks import (
@@ -20,12 +23,14 @@ from signal_tasks import (
     set_task,
 )
 
-from signal_console.paths import STATE_DIR, TASKS_FILE
+from signal_console.orchestrator import claim_if_free
+from signal_console.owner import read_owner_name
+from signal_console.paths import ENV_FILE_PATH, STATE_DIR, TASKS_FILE
 
 
 def add_tasks_parser(commands: argparse._SubParsersAction) -> None:
     """Register `console tasks` and its four actions on the top-level subparsers."""
-    tasks = commands.add_parser("tasks", help="report the orchestrator's tasks (the Tasks page)")
+    tasks = commands.add_parser("tasks", help="report Claude's tasks (the Tasks page)")
     actions = tasks.add_subparsers(required=True, metavar="action")
 
     set_parser = actions.add_parser("set", help="create a task or change some of its fields")
@@ -34,7 +39,8 @@ def add_tasks_parser(commands: argparse._SubParsersAction) -> None:
     set_parser.add_argument("--pct", type=int, help="rough percent done, 0-100")
     set_parser.add_argument("--status", choices=list(STATUS_NUMBERS))
     set_parser.add_argument("--next", help="the next step, one line")
-    set_parser.add_argument("--you", help="what the owner must do (required for needs_you)")
+    owner = read_owner_name(ENV_FILE_PATH)
+    set_parser.add_argument("--you", help=f"what {owner} must do (required for needs_you)")
     set_parser.set_defaults(run=_run_set)
 
     done = actions.add_parser("done", help="mark a task done (100%%)")
@@ -50,9 +56,22 @@ def add_tasks_parser(commands: argparse._SubParsersAction) -> None:
 
 
 def _run_set(args: argparse.Namespace) -> int:
+    now = _now()
     change = TaskChange(args.name, args.pct, args.status, args.next, args.you)
-    task = set_task(STATE_DIR / TASKS_FILE, args.id, change, _now())
+    task = set_task(STATE_DIR / TASKS_FILE, args.id, change, now)
     print(_line(task.id, task.status, task.pct, task.name))
+    # After the task is saved: a new session takes over a missing or closed claim.
+    try:
+        claim = claim_if_free(STATE_DIR, os.environ, now)
+    except OSError as error:
+        print(
+            f"console: task {task.id} was saved, but linking the console failed ({error}). "
+            "Run `console claim` to retry.",
+            file=sys.stderr,
+        )
+        return 1
+    if claim is not None:
+        print(f"No open session held the console, so this one now does (as {claim.label!r}).")
     return 0
 
 

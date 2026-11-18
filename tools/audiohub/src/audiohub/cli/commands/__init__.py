@@ -4,6 +4,7 @@ Add a command by creating a module here that defines `COMMAND` and listing it
 below. `audiohub --help` shows commands in this order.
 """
 
+from audiohub.cli import hub_check
 from audiohub.cli.command import Command
 from audiohub.cli.commands import (
     devices,
@@ -27,6 +28,7 @@ COMMANDS: tuple[Command, ...] = (
     notify.COMMAND,
     mcp.COMMAND,
     music.COMMAND,
+    hub_check.COMMAND,
 )
 
 __all__ = ["COMMANDS"]

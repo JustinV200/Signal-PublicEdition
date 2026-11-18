@@ -10,7 +10,7 @@ from signal_setup import progress
 from signal_setup.registry import Tool
 from signal_setup.settings import schema as schemas
 from signal_setup.settings.formats import for_path
-from signal_setup.settings.placeholders import is_placeholder
+from signal_setup.settings.placeholders import is_placeholder, is_prose_file
 from signal_setup.settings.schema import Schema, Setting
 from signal_setup.settings.values import parse
 
@@ -107,8 +107,9 @@ def leftovers(root: Path, schema: Schema, group: str) -> list[Setting]:
         except ValueError as error:
             found.append(Setting(f"{config.path}: unreadable ({error})", "", config.path))
             continue
+        in_prose = is_prose_file(path)
         for key, value in pairs:
-            if is_placeholder(value):
+            if is_placeholder(value, in_prose):
                 found.append(
                     known.get((config.path, key))
                     or Setting(f"{config.path}:{key}", key, config.path, group=group)

@@ -1,25 +1,8 @@
-/* Setup wizard (and the health list the Tools page shares): the view header,
-   the numbered step strip, one screen at a time, step rows with a status
-   word and mark, forms, and the live output log. State is always in words
-   and marks; colour only repeats it. */
-.view {
-  padding: 14px 0 18px;
-}
-
-.header {
-  display: flex;
-  align-items: baseline;
-  gap: 3ch;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.hint {
-  color: var(--fg-3);
-  font-size: var(--font-small);
-  padding: 8px 0 12px;
-}
-
+/* Setup wizard: one screen at a
+   time, step rows with a status word and mark, forms, and the live output
+   log. The header's running note, the strip and the page-and-tools grid are
+   in head/wizardHead.module.css. State is always in words and marks; colour only
+   repeats it. */
 .problem {
   color: var(--warn);
   padding: 4px 0;
@@ -29,37 +12,6 @@
   color: var(--fg-2);
   font-size: var(--font-small);
   overflow-wrap: anywhere;
-}
-
-/* The numbered strip of screens: real buttons, the current one bold with ▸. */
-.strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 1ch;
-  padding-bottom: 10px;
-  font-size: var(--font-small);
-}
-
-.stripItem {
-  padding: 2px 0.8ch;
-  color: var(--fg-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  transition:
-    background-color 80ms linear,
-    border-color 80ms linear;
-}
-
-.stripItem:hover {
-  background: var(--bg-3);
-  border-color: var(--fg-2);
-}
-
-.stripCurrent {
-  color: var(--accent);
-  font-weight: 600;
-  border-color: var(--accent);
-  background: var(--bg-3);
 }
 
 .screenTitle,
@@ -112,15 +64,13 @@
 }
 
 .row,
-.step,
-.healthRow {
+.step {
   padding: 6px 1ch;
   border-bottom: 1px solid var(--rule);
 }
 
 .row:last-child,
-.step:last-child,
-.healthRow:last-child {
+.step:last-child {
   border-bottom: 0;
 }
 
@@ -133,6 +83,20 @@
 
 .pick span {
   display: block;
+}
+
+/* A tool's cost on Pick tools: a bordered tag, so its shape makes it one item. */
+.pick .tag {
+  display: inline-block;
+  padding: 0 0.8ch;
+  color: var(--fg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* "Add Gmail too" under "! not picked", lined up with the row's text. */
+.pickExtra {
+  padding: 4px 0 0 3.5ch;
 }
 
 .stepTitle {
@@ -153,20 +117,22 @@
 }
 
 /* Second cue only: the word and mark before it say the same. */
-.status_done,
-.health_active {
+.status_done {
   color: var(--ok);
 }
 
-.status_failed,
-.health_down {
+.status_failed {
   color: var(--error);
 }
 
-.status_todo,
-.status_skipped,
-.health_not_set_up {
+.status_skipped {
   color: var(--fg-3);
+}
+
+/* "○ to do" says what's next, so it stays off the faintest grey (fg-2: 6.2:1
+   or more on every surface, both themes). */
+.status_todo {
+  color: var(--fg-2);
 }
 
 .stepBody {
@@ -197,8 +163,9 @@
   font-weight: 600;
 }
 
+/* What to type in a field: fg-2, like "○ to do", never the faintest grey. */
 .fieldHint {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: var(--font-small);
 }
 
@@ -212,7 +179,6 @@
 .area {
   max-width: 60ch;
   padding: 2px 1ch;
-  font: inherit;
   color: var(--fg);
   background: var(--bg-2);
   border: 1px solid var(--fg-3);
@@ -243,48 +209,46 @@
   font-weight: 600;
 }
 
+/* The consent page's plain lines, one per tool (Permissions). */
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 80ch;
+  list-style: none;
+}
+
+/* A collapsed <details> (a step's guide, Show exact entries): the native
+   marker turns when open, a shape and not a colour. */
+.disclosure summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+/* Command output, on the global .panel: only its size and wrapping here. */
 .log {
   max-height: 16em;
   overflow: auto;
-  padding: 8px 1ch;
   font-size: var(--font-small);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: var(--bg-2);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
 }
 
-.healthRow {
-  display: grid;
-  grid-template-columns: 2ch 26ch minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1ch;
+/* A tool set up but not added to Claude Code, on the global .panel: the half
+   mark and words say it; the warning rule (an inset shadow, like the
+   server-down notice's) repeats it. */
+.banner {
+  box-shadow: inset 2px 0 0 var(--warn);
 }
 
-.mark {
-  text-align: center;
-}
-
-.healthWords {
-  min-width: 0;
-  color: var(--fg-2);
-  overflow-wrap: anywhere;
-}
-
-.healthWords strong {
+/* The restart line after Add to Claude Code: the ✓ and words carry it, weight sets it apart. */
+.restart {
   color: var(--fg);
+  font-weight: 600;
 }
 
 @media (max-width: 720px) {
   .stepBody {
     padding-left: 0;
-  }
-  .healthRow {
-    grid-template-columns: 2ch minmax(0, 1fr);
-  }
-  .healthWords,
-  .healthRow > .controls {
-    grid-column: 2;
   }
 }

@@ -88,14 +88,14 @@ async def set_fit(request: web.Request) -> web.Response:
 
 @routes.post("/api/night/show")
 async def night_show(request: web.Request) -> web.Response:
-    """Show the night view (sleep mode): `{seed?, sky?}`, what tools/sleepmode sends.
+    """Show the night view (sleep mode): `{seed?}`, what tools/sleepmode sends.
 
-    Returns `{ok, view: "night", seed, sky, previous_view}`. Already showing, only the
-    sky changes; previous_view stays the view from before the night.
+    Returns `{ok, view: "night", seed, previous_view}`. Already showing, only the
+    seed changes; previous_view stays the view from before the night.
     """
-    seed, sky = parse_night(await read_json_object(request), datetime.now())
+    seed = parse_night(await read_json_object(request), datetime.now())
     board = request.app[BOARD_KEY]
-    night = await board.show_night(seed, sky)
+    night = await board.show_night(seed)
     return web.json_response({"ok": True, "view": board.scene.view, **dataclasses.asdict(night)})
 
 

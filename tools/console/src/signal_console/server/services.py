@@ -8,6 +8,7 @@ import aiohttp
 from aiohttp import web
 from signal_brief import BriefPaths
 
+from signal_console.health import HealthPaths
 from signal_console.models import ModelFiles
 from signal_console.server.action_runner import ActionRunner
 from signal_console.server.dispatch import Dispatcher
@@ -60,7 +61,8 @@ class Services:
         whiteboard_dir: The whiteboard daemon's .state folder (its port and token).
         brief_paths: The brief's state files, for the Away/Here toggle.
         models: The model strip's files (settings, session models, voice's pick).
-        setup: Runs the setup CLI for the Setup and Tools pages.
+        setup: Runs the setup CLI for Setup and System's Tools list.
+        health: Where /api/health's checks read (signal_console.health).
     """
 
     events: EventHub
@@ -76,6 +78,7 @@ class Services:
     brief_paths: BriefPaths
     models: ModelFiles
     setup: SetupRunner
+    health: HealthPaths
 
 
 SERVICES_KEY = web.AppKey("services", Services)

@@ -6,6 +6,7 @@ export {
   formatElapsed,
   formatRelative,
   isSameDay,
+  shortAge,
   toMs,
 } from "./format";
 export type { TimeLike } from "./format";

@@ -4,6 +4,7 @@ stdout is the MCP protocol channel, so all logging goes to stderr.
 """
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -11,6 +12,7 @@ from pathlib import Path
 from browser_tool.config import ConfigError, load_settings
 from browser_tool.gates import DialogConfirmer
 from browser_tool.server.app import build_server
+from browser_tool.server.check import check_summary
 from browser_tool.server.wiring import BACKEND_DOCKER, BACKEND_LOCAL, BACKENDS, build_context
 
 logger = logging.getLogger("browser_tool")
@@ -25,10 +27,17 @@ def main(argv: list[str] | None = None) -> None:
     Args:
         argv: Command-line arguments (defaults to sys.argv[1:]).
 
+    With --check it only loads the config and prints the setup tool's one-line
+    {words, fix, command} summary (check.py), then exits.
+
     Raises:
-        SystemExit: With code 2 when the config is invalid.
+        SystemExit: With code 2 when the config is invalid, or --check's exit code.
     """
     args = _parse_args(argv)
+    if args.check:
+        code, summary = check_summary(args.config)
+        print(json.dumps(summary))
+        raise SystemExit(code)
     logging.basicConfig(level=logging.INFO, stream=sys.stderr, format=LOG_FORMAT)
     try:
         settings = load_settings(args.config)
@@ -50,5 +59,10 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         choices=BACKENDS,
         default=BACKEND_LOCAL,
         help="where Edge runs: the desktop profile (local) or a container per job (docker)",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="only load the config and print a one-line JSON health summary",
     )
     return parser.parse_args(argv)

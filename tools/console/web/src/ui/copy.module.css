@@ -1,0 +1,33 @@
+/* The copy control: the button and its note on one line, and, only after a
+   failed copy, a read-only box with the text selected for Ctrl+C. */
+.copy {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 1ch;
+}
+
+.note {
+  color: var(--fg-2);
+  font-size: var(--font-small);
+  overflow-wrap: anywhere;
+}
+
+.fallback {
+  width: 100%;
+  min-width: min(40ch, 100%);
+  padding: 6px 1ch;
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: var(--font-small);
+  resize: vertical;
+}

@@ -18,7 +18,7 @@ Request: $ARGUMENTS
 
 ## Hard rules
 
-- Never ask for or accept a password, token, API key, OAuth code, Duo code or client secret in chat. Steps that need one are marked `"terminal": true` in `setup list`; tell the user to run `.\setup.ps1 <tool>` (Windows) or `./setup.sh <tool>` in their own terminal, then continue when they say it's done. Email addresses, hostnames and folder paths aren't secrets and can be asked in chat.
+- Never ask for or accept a password, token, API key, OAuth code, Duo code or client secret in chat. Steps that need one are marked `"terminal": true` in `setup list`; tell the user to run `.\setup.cmd step <tool> <step>` (Windows) or `./setup.sh step <tool> <step>` in their own terminal (it runs just that step, with no wiring), then continue when they say it's done; `setup list` shows whether it worked. Email addresses, hostnames and folder paths aren't secrets and can be asked in chat.
 - Every tool and every optional step is skippable. Never push a tool on the user. A skipped tool gets no config, MCP server, permissions, hooks or scheduled task.
 - Never set a permission mode or `bypassPermissions`. Only `setup wire --yes` writes Claude Code settings, and only after the user has seen `setup plan` and said yes once.
 - Windows-only tools (`supported_here: false` in `setup list`) can't be set up on Linux: say so and move on.
@@ -31,14 +31,14 @@ Unless the request says `--no-ui`, "in chat" or "in the terminal", or asks for t
 uv run --project tools/setup --frozen --quiet setup ui [<tool>]
 ```
 
-It installs and builds the console if needed (long the first time), then opens the console's Setup tab: a wizard that runs these same commands from buttons, shows their output live, and resumes from `.setup/progress.json`. On exit 0, tell the user the setup window is open, that every tool and optional step can be skipped there, and that a failed step has a **Hand to Claude** button that sends the error to you in the console's Chat (fix it as in step 5, then tell them to retry). Then stop; don't run the steps in chat as well. On exit 1 (not Windows, a missing program such as Node.js, or a failed build), say why in one line and carry on with the full setup below in chat.
+It installs and builds the console if needed (long the first time), then opens the console's Setup tab: a wizard that runs these same commands from buttons, shows their output live, and resumes from `.setup/progress.json`. On exit 0, first run `uv run --project tools/console --frozen --no-sync console claim` yourself from this session's own Bash or PowerShell tool, so the window's Chat and **Hand to Claude** reach this session (the wizard's claim step then ticks itself). Then tell the user the setup window is open, that every tool and optional step can be skipped there, and that a failed step has a **Hand to Claude** button that sends the error to you in the console's Chat (fix it as in step 5, then tell them to retry). Then stop; don't run the steps in chat as well. On exit 1 (not Windows, a missing program such as Node.js, or a failed build), say why in one line and carry on with the full setup below in chat.
 
 ## Full setup (in chat)
 
 1. Show the intro: the text of `tools/setup/src/signal_setup/data/intro.txt`.
 2. `setup prereqs` and tell the user what's missing, with the links it gives.
 3. `setup list`. Show the tools as a short checklist: name, one-line description, platform label (`Windows` or `Windows + Linux (untested)`), status. Ask which they want. Mention `needs` (calendar and mail-digest build on mail; mail-digest also on audiohub; jobhunt on browser).
-4. `setup choose <id,id,...>` with their picks.
+4. `setup choose <id,id,...>` with their picks, then `setup auto`: it runs every pick's automatic steps (required `run`/`copy` steps that need nobody: not terminal, not a browser sign-in) in one go, asks nothing, never wires, and ends with JSON naming where each tool stopped (`stopped`; exit 1 a step failed, 2 none of the named tools is picked, 3 a step needs the user). Then carry on with step 5 from those stops.
 5. For each chosen tool, for each step in order whose status isn't `done`:
    - Optional step: ask (one line, say the default). If they decline, `setup mark <tool> <step> skipped`.
    - `confirm` step (e.g. browser auto-approve, default yes): ask the question as written, then `setup apply <tool> <step> --answer yes|no`. For the browser, say that its own purchase, send and delete confirmations stay on either way.
@@ -50,8 +50,8 @@ It installs and builds the console if needed (long the first time), then opens t
    - `samples` step: see "copytone samples" below.
    - `settings` step: `setup apply <tool> <step>` creates the config files from their examples. Then `setup config <tool> --list`; for every `basic` setting and every row with `is_placeholder: true`, ask the user in chat (show the description, hint and current value; they can keep it), then `setup config <tool> --set id=value` (repeat `--set` for several). Offer the `advanced` ones in one question (default no). The step is done only when `placeholders_left` is empty; never invent a value or pass a placeholder (example.edu/example.com hosts, YOUR_..., <...>, TODO(...)). For the mail-digest `checker` step, the hosts are the user's school's LMS and SSO hosts.
    - Exit code 1 means the step failed: read the messages, diagnose (missing program, network, a file the user still has to place), fix what you can without secrets, and retry. Exit code 3 means it needs input or the user's terminal.
-6. `setup plan`. Show the summary verbatim and ask once: "Write this?" On yes, `setup wire --yes`; on no, stop (progress is kept).
-7. `setup verify` and report each tool as OK or the problem (placeholders left count as a problem: fix them with `setup config`). Tell the user to restart Claude Code or run `/mcp` to load new MCP servers.
+6. `setup plan`. Show the summary verbatim and ask once: "Add to Claude Code?" On yes, `setup wire --yes`; on no, stop (progress is kept).
+7. `setup verify` and report each tool as OK or the problem (placeholders left count as a problem: fix them with `setup config`; a failed check that printed no summary line also has `output`, its last output line, to diagnose from). Tell the user to restart Claude Code or run `/mcp` to load new MCP servers.
 8. Offer the tour (default no).
 
 `setup <tool>` from the user: open the window at that tool (`setup ui <tool>`), or in chat do step 5 for that one tool (offering to redo finished steps), then 6 and 7. "Remove <tool>": `setup choose` with the tool left out, then 6. "Change <tool>'s settings": `setup config <tool> --list`, ask, `--set`. The context-handoff threshold in AGENTS.md section 4 is the `agents` tool's setting: `setup config agents --set context-handoff-percent=<30-90>` (lower hands off sooner, with fresher context but more handoffs).

@@ -1,8 +1,10 @@
-// Board rows as the UI sees them: rows 0 and 1 are the to-do list and idle board, then one row per
-// save, each with the action that puts it on the projector; plus the words
-// for what `board.view` says is showing. Shared by the boards view, the
-// status line, the scope, the reducer's cursor clamp and the palette.
-import type { ActionArgs, ActionName, BoardSave, ServerState } from "../api";
+// Board rows as the UI sees them: rows 0 and 1 are the to-do list and idle
+// board, then one row per save, each with the action that puts it on the
+// projector and a key that names it across snapshots; the preview's buttons per
+// row; plus the words for what `board.view` says is showing and whether a
+// drawing is up. Shared by the boards view, the status line, the scope, the
+// reducer's selection, the confirm rule and the palette.
+import type { ActionArgs, ActionName, BoardSave, BoardState, ServerState } from "../api";
 
 /** Shown wherever the to-do list cannot be requested. */
 export const TODO_UNAVAILABLE_REASON = "Not available yet: the whiteboard needs an update";
@@ -23,8 +25,22 @@ export interface BoardRowInfo {
   args?: ActionArgs;
   /** Set when the row's button must be off; shown as its tooltip and caption. */
   disabledReason?: string;
-  /** The board.update arguments when the board can be redrawn from live data, else null. */
+  /**
+   * The board.update arguments for a save that can be redrawn from live data (it has a
+   * refresher), else null. The to-do list has none: sending it already redraws it.
+   */
   updateArgs: ActionArgs | null;
+  /** What redraws a save from live data (`tasks`, `todo`); null for the fixed rows. */
+  refresher: BoardSave["refresher"];
+}
+
+/** One button in a board's preview: its label and the action it runs. */
+export interface BoardButton {
+  label: string;
+  action: ActionName;
+  args?: ActionArgs;
+  /** The preview's one primary button. */
+  primary: boolean;
 }
 
 const TODO_ROW: BoardRowInfo = {
@@ -32,15 +48,17 @@ const TODO_ROW: BoardRowInfo = {
   description: "The whiteboard's own to-do list.",
   updatedAt: null,
   action: "board.todo",
-  updateArgs: { view: "todo" },
+  updateArgs: null,
+  refresher: null,
 };
 
 const IDLE_ROW: BoardRowInfo = {
   name: "Idle board",
-  description: "The board's resting view: clock, tasks, weather and news.",
+  description: "The whiteboard's resting view: clock, tasks, weather and news.",
   updatedAt: null,
   action: "board.idle",
   updateArgs: null,
+  refresher: null,
 };
 
 /** The board's night view (sleep mode): calibration would light the room. */
@@ -68,9 +86,38 @@ export function boardRows(server: ServerState | null): BoardRowInfo[] {
 /** The to-do list and the idle board come before the saves. */
 export const FIXED_ROWS = 2;
 
-/** Rows in the boards view: the two fixed rows plus one per save. */
-export function boardRowCount(server: ServerState | null): number {
-  return FIXED_ROWS + (server?.board.saves.length ?? 0);
+/**
+ * The preview's buttons for `row`, primary first. A save with live data leads with
+ * `Show live version` (board.update: redraws it from live data and shows it), since
+ * its saved copy is stale; `Show saved copy` loads that copy. Every other row has
+ * one `Send to projector`.
+ */
+export function boardButtons(row: BoardRowInfo): BoardButton[] {
+  const send = { action: row.action, args: row.args };
+  if (!row.updateArgs) return [{ label: "Send to projector", primary: true, ...send }];
+  return [
+    { label: "Show live version", action: "board.update", args: row.updateArgs, primary: true },
+    { label: "Show saved copy", primary: false, ...send },
+  ];
+}
+
+/**
+ * A row's name across snapshots (`action:name`). The selection stores this, not
+ * a row number, because a new save arriving at the top moves every row down.
+ */
+export function boardRowKey(row: BoardRowInfo): string {
+  return `${row.action}:${row.name}`;
+}
+
+/** The to-do row's key: where the selection starts and where it falls back. */
+export const TODO_ROW_KEY = boardRowKey(TODO_ROW);
+
+/** Index of the row named `key`; the to-do row (0) when that board is gone. */
+export function boardIndexOf(rows: readonly BoardRowInfo[], key: string): number {
+  return Math.max(
+    0,
+    rows.findIndex((row) => boardRowKey(row) === key),
+  );
 }
 
 /**
@@ -94,11 +141,39 @@ export function isRowShowing(row: BoardRowInfo, view: string | null): boolean {
   );
 }
 
-/** `board.view` in words for the header, tab and scope; `nothing` while there is no view. */
+/**
+ * Whether the projector may hold a drawing (unsaved items) that loading a save
+ * would wipe: the view is `items` and the whiteboard has not said it is empty.
+ * An unknown count counts as a drawing, so the confirm errs on asking.
+ */
+export function isDrawingUp(board: BoardState | undefined): boolean {
+  return board?.view === ITEMS_VIEW && board.itemCount !== 0;
+}
+
+/** `board.view` in words for the header and scope; `nothing` while there is no view. */
 export function boardViewWords(view: string | null): string {
   if (view === TODO_VIEW) return "the to-do list";
   if (view === IDLE_VIEW) return "the idle board";
-  if (view === ITEMS_VIEW) return "your board";
+  if (view === ITEMS_VIEW) return "a drawing";
   if (view === NIGHT_VIEW) return "the night view";
   return view ?? "nothing";
+}
+
+// The Boards tab's short words: what is up, kept brief so all tabs fit one row.
+const TAB_WORDS: Record<string, string> = {
+  [TODO_VIEW]: "to-do list",
+  [IDLE_VIEW]: "idle",
+  [ITEMS_VIEW]: "drawing",
+  [NIGHT_VIEW]: "night",
+};
+
+/**
+ * The Boards tab's words for `board`: `to-do list`, `idle`, `drawing`, `night` or `off`.
+ * An older whiteboard that is on but reports no view reads `on`.
+ */
+export function boardTabWords(board: BoardState | undefined): string {
+  if (!board?.online) return "off";
+  if (board.view === null) return "on";
+  // hasOwn, not `??`: a view named like an Object.prototype key must not read its member.
+  return Object.hasOwn(TAB_WORDS, board.view) ? TAB_WORDS[board.view] : board.view;
 }

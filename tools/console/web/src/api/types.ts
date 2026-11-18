@@ -21,7 +21,11 @@ export interface TurnStatus {
 
 export interface OrchestratorState {
   claimed: boolean;
+  /** The claimed session is still open (its inbox pipe exists); false with no claim. */
+  alive: boolean;
   label: string;
+  /** When the session claimed the console (ISO); null with no claim or an older server. */
+  claimedAt: string | null;
   turn: TurnStatus;
 }
 
@@ -36,14 +40,22 @@ export interface BoardSave {
   updatedAt: string | number | null;
   /** One line about what is on the board; null until the backend passes it through. */
   description: string | null;
-  /** What can redraw it from live data (`tasks` or `todo`); null means no Update button. */
+  /** What can redraw it from live data (`tasks` or `todo`); null means no `Show live version`. */
   refresher: string | null;
 }
 
 export interface BoardState {
   saves: BoardSave[];
-  /** The whiteboard's view, `"todo"` or `"items"`; null when it is off or an older build reports none. */
+  /**
+   * The whiteboard's view: `"items"` (drawn or loaded items), `"todo"`, `"idle"` or `"night"`;
+   * null when it is off or an older build reports none.
+   */
   view: string | null;
+  /**
+   * How many items the whiteboard holds (its status's `item_count`); null when it is off or
+   * an older build sends none. Zero means an `items` view is empty, so a load wipes nothing.
+   */
+  itemCount: number | null;
   /** The whiteboard daemon answered. False until the first board request starts it. */
   online: boolean;
 }
@@ -81,6 +93,13 @@ export interface ServerState {
   board: BoardState;
   /** Null from an older server. */
   models: ModelsState | null;
+  /** The owner's away mode, for the title row; null while unreadable or from an older server. */
+  away: AwayInfo | null;
+  /**
+   * The full `console open` command line, with the server's own absolute project path, so it
+   * runs from any folder. Cached for while the server is down; null from an older server.
+   */
+  openCommand: string | null;
 }
 
 /** `console` is the UI's own `note` rows; the server never sends it as a message role. */
@@ -174,7 +193,7 @@ export interface TasksPayload {
 
 export type DeviceState = "on" | "off" | "unknown";
 
-/** One row of the Connected devices page; `words` always says the state. */
+/** One device row (System's DEVICES group); `words` always says the state. */
 export interface DeviceRow {
   id: string;
   name: string;
@@ -199,6 +218,29 @@ export interface DevicesPayload {
   away: AwayInfo | null;
 }
 
+/** ok: nothing to do; attention: works, but needs a look; fail: the console can't work. */
+export type CheckLevel = "ok" | "attention" | "fail";
+
+/** One of the console's own checks (GET /api/health), as `console doctor` prints it. */
+export interface ConsoleCheck {
+  /** Stable, e.g. `turn-hook` (TURN_HOOK_CHECK); never a socket name or token. */
+  id: string;
+  name: string;
+  level: CheckLevel;
+  /** The state in a word or two: `running`, `missing`, `taken`. */
+  state: string;
+  /** One sentence on what was found. */
+  words: string;
+  /** What to do, in one sentence; "" when the row is ok. */
+  fix: string;
+  /** A command that fixes it, runnable as shown; "" when there is none. */
+  command: string;
+}
+
+/** The checks whose state other views word: Claude's turn state and the model strip. */
+export const TURN_HOOK_CHECK = "turn-hook";
+export const SESSION_HOOK_CHECK = "session-hook";
+
 /** One parsed SSE event from GET /api/events. */
 export type ServerEvent =
   | { type: "state"; data: ServerState }
@@ -220,6 +262,4 @@ export type ActionName =
 
 export interface ActionArgs {
   name?: string;
-  /** board.update on the to-do list, which is not a save. */
-  view?: "todo";
 }

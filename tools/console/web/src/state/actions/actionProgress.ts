@@ -4,7 +4,7 @@
 // (replayed history). Pure; the views derive it.
 import type { ActionName } from "../../api";
 import { toMs } from "../../time";
-import type { LocalMessage } from "../reducer";
+import type { LocalMessage } from "../types";
 
 export type ActionProgress = "sending" | "sent" | "working" | "done" | "failed";
 

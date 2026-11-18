@@ -4,7 +4,7 @@
 import type { Dispatch } from "react";
 import { sendAction, sendText, UnauthorizedError } from "../../api";
 import type { ActionArgs, ActionName } from "../../api";
-import type { LocalMessage, Origin, StoreAction } from "../reducer";
+import type { LocalMessage, Origin, StoreAction } from "../types";
 import { actionLabel } from "./actionLabels";
 
 export interface Sender {

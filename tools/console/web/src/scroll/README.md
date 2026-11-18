@@ -1,5 +1,7 @@
 # scroll
 
-Auto-follow for the chat stream and the voice feed: `useFollow(scrollRef, itemCount)` keeps the view pinned to the bottom while the reader is there and counts rows that land below the fold; `NewPill` shows that count and jumps down on click.
+Auto-follow for the chat stream and the voice feed: `useFollow(scrollRef, rowCount, { onAtBottom, isLiveEnd, tailKey })` keeps the view pinned to the bottom while the reader is there and counts rows that land below the fold. `onAtBottom` runs whenever the reader is at the end and the page is visible (`ui`'s `isPageVisible`; on mount, after each followed append, on scrolling back down), and again when it becomes visible at the end (Chat marks its rows seen with it; rows that land while the page is hidden stay new). With `isLiveEnd` set (the newest row arrived after mount: Chat passes it, Voice doesn't), rows appended at the end of a non-empty log that are taller than the view are shown from their top instead of their end, and counted on the pill, so a long reply reads from its start; replayed history, in however many chunks, and an empty log filling always land at the end. `tailKey` changes when something after the rows comes or goes (Chat's working row, keyed by `busySince`): the view re-pins to the end if the reader is there, and the pill never counts it. `NewPill` shows that count as a `ui` Button on a sticky strip and jumps down on click (smooth, instant under reduced motion).
 
-Public API: `index.ts`. Depends on React only.
+Internals: `followRows` decides how new rows are treated (count, show from top, or follow), `useBottomWatch` tracks scroll and visibility, `measure` holds the end/bottom measurements (`contentEnd` assumes the scroller's last child spans the content, as Shell's view wrapper does).
+
+Public API: `index.ts`. Depends on `ui`.

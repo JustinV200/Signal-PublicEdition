@@ -1,6 +1,6 @@
 // The Tasks page's words: the header's counts and the usage line. Pure, so
-// they are easy to test. Every status is a number plus a word (the owner is
-// colourblind; colour is only ever a second cue).
+// they are easy to test. Every status is a word, so it also works
+// for colourblind users; colour is only ever a second cue.
 import type { TaskInfo, TasksPayload, UsageInfo, UsageWindow } from "../../api";
 import { formatClock, formatRelative, toMs } from "../../time";
 
@@ -12,9 +12,16 @@ const STATUS_WORDS: Record<TaskInfo["status"], string> = {
   done: "done",
 };
 
-/** `[1 review]`: the board's number and the word. */
+const USAGE_LABEL = "Claude usage:";
+
+/**
+ * `[review]`: the state by word only (the whiteboard grid's status number is
+ * not shown). A task waiting on the owner reads `! [needs you]`, so the mark
+ * and the word, not just the colour, set it apart.
+ */
 export function statusTag(task: TaskInfo): string {
-  return `[${task.number} ${STATUS_WORDS[task.status]}]`;
+  const tag = `[${STATUS_WORDS[task.status]}]`;
+  return task.status === "needs_you" ? `! ${tag}` : tag;
 }
 
 /** `4 active · 1 needs you · overall 58%`. */
@@ -37,16 +44,22 @@ function windowWords(
   return withReset ? `${pct} (resets ${formatClock(window.resetsAt)})` : pct;
 }
 
-/** `5h 42% (resets 14:10) · wk 18% · agents 5 · as of 2m ago`. */
+/**
+ * `Claude usage: 5-hour window 42% (resets 14:10) · week 18% · 5 agents · updated 2m ago`.
+ * @param usage the server's usage block, null when it sent none
+ * @param now the clock the reset and age are read against, in ms
+ */
 export function usageWords(usage: UsageInfo | null, now: number): string {
-  if (!usage) return "usage unknown";
-  const age = usage.updatedAt ? `as of ${formatRelative(usage.updatedAt, now)}` : "no usage yet";
-  return [
-    windowWords("5h", usage.fiveHour, now, true),
-    windowWords("wk", usage.sevenDay, now, false),
-    `agents ${usage.agents}`,
+  if (!usage) return `${USAGE_LABEL} unknown`;
+  const age = usage.updatedAt ? `updated ${formatRelative(usage.updatedAt, now)}` : "no usage yet";
+  const agents = `${usage.agents} ${usage.agents === 1 ? "agent" : "agents"}`;
+  const parts = [
+    windowWords("5-hour window", usage.fiveHour, now, true),
+    windowWords("week", usage.sevenDay, now, false),
+    agents,
     age,
-  ].join(" · ");
+  ];
+  return `${USAGE_LABEL} ${parts.join(" · ")}`;
 }
 
 /** `Queued: 6 tasks, none started` (or how many have). */

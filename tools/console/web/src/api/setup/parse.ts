@@ -4,6 +4,7 @@
 import { dictList, isDict, numberOrNull, stringOr } from "../parseFields";
 import type { Dict } from "../parseFields";
 import type {
+  AutoStop,
   HealthState,
   MailSample,
   MissingPrereq,
@@ -58,6 +59,7 @@ function parseStep(dict: IdDict): SetupStep {
     optional: dict.optional === true,
     default: dict.default !== false,
     terminal: dict.terminal === true,
+    automatic: dict.automatic === true,
     text: stringOr(dict.text, ""),
     doc: stringOr(dict.doc, ""),
     group: stringOr(dict.group, ""),
@@ -72,13 +74,30 @@ export function parseTools(value: unknown): SetupTool[] {
     id: dict.id,
     name: stringOr(dict.name, dict.id),
     description: stringOr(dict.description, ""),
+    group: stringOr(dict.group, ""),
+    cost: stringOr(dict.cost, ""),
     platform: stringOr(dict.platform, ""),
     supportedHere: dict.supported_here !== false,
     status: stringOr(dict.status, "not set up"),
+    picked: dict.picked === true,
+    wired: dict.wired === true,
     needs: strings(dict.needs),
     prereqs: strings(dict.prereqs),
     steps: rows(dict.steps, parseStep),
   }));
+}
+
+/** `setup auto`'s closing JSON: where each tool stopped (a stop without a tool or step is dropped). */
+export function parseAutoStops(value: unknown): AutoStop[] {
+  const stopped = isDict(value) ? value.stopped : [];
+  return dictList(stopped)
+    .filter((dict) => typeof dict.tool === "string" && typeof dict.step === "string")
+    .map((dict) => ({
+      tool: stringOr(dict.tool, ""),
+      step: stringOr(dict.step, ""),
+      title: stringOr(dict.title, stringOr(dict.step, "")),
+      reason: dict.reason === "failed" ? "failed" : "needs_you",
+    }));
 }
 
 /** `setup config <tool> --list`: the tool's settings and unnamed placeholders. */
@@ -97,7 +116,7 @@ export function parseSettings(value: unknown): SettingRow[] {
   }));
 }
 
-/** `setup status --json`: each tool's health. */
+/** `setup status --json`: each tool's health; a null `fix` or `command` reads as "". */
 export function parseHealth(value: unknown): ToolHealth[] {
   return rows(value, (dict) => ({
     id: dict.id,
@@ -106,7 +125,10 @@ export function parseHealth(value: unknown): ToolHealth[] {
     supportedHere: dict.supported_here !== false,
     setupStatus: stringOr(dict.setup_status, ""),
     state: pick(HEALTH_STATES, dict.state, "not_set_up"),
-    detail: stringOr(dict.detail, ""),
+    words: stringOr(dict.words, ""),
+    fix: stringOr(dict.fix, ""),
+    command: stringOr(dict.command, ""),
+    wired: dict.wired === true,
   }));
 }
 
