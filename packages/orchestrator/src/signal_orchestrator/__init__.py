@@ -6,6 +6,7 @@ Test helpers live in signal_orchestrator.testing and aren't re-exported here.
 """
 
 from signal_orchestrator.claim import (
+    PIPE_PREFIX,
     SOCKET_ENV,
     TOKEN_ENV,
     Claim,
@@ -17,6 +18,7 @@ from signal_orchestrator.claim import (
 from signal_orchestrator.inbox import InboxError, encode_frames, send_to_inbox
 
 __all__ = [
+    "PIPE_PREFIX",
     "SOCKET_ENV",
     "TOKEN_ENV",
     "Claim",

@@ -8,7 +8,7 @@ Reach the claimed Signal orchestrator session: read its claim, and send it a mes
 
 - `Claim(socket, token, label, claimed_at)`: a claimed session's inbox. The token is kept out of `repr`.
 - `claim_from_env(environ, label) -> Claim` builds one from `CLAUDE_CODE_MESSAGING_SOCKET` and `CLAUDE_CODE_MESSAGING_TOKEN` (`SOCKET_ENV`, `TOKEN_ENV`), which Claude Code exports to a session's tools. It raises `ClaimError` when they're missing or the socket isn't a local named pipe.
-- `claim_to_json(claim)` is the object the claim file holds. `read_claim_file(path) -> Claim | None` reads it back, and gives None for a missing, unreadable or malformed file. Both checks refuse a socket that isn't `\\.\pipe\...` with no `..` or `/`, since the token is written to it.
+- `claim_to_json(claim)` is the object the claim file holds. `read_claim_file(path) -> Claim | None` reads it back, and gives None for a missing, unreadable or malformed file. Both checks refuse a socket that isn't `\\.\pipe\...` (`PIPE_PREFIX`) with no `..` or `/`, since the token is written to it.
 - `async send_to_inbox(claim, text)` writes the auth line and the message frame, and raises `InboxError` when the pipe can't be opened (3 s) or Claude Code closes the connection within 0.5 s (wrong token, or a frame it rejects). `encode_frames(token, text)` is the bytes it writes.
 
 The auth line is documented ([cross-session messaging](https://code.claude.com/docs/en/cross-session-messaging#the-sessions-inbox-socket)). The message frame isn't: it's the one Claude Code 2.1.301's own sender writes, and it may change in a later version. See `inbox.py`.
