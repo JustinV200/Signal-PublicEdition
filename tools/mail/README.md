@@ -1,6 +1,6 @@
 # mail
 
-Claude's own Gmail tool for the owner's Google accounts: personal Gmail and the school's Google Workspace. Claude can search, read and draft mail through an MCP server (`mail mcp`, server name `mail`). Sending a draft takes the owner's click in an Allow/Deny dialog. The `mail` CLI covers sign-in and account management, plus search and read, and `mail send-self`, which emails the owner's own address with no dialog (see Security).
+Claude's own Gmail tool for the owner's Google accounts: a personal Gmail address, plus any school or work Google Workspace accounts added later. Claude can search, read and draft mail through an MCP server (`mail mcp`, server name `mail`). Sending a draft takes the owner's click in an Allow/Deny dialog. The `mail` CLI covers sign-in and account management, plus search and read, and `mail send-self`, which emails the owner's own address with no dialog (see Security).
 
 It calls the Gmail REST API directly with `google-auth`'s `AuthorizedSession`. There's no discovery client.
 
@@ -32,7 +32,7 @@ tools/mail/.state/
 | Tool | Does |
 |---|---|
 | `mail_accounts` | Lists aliases, emails and status: `ok`, `needs re-auth`, `offline` or `error` |
-| `mail_search(account, query, max_results=20)` | Runs a Gmail query (`is:unread newer_than:1d`, `from:x`, `subject:y`) and returns id, thread_id, from, to, subject, date, snippet and labels |
+| `mail_search(account, query, max_results=20, page_token="")` | Runs a Gmail query (`is:unread newer_than:1d`, `from:x`, `subject:y`) and returns id, thread_id, from, to, subject, date, snippet and labels. The reply is always `{messages, next_page_token?, estimated_total?}`; pass `next_page_token` back as `page_token` with the same query for the next page. `estimated_total` is Gmail's `resultSizeEstimate`, a rough count of all matches, not exact |
 | `mail_read(account, message_id)` | Returns the headers, the body as plain text (HTML converted, capped at 20,000 chars) and attachment names and sizes, without downloading them |
 | `mail_thread(account, thread_id)` | Returns the conversation, oldest first, with quoted earlier mail stripped, each body capped at 5,000 chars and the oldest messages dropped past 30,000 chars |
 | `mail_draft(account, to, subject, body, reply_to_message_id="")` | Saves a draft and never sends. Replies get `threadId`, `In-Reply-To`, `References` and the `Re:` subject |
@@ -43,8 +43,8 @@ tools/mail/.state/
 ## CLI
 
 ```
-mail setup | add ALIAS [--email ADDRESS] | accounts | remove ALIAS
-mail search ACCOUNT QUERY [--max N] | read ACCOUNT ID | mcp
+mail setup | add ALIAS [--email ADDRESS] | accounts | check | remove ALIAS
+mail search ACCOUNT QUERY [--max N] [--paged] [--page-token T] | read ACCOUNT ID | mcp
 mail send-self --subject SUBJECT --body-file FILE
 ```
 

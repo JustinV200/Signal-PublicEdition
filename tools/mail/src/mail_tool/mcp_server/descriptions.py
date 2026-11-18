@@ -31,8 +31,11 @@ MAIL_SEARCH = (
     "thread_id, from, to, subject, date (when Gmail received it), snippet, labels. "
     "Query examples: 'is:unread newer_than:1d', 'from:alice@example.com', 'subject:invoice', "
     "'has:attachment after:2026/01/01', 'in:sent to:bob', 'label:work is:starred'. "
-    "An empty query lists the newest mail. max_results is 1-50 (default 20). Use mail_read "
-    f"or mail_thread for the full text. {ACCOUNT_ARG} {UNTRUSTED_RULE}"
+    "An empty query lists the newest mail. max_results is 1-50 (default 20). "
+    "The reply is {messages, next_page_token?, estimated_total?}: call again with the same query "
+    "and page_token=next_page_token for the next page, until no next_page_token comes back. "
+    "estimated_total is Gmail's rough count of all matches, not exact. Use "
+    f"mail_read or mail_thread for the full text. {ACCOUNT_ARG} {UNTRUSTED_RULE}"
 )
 
 MAIL_READ = (

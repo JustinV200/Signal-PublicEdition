@@ -257,3 +257,20 @@ def test_list_accounts_reports_status_from_a_profile_check(outcome, status) -> N
     assert row["alias"] == "personal" and row["email"] == "owner@example.com"
     assert row["status"] == status
     assert len(session.calls) == 1  # the probe isn't retried, so offline answers fast
+
+
+def test_search_page_returns_an_envelope_and_passes_the_token_through() -> None:
+    session = FakeSession(
+        {
+            ("GET", "messages"): {
+                "messages": [{"id": "m1"}],
+                "nextPageToken": "tok2",
+                "resultSizeEstimate": 120,
+            },
+            ("GET", "messages/m1"): gmail_message("m1", SAMPLE_HEADERS),
+        }
+    )
+    page = make_service(session).search_page("personal", "", page_token="tok1")
+    assert session.calls[0][2]["params"]["pageToken"] == "tok1"
+    assert page["next_page_token"] == "tok2" and page["estimated_total"] == 120
+    assert [m["id"] for m in page["messages"]] == ["m1"]
