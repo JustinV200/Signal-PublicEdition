@@ -1,6 +1,6 @@
 # Calendar tool setup (one time, about 5 minutes)
 
-This gives the `calendar` tool read-only access to the calendars on `owner@example.com`. It reuses the Google Cloud project and Desktop OAuth client you made for the mail tool ([tools/mail/SETUP.md](../mail/SETUP.md)), so do that first. There's no new client file to download.
+This gives the `calendar` tool read-only access to the calendars on your personal Gmail address (`owner@example.com` in these steps), the one you connected to the mail tool first. It reuses the Google Cloud project and Desktop OAuth client you made for the mail tool ([tools/mail/SETUP.md](../mail/SETUP.md)), so do that first. There's no new client file to download.
 
 ## 1. Turn on the Calendar API
 
