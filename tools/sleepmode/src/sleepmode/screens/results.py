@@ -6,8 +6,12 @@ from dataclasses import dataclass
 DDC_OFF = "ddc-off"  # powered off over DDC/CI (VCP 0xD6)
 BLACK_WINDOW = "black-window"  # covered by a borderless, topmost black window
 NIGHT_SKY = "night-sky"  # the projector shows the whiteboard's night view
-BLACK_PAGE = "black-page"  # the projector shows the whiteboard's night view without the sky
-METHODS: tuple[str, ...] = (DDC_OFF, BLACK_WINDOW, NIGHT_SKY, BLACK_PAGE)
+METHODS: tuple[str, ...] = (DDC_OFF, BLACK_WINDOW, NIGHT_SKY)
+# Old methods a state file may still hold, and what they read as now. The black page was
+# the night view without the sky, so it's the night view (wake hides it).
+# TODO: drop it once no sleepmode MCP server started before the black-page option went
+# (2026-11-18) can still be running (after a wake and an MCP restart).
+LEGACY_METHODS: dict[str, str] = {"black-page": NIGHT_SKY}
 
 
 @dataclass(frozen=True)

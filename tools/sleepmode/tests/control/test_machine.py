@@ -12,8 +12,9 @@ from support.fakes import KEEPER_PID, PRIMARY, PROJECTOR, SIDE, make_rig
 
 import sleepmode.control.machine as machine
 from sleepmode.control import SleepModeError, SleepState, load_state, save_state
+from sleepmode.control.projector_step import WAITING_FOR_WHITEBOARD
 from sleepmode.lighting import Lighting, OpenRgbSession
-from sleepmode.screens import BLACK_PAGE, BLACK_WINDOW, DDC_OFF, NIGHT_SKY
+from sleepmode.screens import BLACK_WINDOW, DDC_OFF, NIGHT_SKY
 
 TONIGHT_SEED = 20261019
 
@@ -31,7 +32,7 @@ def test_sleep_then_wake_then_wake_again(tmp_path) -> None:
     assert lights_off_by_then == [[True]]
     assert rig.scheduler.scheduled == [datetime(2026, 10, 20, 7, 0)]
     assert rig.screens.powered_off == [PRIMARY.device_name, SIDE.device_name]
-    assert rig.whiteboard.shown == [(TONIGHT_SEED, True)] and rig.whiteboard.starts == 0
+    assert rig.whiteboard.shown == [TONIGHT_SEED] and rig.whiteboard.starts == 0
     methods = {m.device_name: m.method for m in asleep.monitors}
     assert methods == {
         PRIMARY.device_name: BLACK_WINDOW,
@@ -67,7 +68,7 @@ def test_whiteboard_unavailable_covers_the_projector_with_a_black_window(tmp_pat
     state = rig.sleep_mode.sleep()
 
     projector = next(m for m in state.monitors if m.is_projector)
-    assert projector.method == BLACK_WINDOW and "whiteboard not up" in projector.detail
+    assert (projector.method, projector.detail) == (BLACK_WINDOW, WAITING_FOR_WHITEBOARD)
     # Sleep starts the daemon once (it resumes the night view itself), and only on sleep.
     assert rig.whiteboard.starts == 1 and state.notes == ()
     (options,) = rig.keeper.started
@@ -78,6 +79,20 @@ def test_whiteboard_unavailable_covers_the_projector_with_a_black_window(tmp_pat
     # Waking still works, and a whiteboard that never showed the night view isn't a problem.
     assert rig.sleep_mode.wake().notes == ()
     assert rig.whiteboard.starts == 1
+
+
+def test_a_night_view_on_no_page_is_waiting_not_night_sky(tmp_path) -> None:
+    # Regression: the status said "night sky" all night while the kiosk had closed and
+    # the projector showed only the keeper's black window.
+    rig = make_rig(tmp_path)
+    rig.whiteboard.has_page = False
+
+    state = rig.sleep_mode.sleep()
+
+    projector = next(m for m in state.monitors if m.is_projector)
+    assert (projector.method, projector.detail) == (BLACK_WINDOW, WAITING_FOR_WHITEBOARD)
+    # The daemon is up, so sleep doesn't start another; the keeper's guard repairs it.
+    assert rig.whiteboard.shown == [TONIGHT_SEED] and rig.whiteboard.starts == 0
 
 
 def test_a_whiteboard_that_wont_start_is_a_note_and_sleep_goes_on(tmp_path) -> None:
@@ -102,7 +117,7 @@ def test_bad_wake_time_changes_nothing(tmp_path) -> None:
 def test_sleeping_again_keeps_the_wake_time_unless_given(tmp_path) -> None:
     rig = make_rig(tmp_path)
     first = rig.sleep_mode.sleep(wake_at="07:00")
-    second = rig.sleep_mode.sleep(night_sky=False)
+    second = rig.sleep_mode.sleep()
     assert second.wake_at == first.wake_at and rig.scheduler.pending == first.wake_at
     # Its lights are already off, so the first sleep's snapshot of them must be kept.
     assert rig.lighting.offs == [True, False]
@@ -110,10 +125,6 @@ def test_sleeping_again_keeps_the_wake_time_unless_given(tmp_path) -> None:
     assert second.keeper_pid == KEEPER_PID + 1
     # No state names the old keeper any more, so its topmost windows would outlast every wake.
     assert rig.keeper.stopped == [(KEEPER_PID, 1)]
-    # No sky: the whiteboard shows a black page, and the keeper asks for the same.
-    assert rig.whiteboard.shown[-1] == (TONIGHT_SEED, False)
-    assert next(m for m in second.monitors if m.is_projector).method == BLACK_PAGE
-    assert not rig.keeper.started[-1].night_sky
     rig.sleep_mode.sleep(wake_at="06:30")
     assert rig.scheduler.pending == datetime(2026, 10, 20, 6, 30)
 

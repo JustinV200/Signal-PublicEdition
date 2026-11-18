@@ -32,7 +32,7 @@ def test_the_cover_comes_off_once_the_whiteboard_is_up_and_back_if_it_goes() -> 
     # Regression: a whiteboard down at sleep time left the projector black all night,
     # and one that stopped mid-night left the desktop lit on it.
     FakeCover.opened = []
-    clock, showing, shows = [0.0], [False], []
+    clock, showing, shows, repairs = [0.0], [False], [], []
 
     def show() -> None:
         shows.append(clock[0])
@@ -41,7 +41,11 @@ def test_the_cover_comes_off_once_the_whiteboard_is_up_and_back_if_it_goes() -> 
         showing[0] = True
 
     guard = NightGuard(
-        PROJECTOR, NightView(lambda: showing[0], show), FakeCover, _inline, lambda: clock[0]
+        PROJECTOR,
+        NightView(lambda: showing[0], show, lambda: repairs.append(clock[0])),
+        FakeCover,
+        _inline,
+        lambda: clock[0],
     )
 
     def poll_at(at: float) -> bool:
@@ -51,11 +55,13 @@ def test_the_cover_comes_off_once_the_whiteboard_is_up_and_back_if_it_goes() -> 
         guard.poll()
         return any(cover.is_open for cover in FakeCover.opened)
 
-    assert poll_at(0.0) and shows == [0.0]  # down at sleep time: stays covered
+    # Down at sleep time: stays covered, and the whiteboard is repaired (started).
+    assert poll_at(0.0) and shows == [0.0] and repairs == [0.0]
     assert poll_at(30.0) and shows == [0.0]  # not retried before NIGHT_RETRY_S
     assert not poll_at(60.0) and shows == [0.0, 60.0]  # it started: the sky shows
     showing[0] = False  # the daemon stopped mid-night
-    assert poll_at(120.0) and shows == [0.0, 60.0]  # covered at once, no show yet
+    # Covered at once, with no show or repair yet: a wake may have just hidden it.
+    assert poll_at(120.0) and shows == [0.0, 60.0] and repairs == [0.0]
     assert not poll_at(180.0) and shows == [0.0, 60.0, 180.0]
     assert len(FakeCover.opened) == 2
 
@@ -70,7 +76,8 @@ def test_close_waits_for_a_show_in_flight() -> None:
         release.wait()
         shows.append(True)
 
-    guard = NightGuard(PROJECTOR, NightView(lambda: False, show), FakeCover, clock=lambda: 0.0)
+    view = NightView(lambda: False, show, lambda: None)
+    guard = NightGuard(PROJECTOR, view, FakeCover, clock=lambda: 0.0)
     guard.poll()  # starts the check on its own thread
     threading.Timer(0.05, release.set).start()
     guard.close()

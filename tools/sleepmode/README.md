@@ -15,20 +15,20 @@ It never puts the PC to sleep, hibernates it or logs off, and it doesn't change 
 ## Commands
 
 ```
-uv run --project tools/sleepmode sleepmode sleep [--wake 07:00] [--no-sky]
+uv run --project tools/sleepmode sleepmode sleep [--wake 07:00]
 uv run --project tools/sleepmode sleepmode wake
 uv run --project tools/sleepmode sleepmode status
 ```
 
 - `--wake` takes `07:00`, `7`, `7am`, `6:30 pm`, or an ISO date-time like `2026-10-20T07:00`. A clock time means the next time it comes round.
-- Running `sleep` while asleep updates the sleep. Without `--wake`, the wake time already set is kept. That only holds through MCP or voice ("turn off the night sky" keeps the 07:00 wake): typing `sleep --no-sky` is keyboard input, which wakes sleep mode first, so the new sleep starts with no wake time.
+- Running `sleep` while asleep updates the sleep. Without `--wake`, the wake time already set is kept. That only holds through MCP or voice: typing `sleep` is keyboard input, which wakes sleep mode first, so the new sleep starts with no wake time.
 - `wake` is safe to run any time, as often as you like.
 
 ## MCP tools (`mcp__sleepmode__*`)
 
 | Tool | For |
 |---|---|
-| `sleep_mode_on(wake_at="", night_sky=true)` | "sleep mode", "sleep mode until 7", "turn off the night sky" |
+| `sleep_mode_on(wake_at="")` | "sleep mode", "sleep mode until 7" |
 | `sleep_mode_off()` | "good morning", "sleep mode off" |
 | `sleep_mode_status()` | "is sleep mode on?" |
 
@@ -45,8 +45,8 @@ Details are in `src/sleepmode/mcp_server/README.md`.
    - It never powers off a USB port, and never saves to a device's own memory. Each backend gets 45 s (enough for OpenRGB to start and save a snapshot). One that overruns is abandoned and changes nothing after that, and a failure is a note, never an error.
    - This also comes before any screen goes dark, so a lighting step that hangs leaves them lit. It's before the keeper starts, too, so an input wake can't bring the lights back while they're still going off.
 4. **Turns every other monitor off** with DDC/CI (VCP 0xD6 = 4, "DPM off", through dxva2). After 2 s it reads the power mode back. DDC/CI writes get no reply, so only a monitor that reads back an off mode (2 to 5) counts as off. One that refuses the write, switches itself back on, reads back anything else, or can't be read back gets a borderless, topmost black window with no mouse pointer instead. Over a monitor that did go off, the black window is invisible.
-5. **Asks the whiteboard for the night view**: a night sky, or black with `--no-sky` (see the contract below). The whiteboard daemon serves it. If the daemon isn't running, or is an older one without the night view, the projector gets a black window too, and the keeper keeps trying (below). A daemon that isn't running (no `daemon.json` with a live pid) gets started in the background (`uv run --project tools/whiteboard --frozen whiteboard serve`, logging to the whiteboard's `.state/daemon.log`); sleep doesn't wait for it. Once up, it opens on the night view by itself, since sleep mode is on. A start that fails is a note in the sleep result, never a failed sleep. Wake never starts it.
-6. **Starts the keeper**, a small background process. It has to still be running 2 s later, or the sleep counts as failed. It holds `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)`, plus `ES_DISPLAY_REQUIRED` whenever there's a projector, so the display timeout can't switch it off. It also draws the black windows, keeps the projector dark (every 60 s it checks `GET /api/status`: if the night view isn't on a connected page it covers the projector with a black window, then asks for the night view again and uncovers it once it shows, so a whiteboard started later still gets the sky) and wakes everything on real keyboard or mouse use (media, volume, browser and launch keys don't count, nor does a few pixels of mouse jitter), after a 5 s grace period. If the keeper itself fails, it wakes everything rather than leave the screens dark.
+5. **Asks the whiteboard for the night view**, always the night sky (see the contract below). The whiteboard daemon serves it. It's recorded as the night sky only if a board page really shows it (`GET /api/status`); otherwise (the daemon isn't running, or its kiosk has closed) the projector gets a black window, recorded as waiting for the whiteboard, and the keeper repairs it (below). That black window is only a stop-gap while the whiteboard is down or starting. A daemon that isn't running (no `daemon.json` with a live pid) gets started in the background (`uv run --project tools/whiteboard --frozen whiteboard serve`, logging to the whiteboard's `.state/daemon.log`); sleep doesn't wait for it. Once up, it opens on the night view by itself, since sleep mode is on. A start that fails is a note in the sleep result, never a failed sleep. Wake never starts it.
+6. **Starts the keeper**, a small background process. It has to still be running 2 s later, or the sleep counts as failed. It holds `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)`, plus `ES_DISPLAY_REQUIRED` whenever there's a projector, so the display timeout can't switch it off. It also draws the black windows, keeps the projector dark (every 60 s it checks `GET /api/status`: if the night view isn't on a connected page it covers the projector with a black window, then asks for the night view again; if it's still not on a page it repairs the whiteboard, starting its daemon if it's down or asking it to reopen its kiosk with `POST /api/kiosk/open` if it's up, and uncovers the projector once the sky shows) and wakes everything on real keyboard or mouse use (media, volume, browser and launch keys don't count, nor does a few pixels of mouse jitter), after a 5 s grace period. If the keeper itself fails, it wakes everything rather than leave the screens dark.
 7. **Records it all** in `.state/state.json`. The new sleep's session id goes in first, before step 2, so the keeper of an earlier sleep exits instead of waking this one. An earlier keeper that hangs on is ended once the new one is up. The log is `.state/sleepmode.log`.
 
 If any step after the session id is recorded fails (or you press Ctrl+C), sleep wakes everything back up, ends its own keeper (if it started) and an earlier keeper if they hang on, and reports the error, so the screens are never left dark without a keeper, and no keeper is left up that no state names.
@@ -65,16 +65,19 @@ If any step after the session id is recorded fails (or you press Ctrl+C), sleep 
 The night view itself belongs to `tools/whiteboard`, whose daemon serves it. sleepmode only calls it, through the whiteboard daemon's existing authenticated loopback API:
 
 - **Address and auth:** `http://127.0.0.1:<port>`, with the port from `tools/whiteboard/.state/daemon.json`. Each request carries `X-Signal-Token: <tools/whiteboard/.state/token>` and a JSON body, behind the daemon's usual request guard.
-- **Never starting it:** sleepmode never starts the daemon. When it's not running, or answers 404 because it's an older daemon without the night routes, sleepmode logs it and uses a black window on the projector instead. A `daemon.json` whose `pid` has exited counts as not running straight away. The keeper retries the night view every 60 s.
+- **Starting and repairing it:** this client never starts the daemon itself; sleep and the keeper's night guard do (`start_whiteboard_if_down`). When it's not running, or answers 404 because it's an older daemon without the night routes, sleepmode logs it and uses a black window on the projector instead. A `daemon.json` whose `pid` has exited counts as not running straight away. The keeper retries the night view every 60 s.
 
 ### `POST /api/night/show`
 
-Body: `{"seed": 20261019, "sky": true}`
+Body: `{"seed": 20261019}`
 
 - `seed` (int) is `YYYYMMDD` of the evening the night began; nights run noon to noon. The sky should be a pure function of the seed: a new sky each night, the same sky if it's shown twice in one night.
-- `sky` (bool): `true` shows the night sky, `false` a plain black page.
 - The daemon switches the scene's view to `"night"`, a new value next to `"items"` and `"todo"`. It remembers the view that was showing, unless it's already in the night view (then it keeps the remembered one), and saves both in `scene.json` so a daemon restart stays in the night view.
 - The reply is `{"ok": true, "view": "night", "previous_view": "items"}`. sleepmode only checks `"ok": true`.
+
+### `POST /api/kiosk/open`
+
+Body: `{}`. Reopens the whiteboard's projector kiosk (its Edge window) if no board page is connected, under the daemon's own retry backoff. The reply is `{"ok": true, "opened": bool}`; 409 when the whiteboard has no kiosk (no projector, or `launch_kiosk = false`). The keeper's night guard calls it when the daemon is up but nothing shows the night view.
 
 ### `POST /api/night/hide`
 
@@ -104,7 +107,7 @@ Body: `{}`
   - Each miss reinstalls the hooks, so after Windows drops one, the first key (or its own release) only reinstalls it and the next key wakes.
   - Three counted misses within 5 s count as real input and wake it. Misses under 1 s after a counted one count as that one, so a press and its release count once. So keys typed into an admin window wake it after 3 separate presses within 5 s, or about 2.5 s of steady typing or mouse movement. A headset button the hooks do see is never a miss.
 - **Topmost windows opened later**, such as an Allow/Deny dialog or a notification, show above the black windows.
-- **The display timeout is held off** whenever there's a projector, whether the sky, a black page or a black window covers it, so the projector never loses its signal and switches itself off.
+- **The display timeout is held off** whenever there's a projector, whether the sky or a black window covers it, so the projector never loses its signal and switches itself off.
 - **If the whiteboard daemon is down when a wake runs**, it stays in the night view (saved in `scene.json`) until something takes it out; the whiteboard doesn't yet check sleepmode's state when it starts.
 - **`SC_MONITORPOWER` isn't used.** It powers off every display, the projector included. Many projectors then show "No signal" or switch themselves off, and only the remote can bring them back.
 - **Monitors that vanish when powered off:** a monitor that drops off the display list when powered off over DDC/CI can't be woken over DDC. `wake` says so: press its power button.

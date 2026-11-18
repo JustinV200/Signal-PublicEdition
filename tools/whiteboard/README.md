@@ -38,10 +38,11 @@ Windows 11, Python 3.12, uv. The board page runs in Edge (already installed). No
 
 - `uv run whiteboard serve` runs the daemon in a terminal until Ctrl+C. It:
   - serves the board page on `127.0.0.1:8770`
-  - opens it fullscreen in an Edge kiosk on the projector
+  - opens it fullscreen in an Edge kiosk on the projector, and reopens the kiosk whenever it's gone (Edge closed by an update or a crash): every 30 s it checks a board page is connected, waiting longer between tries while reopening doesn't help (`src/whiteboard/daemon/kiosk/`)
   - starts the camera, the change watcher and the board agent
 - You don't have to start it by hand. The first `board_*` tool call (or `whiteboard look`, `draw`, ...) starts it in the background, with its log in `.state/daemon.log`. Just loading `.mcp.json` doesn't start it.
 - `uv run whiteboard stop` stops a running daemon cleanly. It closes the kiosk and frees the camera.
+- `uv run whiteboard status` says whether a daemon is running and never starts one. It's the setup tool's health check: "running", or "installed, not running" (which passes, since a board call starts it).
 
 ## Aiming the camera
 
@@ -181,13 +182,13 @@ Sleep mode (`tools/sleepmode`) puts a very dim night sky on the board while you 
 
 | | Sleep mode | Claude | CLI |
 |---|---|---|---|
-| Show the sky, or a black page | `POST /api/night/show {"seed", "sky"}` | `board_night_show(sky)` | `whiteboard night show [--no-sky]` |
+| Show the sky | `POST /api/night/show {"seed"}` | `board_night_show` | `whiteboard night show` |
 | Back to the view it hid | `POST /api/night/hide {}` | `board_night_hide` | `whiteboard night hide` |
 
-- `seed` picks the sky. Sleep mode sends `YYYYMMDD` of the evening the night began; Claude and the CLI send none, which means tonight's. `sky: false` is a plain black page. Showing it again only changes the sky.
+- `seed` picks the sky. Sleep mode sends `YYYYMMDD` of the evening the night began; Claude and the CLI send none, which means tonight's. Showing it again only changes the seed. There's no black option: the night view is always the sky.
 - Hiding goes back to the view that showed before, items or TODO. Outside the night view it changes nothing and still says ok, because wake calls it every time.
 - The view, the sky and the view under it are saved in `scene.json`, so a restarted daemon comes back to the night sky.
-- Like every board command, `whiteboard night show|hide` and `board_night_*` start the daemon if it's stopped, so the projected items can show for a moment before the sky. Sleep mode never starts it.
+- Like every board command, `whiteboard night show|hide` and `board_night_*` start the daemon if it's stopped, so the projected items can show for a moment before the sky. Sleep mode starts it too when it's down, and asks it to reopen the kiosk (`POST /api/kiosk/open`) when no board page is connected.
 
 While it shows, nothing flashes or wakes things:
 

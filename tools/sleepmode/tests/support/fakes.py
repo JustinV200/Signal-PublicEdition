@@ -58,18 +58,25 @@ class FakeScreens:
 @dataclass
 class FakeNightView:
     """Records show/hide calls; raises WhiteboardUnavailableError when `is_available` is False.
+    A shown night view is on a page unless `has_page` is False (its kiosk closed).
     Also stands in for starting the daemon: counts `starts`, raising `start_error` if set."""
 
     is_available: bool = True
-    shown: list[tuple[int, bool]] = field(default_factory=list)
+    has_page: bool = True
+    shown: list[int] = field(default_factory=list)
     hides: int = 0
     starts: int = 0
     start_error: OSError | None = None
 
-    def show(self, seed: int, sky: bool) -> None:
+    def show(self, seed: int) -> None:
         if not self.is_available:
             raise WhiteboardUnavailableError("the whiteboard daemon isn't running")
-        self.shown.append((seed, sky))
+        self.shown.append(seed)
+
+    def is_showing(self) -> bool:
+        if not self.is_available:
+            raise WhiteboardUnavailableError("the whiteboard daemon isn't running")
+        return self.has_page and bool(self.shown)
 
     def hide(self) -> None:
         if not self.is_available:

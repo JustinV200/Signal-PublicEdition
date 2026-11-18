@@ -43,7 +43,15 @@ def test_keeper_command_round_trips_through_the_cli_with_negative_x() -> None:
     args = build_parser().parse_args(keeper_command(options, python="python")[3:])
     parsed = (args.session, tuple(args.blackout), args.keep_display_on, args.grace)
     assert parsed == (options.session_id, options.rects, True, 5.0)
-    assert (args.projector, args.night_sky) == (options.projector, True)
+    assert args.projector == options.projector
+
+
+def test_an_old_keeper_command_with_night_sky_still_parses() -> None:
+    # Regression: MCP servers started before --night-sky went still pass it.
+    args = build_parser().parse_args(
+        ["keeper", "--session", "abc", "--grace", "5", "--night-sky", "--projector=0,0,10,10"]
+    )
+    assert (args.session, args.projector) == ("abc", (0, 0, 10, 10))
 
 
 def test_a_failing_keeper_lets_go_of_the_screens_then_wakes(monkeypatch) -> None:

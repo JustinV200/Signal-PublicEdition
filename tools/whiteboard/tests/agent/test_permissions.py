@@ -61,7 +61,7 @@ async def test_board_tools_and_the_exact_snapshot_run_without_asking(tool_name, 
         ("mcp__whiteboard__board_todo_done", {"item": "A19"}, None),
         ("mcp__whiteboard__board_todo_undone", {"item": "A19"}, None),
         # The night view is sleep mode's: the board can't dim the room or light it up.
-        ("mcp__whiteboard__board_night_show", {"sky": True}, None),
+        ("mcp__whiteboard__board_night_show", {}, None),
         ("mcp__whiteboard__board_night_hide", {}, None),
         # Every other repo read asks, however harmless it looks.
         ("Read", {"file_path": "tools/whiteboard/README.md"}, None),
