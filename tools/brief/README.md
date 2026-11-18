@@ -32,7 +32,7 @@ Caveat: input is system-wide, so synthetic input counts, and so does an untagged
 ## CLI
 
 ```
-brief show                       # markdown on a terminal, framed when piped; never acks
+brief show [--plain]             # markdown on a terminal, framed when piped (--plain: never framed, for the owner only); never acks
 brief away on [--until sunday] [--note "at the cabin"]
 brief away off
 brief away status

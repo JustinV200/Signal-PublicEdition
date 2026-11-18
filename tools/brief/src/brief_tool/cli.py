@@ -1,14 +1,16 @@
 """The `brief` command line: show the brief, away mode, and the MCP server.
 
-    brief show                         # the brief (never acks: see below)
+    brief show [--plain]               # the brief (never acks: see below)
     brief away on [--until SUNDAY] [--note TEXT]
     brief away off
     brief away status
     brief mcp                          # the stdio MCP server (.mcp.json runs this)
 
 `show` prints markdown on a terminal and, when stdout isn't one (a model ran it),
-one trusted line plus the framed brief. It isn't a delivery and there's no CLI
-ack: only a surface that knows the owner saw the brief may ack it.
+one trusted line plus the framed brief. `--plain` prints the markdown even when
+piped, for callers whose output goes only to the owner, never to a model. It
+isn't a delivery and there's no CLI ack: only a surface that knows the owner saw
+the brief may ack it.
 """
 
 import argparse
@@ -42,7 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
     """The argument parser for every command."""
     parser = argparse.ArgumentParser(prog="brief", description="The owner's catch-up brief.")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("show", help="print the brief").set_defaults(handler=_run_show)
+    show = commands.add_parser("show", help="print the brief")
+    show.add_argument(
+        "--plain", action="store_true", help="unframed markdown even when piped (not for models)"
+    )
+    show.set_defaults(handler=_run_show)
     away = commands.add_parser("away", help="away mode").add_subparsers(dest="away", required=True)
     on = away.add_parser("on", help="turn away mode on")
     on.add_argument("--until", default="", help='e.g. "sunday", "tomorrow", 2026-10-25')
@@ -54,9 +60,9 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _run_show(_: argparse.Namespace) -> int:
+def _run_show(args: argparse.Namespace) -> int:
     brief = compose(BriefPaths())
-    if sys.stdout.isatty():
+    if args.plain or sys.stdout.isatty():
         print(render_text(brief).body)
     else:
         print(framed(CLI_BRIEF_LINE, render_model(brief).body, BRIEF_TAG))
