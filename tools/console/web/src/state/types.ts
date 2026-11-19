@@ -80,7 +80,7 @@ export interface AppState {
   voiceFeed: VoiceEvent[];
   view: View;
   inputMode: InputMode;
-  /** Key (`boardRowKey`) of the `▸` row in the boards view; the to-do row when that board is gone. */
+  /** Key (`boardRowKey`) of the `▸` row in the boards view; the idle row when that board is gone. */
   boardKey: string;
   /** The help panel is open above the view. */
   helpOpen: boolean;

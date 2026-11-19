@@ -6,7 +6,7 @@
 import { NOT_SIGNED_IN } from "../api";
 import type { ServerEvent, ServerState } from "../api";
 import { toMs } from "../time";
-import { boardIndexOf, boardRowKey, boardRows, TODO_ROW_KEY } from "./boards";
+import { boardIndexOf, boardRowKey, boardRows, IDLE_ROW_KEY } from "./boards";
 import { claudeLink } from "./claude";
 import { updateById, upsertSorted } from "./dedupe";
 import { tourStops } from "./prefs";
@@ -39,7 +39,7 @@ export const initialState: AppState = {
   voiceFeed: [],
   view: HOME_VIEW,
   inputMode: { kind: "text" },
-  boardKey: TODO_ROW_KEY,
+  boardKey: IDLE_ROW_KEY,
   helpOpen: false,
   syncedAt: null,
   refreshTick: 0,
@@ -268,7 +268,7 @@ function withDraft(state: AppState, key: string, text: string | null): AppState 
   return { ...state, setupDrafts: drafts };
 }
 
-// Up/Down from the selected row (the to-do row when its board is gone), held to the list.
+// Up/Down from the selected row (the idle row when its board is gone), held to the list.
 function movedBoardKey(state: AppState, delta: number): string {
   const rows = boardRows(state.server);
   const index = boardIndexOf(rows, state.boardKey) + delta;

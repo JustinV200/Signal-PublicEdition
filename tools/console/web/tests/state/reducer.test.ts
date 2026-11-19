@@ -120,6 +120,7 @@ describe("reduce", () => {
     const selected = (state: AppState) =>
       boardRows(state.server)[boardIndexOf(boardRows(state.server), state.boardKey)];
 
+    expect(selected(run([snapshot("lecture")])).action).toBe("board.idle"); // starts on idle
     const picked = run([
       snapshot("lecture", "grid"),
       { type: "boardSelect", key: "board.load:grid" },
@@ -128,8 +129,8 @@ describe("reduce", () => {
     expect(selected(moved)).toMatchObject({ action: "board.load", args: { name: "grid" } });
     // Up moves from the board itself, not from its old row number.
     expect(selected(run([{ type: "boardCursorMove", delta: -1 }], moved)).name).toBe("lecture");
-    // A board that is gone falls back to the to-do row.
-    expect(selected(run([snapshot("lecture")], moved)).action).toBe("board.todo");
+    // A board that is gone falls back to the idle row.
+    expect(selected(run([snapshot("lecture")], moved)).action).toBe("board.idle");
   });
 
   it("keeps when the outage began across offline retries and drops it once online", () => {

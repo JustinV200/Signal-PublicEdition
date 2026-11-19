@@ -48,7 +48,7 @@ export function BoardsView() {
   const whiteboardOff = server !== null && !server.board.online;
   const now = useTicker(RELATIVE_TICK_MS);
   const rows = boardRows(server);
-  // The to-do row when the selected board is gone, so this row always exists.
+  // The idle row when the selected board is gone, so this row always exists.
   const selectedIndex = boardIndexOf(rows, boardKey);
   const selected = rows[selectedIndex];
   const listRef = useRef<HTMLDivElement>(null);

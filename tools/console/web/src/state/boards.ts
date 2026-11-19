@@ -109,15 +109,15 @@ export function boardRowKey(row: BoardRowInfo): string {
   return `${row.action}:${row.name}`;
 }
 
-/** The to-do row's key: where the selection starts and where it falls back. */
-export const TODO_ROW_KEY = boardRowKey(TODO_ROW);
+/** The idle row's key: where the selection starts and where it falls back. */
+export const IDLE_ROW_KEY = boardRowKey(IDLE_ROW);
 
-/** Index of the row named `key`; the to-do row (0) when that board is gone. */
+const IDLE_ROW_INDEX = 1;
+
+/** Index of the row named `key`; the idle row (1) when that board is gone. */
 export function boardIndexOf(rows: readonly BoardRowInfo[], key: string): number {
-  return Math.max(
-    0,
-    rows.findIndex((row) => boardRowKey(row) === key),
-  );
+  const index = rows.findIndex((row) => boardRowKey(row) === key);
+  return index < 0 ? IDLE_ROW_INDEX : index;
 }
 
 /**
