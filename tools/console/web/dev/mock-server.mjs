@@ -33,7 +33,7 @@
 //   node dev/mock-server.mjs --news-every 15 --long-news  # each reply taller than the view
 //   node dev/mock-server.mjs --split-replay   # history arrives in two bursts 300 ms apart
 //   node dev/mock-server.mjs --down-after 20  # stop answering 20 s after start, for 60 s
-//   node dev/mock-server.mjs --many-tasks     # nine active tasks, two need you: a crowded scope
+//   node dev/mock-server.mjs --many-tasks     # twelve active tasks, five need you: a crowded scope
 //   node dev/mock-server.mjs --port 8795      # screen checks: 8790 is the real console's port
 //   open http://127.0.0.1:8790/#k=dev
 import http from "node:http";

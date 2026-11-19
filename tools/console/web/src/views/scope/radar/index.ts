@@ -2,7 +2,7 @@
 // the scale its distances are read against.
 export { Blips } from "./Blips";
 export { ringCaptions, sectorNames, signalCaption } from "./captions";
-export { SIZE } from "./geometry";
+export { polar, SIZE } from "./geometry";
 export { Grid } from "./Grid";
 export { boxOf, layoutLabels } from "./labels";
 export { RadarText } from "./RadarText";

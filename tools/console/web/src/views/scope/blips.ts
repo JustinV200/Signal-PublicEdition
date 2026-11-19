@@ -2,8 +2,9 @@
 // label, never colour alone), each in its subsystem's sector and opening that
 // subsystem's view. Claude sits at the centre; Voice, the board and their
 // pending requests sit at the time since they last did something; tasks at
-// their progress (taskBlips.ts). Pure functions of the store state, so the
-// drawing stays dumb. readout.ts words the same facts as text rows.
+// their progress, those waiting on the owner as one count (taskBlips.ts). Pure
+// functions of the store state, so the drawing stays dumb. readout.ts words
+// the same facts as text rows.
 import { boardViewWords, claudeLink, pendingRows } from "../../state";
 import type { AppState, LocalMessage, View } from "../../state";
 import { toDotPhase, turnCauseWords } from "../../status";
@@ -121,10 +122,10 @@ function requestBlips(state: AppState, now: number): Blip[] {
 }
 
 /**
- * The blips for the scope, in label priority: Claude (its label has a fixed spot,
- * so it goes first and nothing ever covers it), tasks that need the owner,
- * Voice, the board, pending requests, then the other tasks (whose labels a
- * crowded face hides first; the Tasks view lists them all).
+ * The blips for the scope, in label priority: Claude, then the count of tasks
+ * that need the owner (each label has a fixed spot, so they go first and
+ * nothing ever covers them), Voice, the board, pending requests, then the other
+ * tasks (whose labels a crowded face hides first; the Tasks view lists them all).
  */
 export function buildBlips(state: AppState, now: number): Blip[] {
   const tasks = taskBlips(state.tasks);

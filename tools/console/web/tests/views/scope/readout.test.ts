@@ -1,6 +1,6 @@
-// The scope's readout: what needs the owner comes first and opens Tasks,
-// `nothing` when no task waits, and every value is marked `(last known)`
-// while the server isn't answering.
+// The scope's readout: what needs the owner comes first and opens Tasks (three
+// rows at most, then one `+16 more` row), `nothing` when no task waits, and
+// every value is marked `(last known)` while the server isn't answering.
 import { expect, it } from "vitest";
 import type { TaskInfo, TasksPayload } from "../../../src/api";
 import { initialState } from "../../../src/state";
@@ -83,4 +83,21 @@ it.each(CASES)("words the readout: %s", (_name, state, first, isStale) => {
     "YOU",
   ]);
   expect(rows.every((row) => row.value.endsWith(LAST_KNOWN))).toBe(isStale);
+});
+
+// [tasks that need the owner, the NEEDS YOU values]
+const WAITING: [number, string[]][] = [
+  [3, ["do 0", "do 1", "do 2"]],
+  [19, ["do 0", "do 1", "do 2", "+16 more"]],
+];
+
+it.each(WAITING)("caps the NEEDS YOU rows: %i waiting", (count, values) => {
+  const waiting = Array.from({ length: count }, (_, index) =>
+    task(`w${index}`, "needs_you", `do ${index}`),
+  );
+  const rows = buildReadout({ ...ONLINE, tasks: tasksOf(task("a", "building"), ...waiting) }, NOW);
+  const needsYou = rows.filter((row) => row.label === "NEEDS YOU");
+  expect(needsYou.map((row) => row.value)).toEqual(values);
+  expect(needsYou.every((row) => row.view === "tasks")).toBe(true);
+  expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
 });

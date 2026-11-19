@@ -38,8 +38,13 @@ export const TASKS = {
   },
 };
 
-// `--many-tasks`: a crowded scope, two tasks waiting on the owner among nine.
+// `--many-tasks`: a crowded scope, five tasks waiting on the owner among twelve
+// (the scope's readout lists three and folds the other two into `+2 more`; its
+// radar counts all five in one `5 NEED YOU`).
 const MANY_ACTIVE = [
+  task("wake", "Wake word tuning", 100, "needs_you", 3, "ship it", "confirm the wake word"),
+  task("rules", "Checker rules pass", 100, "needs_you", 3, "merge", "approve the rule list"),
+  task("links", "Docs link sweep", 100, "needs_you", 3, "publish", "pick a docs host"),
   task("console-p2", "Console phase 2", 92, "review", 1, "fresh reviewer on the web diff"),
   task("scope", "Scope radar rework", 85, "review", 1, "screen check"),
   task("brief-p2", "Brief phase 2", 60, "needs_you", 3, "live test", "say yes to the hook"),
@@ -52,12 +57,12 @@ const MANY_ACTIVE = [
 ];
 
 /**
- * The `tasks` event: TASKS, nine active tasks with `many`, or none at all
+ * The `tasks` event: TASKS, twelve active tasks with `many`, or none at all
  * with `empty` (`--empty-lists`: the Tasks page's empty state; usage stays).
  */
 export function tasksPayload(many, empty = false) {
   if (empty) return { ...TASKS, active: [], queued: [], done: [], needsYou: 0, overallPct: 0 };
-  return many ? { ...TASKS, active: MANY_ACTIVE, needsYou: 2 } : TASKS;
+  return many ? { ...TASKS, active: MANY_ACTIVE, needsYou: 5 } : TASKS;
 }
 
 const DEVICES = [

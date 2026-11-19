@@ -24,8 +24,12 @@ export interface Blip {
   pulse?: "normal" | "slow";
   /** The view a click opens (the readout row for the same thing opens it by keyboard). */
   view: View;
-  /** Waits on the owner: a triangle with a bold label (and pinned). */
+  /** Waits on the owner: a triangle with a bold label (the needs-you count). */
   isUrgent?: boolean;
-  /** A label a crowded face never hides (Claude's, and every urgent one). */
+  /**
+   * A label that always shows whole in its first spot, never cut short of a
+   * neighbour or hidden (Claude's, the needs-you count's). Whoever builds the
+   * blip keeps that spot clear of every other mark and of the fixed words.
+   */
   isLabelPinned?: boolean;
 }

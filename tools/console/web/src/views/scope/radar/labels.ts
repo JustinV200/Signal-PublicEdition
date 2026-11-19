@@ -4,9 +4,11 @@
 // with an ellipsis (a task keeps its percent) to stop short of the rim and of
 // anything already placed on its line. Blips come in priority order; a label
 // that can't keep MIN_LABEL_CHARS of its words on either side hides (its mark
-// stays, with the full words as a hover title), except a pinned one (a task
-// that needs the owner, and Claude), which always shows. Pure geometry; the
-// text is monospace, so its width is its length times CHAR_WIDTH.
+// stays, with the full words as a hover title). A pinned label (Claude's, the
+// needs-you count's) is not fitted around the others: it always shows whole in
+// its first spot, on a line the scope keeps clear for it, and the rest are laid
+// out around it. Pure geometry; the text is monospace, so its width is its
+// length times CHAR_WIDTH.
 import { CENTER, polar, RADIUS } from "./geometry";
 import type { Blip } from "./types";
 
@@ -107,9 +109,8 @@ function markBox(blip: Blip): Box {
 // The first place the label fits, cut short of the rim and of everything taken; null if none.
 function firstClear(blip: Blip, taken: readonly Box[]): PlacedText | null {
   const minKeep = Math.min(MIN_LABEL_CHARS, blip.label.length);
-  const cap = blip.isLabelPinned ? Infinity : MAX_LABEL_CHARS * CHAR_WIDTH;
   for (const spot of candidates(blip)) {
-    const room = Math.min(roomInRim(spot), cap);
+    const room = Math.min(roomInRim(spot), MAX_LABEL_CHARS * CHAR_WIDTH);
     // A centred label can't stop short on one side, so it only checks for overlaps.
     const clear = spot.anchor === "middle" ? room : Math.min(room, roomBeforeTaken(spot, taken));
     const text = fitText(blip, Math.floor(clear / CHAR_WIDTH), minKeep);
@@ -120,7 +121,7 @@ function firstClear(blip: Blip, taken: readonly Box[]): PlacedText | null {
   return null;
 }
 
-// A pinned label shows even when crowded: inward, cut only to the rim (or just its tail).
+// A pinned label's place, whatever else is on the face: its first spot, cut only to the rim (or just its tail).
 function forced(blip: Blip): PlacedText {
   const [spot] = candidates(blip);
   const text =
@@ -139,7 +140,8 @@ export function layoutLabels(
   const taken: Box[] = [...fixed, ...blips.map(markBox)];
   const shown = new Map<string, PlacedText>();
   for (const blip of blips) {
-    const placed = firstClear(blip, taken) ?? (blip.isLabelPinned ? forced(blip) : null);
+    // A pinned label is never cut short of a neighbour or hidden; its builder keeps its line clear.
+    const placed = blip.isLabelPinned ? forced(blip) : firstClear(blip, taken);
     if (!placed) continue;
     shown.set(blip.id, placed);
     taken.push(boxOf(placed));

@@ -6,9 +6,10 @@ import type { AppState, View } from "../../state";
 import { awayWords, newWords, startedByWords, toDotPhase } from "../../status";
 import { formatClock } from "../../time";
 import { actionView, boardWords, claudeWords } from "./blips";
+import { splitNeedsYou } from "./needsYou";
 
 export interface ReadoutRow {
-  /** Unique per row (a label can repeat: one NEEDS YOU row per task). */
+  /** Unique per row (a label can repeat: a NEEDS YOU row per shown task). */
   key: string;
   label: string;
   value: string;
@@ -19,18 +20,22 @@ export interface ReadoutRow {
 /** Ends every value while the server isn't answering: the state shown is the last one read. */
 export const LAST_KNOWN = " (last known)";
 
-// One row per task waiting on the owner, with what they must do; `nothing` when none.
+// A row per shown task waiting on the owner, with what they must do, then one
+// `+16 more` row for the rest (together the radar's `19 NEED YOU`); `nothing` when none.
 function needsYouRows(state: AppState): ReadoutRow[] {
-  const waiting = state.tasks?.active.filter((task) => task.status === "needs_you") ?? [];
-  if (waiting.length === 0)
-    return [{ key: "needs-you", label: "NEEDS YOU", value: "nothing", view: "tasks" }];
-  return waiting.map((task) => ({
-    key: `needs-you-${task.id}`,
+  const { shown, folded } = splitNeedsYou(state.tasks);
+  const row = (key: string, value: string): ReadoutRow => ({
+    key,
     label: "NEEDS YOU",
-    // `you` is set on needs_you tasks; the name stands in if a writer left it empty.
-    value: task.you || task.name,
+    value,
     view: "tasks",
-  }));
+  });
+  if (shown.length === 0) return [row("needs-you", "nothing")];
+  return [
+    // `you` is set on needs_you tasks; the name stands in if a writer left it empty.
+    ...shown.map((task) => row(`needs-you-${task.id}`, task.you || task.name)),
+    ...(folded > 0 ? [row("more-needs-you", `+${folded} more`)] : []),
+  ];
 }
 
 /** `2 new · last 14:05`; `nothing new` with no rows yet. */
@@ -67,8 +72,9 @@ function runningRows(state: AppState, now: number): ReadoutRow[] {
 }
 
 /**
- * The readout rows at `now` (epoch ms): NEEDS YOU, CHAT, CLAUDE, VOICE, BOARD, YOU, then
- * RUNNING while a button runs. Offline with a state read before, each value ends with LAST_KNOWN.
+ * The readout rows at `now` (epoch ms): NEEDS YOU (at most NEEDS_YOU_SHOWN + 1 rows), CHAT,
+ * CLAUDE, VOICE, BOARD, YOU, then RUNNING while a button runs. Offline with a state read
+ * before, each value ends with LAST_KNOWN.
  */
 export function buildReadout(state: AppState, now: number): ReadoutRow[] {
   const { server } = state;
