@@ -20,6 +20,10 @@
       "command": "uv",
       "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/mail", "--frozen", "mail", "mcp"]
     },
+    "calendar": {
+      "command": "uv",
+      "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/calendar", "--frozen", "calendar", "mcp"]
+    },
     "sleepmode": {
       "command": "uv",
       "args": ["run", "--project", "packages/mcpshim", "--frozen", "mcpshim", "--", "uv", "run", "--env-file", ".env", "--project", "tools/sleepmode", "--frozen", "sleepmode", "mcp"]

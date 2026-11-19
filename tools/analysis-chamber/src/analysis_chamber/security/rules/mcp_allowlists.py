@@ -17,8 +17,11 @@ _MAIL_READS = (
     "mcp__mail__mail_thread",
 )
 
-# Read-only Signal tools for the lead's data collection (spec 12). Calendar, vault,
-# jobhunt and usage have no MCP server yet; add their read tools here when they do.
+# Read-only Signal tools for the lead's data collection (spec 12). Vault, jobhunt and
+# usage have no MCP server yet; add their read tools here when they do.
+# TODO: calendar now has one, and mcp__calendar__calendar_agenda is its read. Adding it
+# loads a server with write tools into lead sessions (send_block would still deny
+# them), so it's left for its own reviewed change.
 _LEAD_READS = (
     *_MAIL_READS,
     "mcp__rcs__rcs_status",

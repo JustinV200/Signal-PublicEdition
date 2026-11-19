@@ -7,6 +7,8 @@ from calendar_tool.errors import ApiError
 from calendar_tool.google_api import CalendarClient, list_events, list_selected_calendars
 
 DEFAULT_DAYS = 14
+# The longest agenda the CLI and the MCP server will fetch.
+MAX_DAYS = 60
 
 
 def fetch_agenda(
@@ -44,7 +46,7 @@ def fetch_agenda(
             skipped.append(calendar.name)
             continue
         for raw in raws:
-            event = normalize_event(raw, calendar.name, zone)
+            event = normalize_event(raw, calendar, zone)
             if event is not None:
                 events.append(event)
     return sorted(events, key=AgendaEvent.sort_key), skipped

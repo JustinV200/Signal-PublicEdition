@@ -1,4 +1,4 @@
-"""The last `sync-cache` outcome in .state/sync_status.json, so a failed scheduled run is visible.
+"""The last agenda sync outcome in .state/sync_status.json, so a failed scheduled run is visible.
 
 The scheduled task runs under pythonw, where stderr goes nowhere. This file is what
 `calendar setup` (and later the board) reads to say why the agenda stopped updating:

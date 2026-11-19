@@ -1,4 +1,4 @@
-"""sign_in: `calendar add` - browser sign-in for read-only consent, then save the refresh token.
+"""sign_in: `calendar add` - browser sign-in for the calendar scopes, then save the refresh token.
 
 The address Google actually signed in must match the expected one, so picking
 the wrong account in Google's chooser saves nothing.
@@ -11,12 +11,13 @@ from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
 from signal_googleauth import SignInError, run_browser_flow
 
-from calendar_tool.auth.session import SCOPES, load_client
+from calendar_tool.auth.scopes import SCOPES
+from calendar_tool.auth.session import load_client
 from calendar_tool.auth.token_file import StoredSignIn, save_sign_in
 from calendar_tool.errors import CalendarError
 from calendar_tool.google_api import CalendarClient, primary_calendar_email
 
-SUCCESS_PAGE = "Signed in to the Signal calendar tool (read-only). You can close this tab."
+SUCCESS_PAGE = "Signed in to the Signal calendar tool. You can close this tab."
 
 # (client JSON path, scopes, login hint, success page) -> credentials with a refresh token.
 FlowRunner = Callable[[Path, Sequence[str], str | None, str], Credentials]
@@ -68,5 +69,5 @@ def sign_in(
             f"Signed in as {email}, not {wanted}, so nothing was saved. "
             f"Run it again and pick {wanted} in Google's account chooser."
         )
-    save_sign_in(token_path, StoredSignIn(email, credentials.refresh_token))
+    save_sign_in(token_path, StoredSignIn(email, credentials.refresh_token, SCOPES))
     return email

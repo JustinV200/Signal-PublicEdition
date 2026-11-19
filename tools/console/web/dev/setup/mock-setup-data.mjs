@@ -215,8 +215,8 @@ export function freshTools({ isFirstRun = false } = {}) {
     ),
     tool(
       "calendar",
-      "Google Calendar (read-only)",
-      "Reads your calendars for the agenda. It can't change anything.",
+      "Google Calendar",
+      "Reads your calendars for the agenda, and lets Claude add events and change them.",
       { needs: ["mail"], skipped: true },
       [install("calendar", "")],
     ),

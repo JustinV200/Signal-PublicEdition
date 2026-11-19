@@ -93,6 +93,10 @@ HIDDEN_MCP_TOOLS = (
     "mcp__sessions__resume_session",
     "mcp__brief__brief_log",
     "mcp__brief__brief_undo",
+    "mcp__calendar__calendar_create",
+    "mcp__calendar__calendar_update",
+    "mcp__calendar__calendar_delete",
+    "mcp__calendar__calendar_respond",
 )
 
 # The CLI runs some calls without asking can_use_tool: in-project reads, and

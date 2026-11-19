@@ -1,6 +1,8 @@
-"""SCOPES and open_session: the read-only scopes, and an AuthorizedSession from the stored token.
+"""open_client: a CalendarClient over the stored sign-in; it writes only with the write scope.
 
 google-auth refreshes the access token before the first request, in memory only.
+The refresh asks for exactly the scopes the sign-in was granted, so an older
+read-only sign-in keeps reading (asking for more would fail the refresh).
 """
 
 from pathlib import Path
@@ -9,15 +11,10 @@ import signal_googleauth
 from google.auth.transport.requests import AuthorizedSession
 from signal_googleauth import ClientConfig, ClientFileError, build_credentials
 
+from calendar_tool.auth.scopes import WRITE_SCOPE
 from calendar_tool.auth.token_file import load_sign_in
 from calendar_tool.errors import SetupError
-
-# Read-only on purpose: events and the calendar list, nothing that can create,
-# edit or delete. The "Signal" calendar and its write scope are a later phase.
-SCOPES = (
-    "https://www.googleapis.com/auth/calendar.events.readonly",
-    "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
-)
+from calendar_tool.google_api import CalendarClient
 
 
 def load_client(client_path: Path) -> ClientConfig:
@@ -32,8 +29,8 @@ def load_client(client_path: Path) -> ClientConfig:
         raise SetupError(str(error)) from None
 
 
-def open_session(client_path: Path, token_path: Path) -> AuthorizedSession:
-    """An AuthorizedSession for the stored sign-in.
+def open_client(client_path: Path, token_path: Path) -> CalendarClient:
+    """A CalendarClient for the stored sign-in; it refuses writes without WRITE_SCOPE.
 
     Args:
         client_path: The OAuth client JSON (the mail tool's).
@@ -45,4 +42,5 @@ def open_session(client_path: Path, token_path: Path) -> AuthorizedSession:
     """
     client = load_client(client_path)
     sign_in = load_sign_in(token_path)
-    return AuthorizedSession(build_credentials(sign_in.refresh_token, client, SCOPES))
+    credentials = build_credentials(sign_in.refresh_token, client, sign_in.scopes)
+    return CalendarClient(AuthorizedSession(credentials), can_write=WRITE_SCOPE in sign_in.scopes)

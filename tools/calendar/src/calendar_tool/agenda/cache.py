@@ -16,17 +16,16 @@ from calendar_tool.google_api import CalendarClient
 
 
 def agenda_payload(
-    events: list[AgendaEvent], updated: datetime, skipped: list[str]
+    events: list[AgendaEvent], updated: datetime, skipped: list[str], is_detailed: bool = False
 ) -> dict[str, Any]:
-    """The cache file and `agenda --json` shape.
+    """The cache file's shape, or with is_detailed the `agenda --json` and MCP one.
 
     {"updated": ISO 8601, "events": [...], "skipped": [names of calendars that failed]}.
+    Detailed events also carry id, calendar_id, mine, recurring and invite; the
+    cache keeps the idle board's five fields only.
     """
-    return {
-        "updated": updated.isoformat(timespec="seconds"),
-        "events": [event.to_json() for event in events],
-        "skipped": skipped,
-    }
+    rows = [event.to_detail_json() if is_detailed else event.to_json() for event in events]
+    return {"updated": updated.isoformat(timespec="seconds"), "events": rows, "skipped": skipped}
 
 
 def sync_cache(

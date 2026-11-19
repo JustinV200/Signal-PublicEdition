@@ -40,7 +40,7 @@ Holds the logins the browser may fill. Add them in your own terminal: `uv run --
 
 ## Mail and calendar
 
-"Any mail from my landlord this week?", "draft a reply saying Thursday works". Claude can search, read and draft; sending needs you to click Allow on your PC. The calendar is read-only: "what's on tomorrow?".
+"Any mail from my landlord this week?", "draft a reply saying Thursday works". Claude can search, read and draft; sending needs you to click Allow on your PC. The calendar reads and writes: "what's on tomorrow?", "add the dentist Thursday at 3". Claude adds events and changes its own without asking; changing, deleting or answering any other event needs you to click Allow.
 
 ## Mail digest
 

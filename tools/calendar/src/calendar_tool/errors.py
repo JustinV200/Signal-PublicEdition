@@ -27,3 +27,7 @@ class OfflineError(CalendarError):
 
 class ApiError(CalendarError):
     """The Calendar API answered with an error or a body that isn't what it documents."""
+
+
+class ChangeRefused(CalendarError):
+    """A change wasn't made: the owner didn't click Allow, or the event can't take it."""

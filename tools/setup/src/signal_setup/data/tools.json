@@ -726,8 +726,9 @@
     },
     {
       "id": "calendar",
-      "name": "Google Calendar (read-only)",
-      "description": "Reads your calendars for the agenda and the idle whiteboard. It can't change anything.",
+      "name": "Google Calendar",
+      "description": "Reads your calendars for the agenda and the idle whiteboard, and lets Claude add events and change them. Changing an event it didn't add needs you to click Allow on your PC, unless you turn that off.",
+      "consent": "Claude can read your calendars, add events, and change or delete the events it added without asking each time. Changing, deleting or answering any other event still asks, unless you turn that off in the calendar config.",
       "group": "Everyday",
       "cost": "5 min, after Gmail",
       "platforms": [
@@ -738,6 +739,16 @@
       ],
       "needs": [
         "mail"
+      ],
+      "mcp": [
+        "calendar"
+      ],
+      "permissions": [
+        "mcp__calendar__calendar_agenda",
+        "mcp__calendar__calendar_create",
+        "mcp__calendar__calendar_update",
+        "mcp__calendar__calendar_delete",
+        "mcp__calendar__calendar_respond"
       ],
       "steps": [
         {
@@ -754,7 +765,7 @@
         },
         {
           "id": "google-api",
-          "title": "Turn on the Calendar API and its two read-only scopes",
+          "title": "Turn on the Calendar API and its two scopes",
           "kind": "manual",
           "text": "Follow steps 1 and 2 of tools/calendar/SETUP.md (it reuses the mail tool's Google project).",
           "doc": "tools/calendar/SETUP.md"
