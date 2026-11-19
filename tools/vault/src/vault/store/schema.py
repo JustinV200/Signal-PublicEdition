@@ -25,8 +25,11 @@ CHALLENGE_BYTES = 32
 CREDENTIAL_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 POLICY_CONFIRM_KEY = "confirm"
 POLICY_CONFIRM_ALWAYS = "always"
-# v1 supports one policy: confirm every fill. It's stored so it is AAD-bound
-# and later policies can't be applied to old records by editing the file.
+POLICY_CONFIRM_NEVER = "never"
+# The default asks on every fill. The policy is AAD-bound, so editing it in
+# store.json makes the record undecryptable; only `vault policy` (which
+# unlocks) can change it. The fill path skips the dialog only for exactly
+# "never"; any other value asks.
 DEFAULT_POLICY: Mapping[str, str] = {POLICY_CONFIRM_KEY: POLICY_CONFIRM_ALWAYS}
 
 

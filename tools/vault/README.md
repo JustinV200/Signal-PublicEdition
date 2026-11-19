@@ -41,6 +41,7 @@ There is no API that returns a secret. `FillResult.reason` is one of `filled`,
 4. Asks the owner in a topmost Allow/Deny dialog (the shared `signal_confirm`,
    `packages/confirm`) showing the credential name and the live origin. Deny is
    the default, Allow has no keyboard shortcut, and it denies by itself after 60 s.
+   Skipped for a credential whose policy is `confirm=never` (see Owner CLI).
 5. Unlocks (Windows Hello prompt, or the passphrase dialog), unwraps the data
    key, decrypts this one record (AES-GCM; its AAD binds the origins), wipes the keys.
 6. Re-checks origins on the same `ElementHandle`s and fills through them (a
@@ -61,15 +62,27 @@ uv run --project tools/vault vault add github --name GitHub --origin https://git
 uv run --project tools/vault vault add github --name GitHub --origin https://github.com --username me
 uv run --project tools/vault vault list
 uv run --project tools/vault vault remove github
+uv run --project tools/vault vault policy github --confirm never   # or: always
 ```
 
 - `init` with Hello prompts three times (create the key, then sign twice to
   check signatures are deterministic). If Hello isn't available it fails; it
   never switches to the passphrase by itself.
-- `add`, `init` and `remove` refuse unless stdin is an interactive terminal.
+- `add`, `init`, `remove` and `policy` refuse unless stdin is an interactive terminal.
   `add` reads the username and password twice each with `getpass`, warns about
   excluded account kinds (email, SSO, financial, password managers,
   DNS/cloud, government/health, admin/recovery), and unlocks to save.
+- `policy ID --confirm always|never` sets whether fills of that credential show
+  the Allow/Deny dialog (default `always`; any unknown value also asks). It
+  unlocks and re-keys the whole vault (like `remove`), since the policy is
+  bound into each record's ciphertext: hand-editing store.json just breaks the
+  record, and a saved copy of the record from before the change stops
+  decrypting, so an agent can't switch it or roll it back. As with `remove`,
+  a full copy of the old store.json still opens with the same unlock factor.
+  **`never` leaves Windows Hello (or the passphrase) as the only owner gate
+  for that credential.** Origin checks, the re-check before the fill and the
+  audit log are unchanged; an auto-approved fill is logged with
+  `"confirm": "auto"`.
 - `remove` unlocks and re-seals the remaining credentials under a fresh data
   key, so the removed record pasted back alone no longer decrypts. The unlock
   factor doesn't change, though, so a full copy of the old store.json (or its

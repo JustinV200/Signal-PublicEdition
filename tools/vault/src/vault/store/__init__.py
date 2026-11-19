@@ -7,11 +7,14 @@ compose these pieces.
 from vault.store.codec import VaultFormatError
 from vault.store.hints import username_hint
 from vault.store.keys import create_vault_data, unlocked_dek
-from vault.store.rotation import remove_and_rotate
+from vault.store.rotation import remove_and_rotate, rotate_records
 from vault.store.schema import (
     CREDENTIAL_ID_PATTERN,
     DEFAULT_POLICY,
     MAX_NAME_CHARS,
+    POLICY_CONFIRM_ALWAYS,
+    POLICY_CONFIRM_KEY,
+    POLICY_CONFIRM_NEVER,
     CredentialMeta,
     CredentialRecord,
     VaultData,
@@ -24,6 +27,9 @@ __all__ = [
     "CREDENTIAL_ID_PATTERN",
     "DEFAULT_POLICY",
     "MAX_NAME_CHARS",
+    "POLICY_CONFIRM_ALWAYS",
+    "POLICY_CONFIRM_KEY",
+    "POLICY_CONFIRM_NEVER",
     "CredentialMeta",
     "CredentialRecord",
     "LoginSecrets",
@@ -36,6 +42,7 @@ __all__ = [
     "load_vault",
     "open_credential",
     "remove_and_rotate",
+    "rotate_records",
     "save_vault",
     "seal_credential",
     "unlocked_dek",

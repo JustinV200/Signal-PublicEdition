@@ -4,7 +4,8 @@
 2. Load metadata (nothing decrypted) and find the credential.
 3. Find exactly one visible password field (the vault picks fields itself).
 4. Check the top-level and frame origins against the registered origins.
-5. Ask the owner (native dialog: name + live origin, defaults to No).
+5. Ask the owner (native dialog: name + live origin, defaults to No), unless
+   the credential's policy is confirm=never (audited with confirm="auto").
 6. Unlock (Hello or passphrase prompt), unwrap the data key, decrypt this
    one record (which verifies its AAD-bound origins), wipe the keys.
 7. Re-check the origins on the same ElementHandles, then fill through them.
@@ -42,6 +43,8 @@ from vault.models import (
     FillResult,
 )
 from vault.store import (
+    POLICY_CONFIRM_KEY,
+    POLICY_CONFIRM_NEVER,
     CredentialRecord,
     LoginSecrets,
     TamperedRecordError,
@@ -55,14 +58,16 @@ from vault.store import (
 from vault.unlock import UnlockError
 
 RESULT_CANCELLED = "cancelled"
+CONFIRM_AUTO = "auto"
 
 
 @dataclass
-class _AuditOrigins:
-    """Origin labels learned during the attempt, for the audit line."""
+class _AuditFields:
+    """Origin labels and the auto-confirm marker learned during the attempt, for the audit line."""
 
     top_origin: str = ""
     frame_origin: str = ""
+    confirm: str = ""
 
 
 async def fill_login_with(
@@ -80,7 +85,7 @@ async def fill_login_with(
         FillResult(ok, reason) with a fixed reason code. Never raises, except
         asyncio.CancelledError.
     """
-    origins = _AuditOrigins()
+    origins = _AuditFields()
     reason = REASON_ERROR
     try:
         reason = await _attempt(deps, page, credential_id, submit, origins)
@@ -103,7 +108,7 @@ def _load_metadata(deps: FillDeps) -> VaultData | None:
 
 
 async def _attempt(
-    deps: FillDeps, page: PageLike, credential_id: str, submit: bool, origins: _AuditOrigins
+    deps: FillDeps, page: PageLike, credential_id: str, submit: bool, origins: _AuditFields
 ) -> str:
     """Run steps 1-8 and return the reason code."""
     if playwright_debug_enabled():
@@ -119,9 +124,15 @@ async def _attempt(
     origins.top_origin, origins.frame_origin = check.top_origin, check.frame_origin
     if not check.ok:
         return REASON_ORIGIN_MISMATCH
-    request = ConfirmRequest(record.meta.id, record.meta.name, check.top_origin, check.frame_origin)
-    if not await deps.confirmer.confirm(request):
-        return REASON_DENIED
+    if record.meta.policy.get(POLICY_CONFIRM_KEY) == POLICY_CONFIRM_NEVER:
+        # Owner turned the dialog off for this credential; Hello still gates it.
+        origins.confirm = CONFIRM_AUTO
+    else:
+        request = ConfirmRequest(
+            record.meta.id, record.meta.name, check.top_origin, check.frame_origin
+        )
+        if not await deps.confirmer.confirm(request):
+            return REASON_DENIED
     secrets = await _decrypt(deps, data.header, record)
     if isinstance(secrets, str):
         return secrets

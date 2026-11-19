@@ -16,7 +16,6 @@ from vault.origin import OriginError, parse_registered_origin
 from vault.store.schema import (
     CHALLENGE_BYTES,
     CREDENTIAL_ID_PATTERN,
-    DEFAULT_POLICY,
     FORMAT_VERSION,
     MAX_NAME_CHARS,
     CredentialMeta,
@@ -106,14 +105,18 @@ def _record_from_json(raw: Any) -> CredentialRecord:
     )
     _require(isinstance(name, str) and 0 < len(name) <= MAX_NAME_CHARS, "bad name")
     _require(isinstance(hint, str), "bad username_hint")
-    _require(raw.get("policy") == dict(DEFAULT_POLICY), "unsupported policy")
+    policy = raw.get("policy")
+    _require(
+        isinstance(policy, dict) and all(isinstance(v, str) for v in policy.values()),
+        "bad policy",
+    )
     _require(raw.get("version") == FORMAT_VERSION, "unsupported credential version")
     meta = CredentialMeta(
         id=credential_id,
         name=name,
         origins=_origins_from_json(raw.get("origins")),
         username_hint=hint,
-        policy=dict(DEFAULT_POLICY),
+        policy=policy,
     )
     return CredentialRecord(meta=meta, sealed=_sealed_from_json(raw))
 

@@ -88,8 +88,9 @@ allow_all = false
 # "password_submit" and "grant_access" names are ignored with a warning.
 # Words match whole words, any case, in the names and text of the target and of
 # what a click on it bubbles up to. [] asks for nothing. Either way the vault
-# still asks before every login fill, the Duo lockout stays on, and every action
-# re-checks [policy] right before it runs. Only this file sets these; nothing a
+# still asks before each login fill (unless that credential's vault policy
+# is confirm=never, set with `vault policy`), the Duo lockout stays on, and
+# every action re-checks [policy] right before it runs. Only this file sets these; nothing a
 # page or Claude does can change them.
 always_confirm = ["purchase", "send", "delete"]
 # Your own extra case-insensitive regexes. A click, key press or dropdown choice

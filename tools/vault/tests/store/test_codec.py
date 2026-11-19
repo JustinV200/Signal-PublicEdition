@@ -23,7 +23,7 @@ async def test_store_round_trips_without_plaintext(fill_env):
         (("credentials", 0, "origins"), ["https://LOGIN.example.test"]),
         (("credentials", 0, "origins"), ["https://login.example.test/path"]),
         (("credentials", 0, "nonce"), "AAAA"),
-        (("credentials", 0, "policy"), {"confirm": "never"}),
+        (("credentials", 0, "policy"), "never"),
         (("provider",), "none"),
     ],
 )

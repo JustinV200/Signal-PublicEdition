@@ -17,6 +17,7 @@ EVENT_FILL = "fill"
 EVENT_INIT = "init"
 EVENT_ADD = "add"
 EVENT_REMOVE = "remove"
+EVENT_POLICY = "policy"
 # Logged in place of a requested id that isn't a valid id (it came from the model).
 INVALID_ID_LABEL = "<invalid-id>"
 
@@ -33,6 +34,8 @@ class AuditEntry:
     result: str
     top_origin: str = ""
     frame_origin: str = ""
+    # "auto" when the policy skipped the Allow/Deny dialog; "" (omitted) otherwise.
+    confirm: str = ""
 
 
 def safe_credential_id(credential_id: str) -> str:
@@ -42,6 +45,14 @@ def safe_credential_id(credential_id: str) -> str:
     if isinstance(credential_id, str) and CREDENTIAL_ID_PATTERN.match(credential_id):
         return credential_id
     return INVALID_ID_LABEL
+
+
+def _non_empty(entry: AuditEntry) -> dict[str, str]:
+    """The entry as a dict, leaving out `confirm` unless it is set (older lines stay the same)."""
+    fields = asdict(entry)
+    if not entry.confirm:
+        del fields["confirm"]
+    return fields
 
 
 class AuditLog:
@@ -59,6 +70,7 @@ class AuditLog:
         *,
         top_origin: str = "",
         frame_origin: str = "",
+        confirm: str = "",
     ) -> None:
         """Append one entry. A write failure is logged as a warning, not raised.
 
@@ -71,6 +83,7 @@ class AuditLog:
             result: The result code, e.g. a FillResult reason.
             top_origin: Origin label of the top-level page, for fills.
             frame_origin: Origin label of the login frame, for fills.
+            confirm: "auto" if the dialog was skipped by policy.
         """
         entry = AuditEntry(
             ts=datetime.now(UTC).isoformat(timespec="seconds"),
@@ -79,10 +92,11 @@ class AuditLog:
             result=result,
             top_origin=top_origin,
             frame_origin=frame_origin,
+            confirm=confirm,
         )
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             with self._path.open("a", encoding="utf-8") as log_file:
-                log_file.write(json.dumps(asdict(entry), sort_keys=True) + "\n")
+                log_file.write(json.dumps(_non_empty(entry), sort_keys=True) + "\n")
         except OSError as error:
             _logger.warning("vault audit log write failed (%s)", type(error).__name__)
