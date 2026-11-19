@@ -24,6 +24,7 @@ Task: $ARGUMENTS
    - Fill in every section of the profile under the headings already there. Be specific and quote the samples. Vague entries like "casual tone" are useless. "Starts most paragraphs with 'So' or 'I think', never with a transition word" is what you want.
    - Keep any line in the old profile marked `keep`.
    - Set `status: built`, `built: <today's date>`, `samples-read: <count>`. Overwrite the file.
+   - Mark it in setup, from the repo root: `uv run --project tools/setup --frozen --quiet setup mark copytone samples done`. If that fails (no `uv`, say), carry on with the task.
    - Tell the user in one line that the profile was rebuilt.
 3. If `samples/` has nothing but its README, stop and offer to collect samples (`setup copytone`, or the `setup samples` commands in the setup skill). Do not build a voice from this conversation's messages. Chat messages the user saves as sample files are fine.
 
@@ -73,4 +74,4 @@ Output the text or code by itself. No "Here's a version in your voice", no notes
 
 ## Voice test ("test my copytone voice")
 
-Load the voice (step 1, rebuilding if needed). Write one neutral paragraph of about 80 words (for example, telling a friend about a change of plans), then rewrite it in the user's voice following steps 2 to 4. Show both and ask whether the second sounds like them. If not, ask what's off, add a `keep` line to the profile for each correction, and try once more.
+Load the voice (step 1, rebuilding if needed). Write one neutral paragraph of about 80 words (for example, telling a friend about a change of plans), then rewrite it in the user's voice following steps 2 to 4. Show both and ask whether the second sounds like them. If not, ask what's off, add a `keep` line to the profile for each correction, and try once more. Once they say it sounds like them, run step 1's setup command with `voice-test done` in place of `samples done` (if it fails, carry on).
