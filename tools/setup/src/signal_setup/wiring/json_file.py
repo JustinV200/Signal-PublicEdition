@@ -12,7 +12,7 @@ The writers in writers.py send .mcp.json, .claude/settings.local.json and the us
 
 A write by someone else landing between that re-read and the replace can still be lost; the
 backup covers it. Same approach as the console's settings writer, its own code because the
-tools stay standalone.
+tools stay standalone. read_object is the read-only look at such a file.
 """
 
 import contextlib
@@ -36,6 +36,19 @@ class WiringError(RuntimeError):
 def check_object(path: Path) -> None:
     """Raise WiringError unless `path` is missing or holds a JSON object (it reads only)."""
     _parse_object(path, _read(path))
+
+
+def read_object(path: Path) -> dict[str, Any]:
+    """The JSON object in `path`, or {} when it's missing, unreadable or not an object.
+
+    For a file setup only looks at. A broken one counts as empty on purpose: Claude Code
+    can't load anything from it either, so nothing in it is there.
+    """
+    try:
+        data = json.loads(path.read_text("utf-8"))
+    except (OSError, ValueError, RecursionError):  # deep nesting overflows the parser
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def update_json_file(

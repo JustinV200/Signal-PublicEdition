@@ -1,4 +1,4 @@
-"""Progress: resume after a stop, optional skips, skipped tools, Windows-only steps."""
+"""Progress: resume after a stop, optional skips, skipped tools, picks, Windows-only steps."""
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from signal_setup import progress, registry
-from signal_setup.cli.agent import AgentAsker
+from signal_setup.cli.agent import AgentAsker, choose
 from signal_setup.steps import run
 
 
@@ -28,6 +28,21 @@ def test_tool_status_through_a_resumed_setup(tmp_path: Path) -> None:
     assert progress.tool_status(data, calendar, "windows") == progress.SKIPPED
     progress.set_step(data, "calendar", "install", progress.DONE)  # re-running un-skips
     assert progress.tool_status(data, calendar, "windows") == progress.DONE
+
+
+def test_picking_skips_only_tools_setup_has_a_record_for(tmp_path: Path) -> None:
+    # Regression: picking one tool marked every other one skipped, so a tool set up by
+    # hand (no record) stopped reading as found the first time the wizard opened.
+    data = progress.load(tmp_path)
+    progress.set_step(data, "usage", "install", progress.DONE)
+    progress.save(tmp_path, data)
+
+    choose(tmp_path, ["brief"])
+
+    tools = progress.load(tmp_path)["tools"]
+    assert tools["usage"]["skipped"] and not tools["brief"]["skipped"]
+    assert "mail" not in tools
+    assert not progress.has_record({"tools": tools}, "brief")  # picked, no step run yet
 
 
 @pytest.mark.parametrize("settled", [progress.DONE, progress.SKIPPED])

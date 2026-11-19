@@ -2,7 +2,9 @@
 // Hardware, Extras), each a checkbox row (PickRow) with its cost tag, plus
 // Pick all and None. Before any pick the Task console comes ticked (the window
 // itself runs on it). "Save N picks and install" saves the picks with
-// `setup choose` (the rest are skipped and get nothing), then runs every
+// `setup choose` (setup adds nothing for the rest: one it set up before is
+// skipped and loses what setup added for it at the next Add to Claude Code,
+// one set up by hand stays as it is), then runs every
 // pick's automatic steps in one log (`setup auto`: required installs that need
 // nobody; optional steps wait for their own click) and names where each tool
 // stopped, with a button to its screen. The runner is the wizard's, so the
@@ -51,8 +53,9 @@ export function PickScreen({ tools, runner, reload, next }: PickScreenProps) {
   return (
     <section className={styles.screen}>
       <p className={styles.note}>
-        Pick the tools you want. Anything left out gets no config, server, permissions or hooks, and
-        you can add it later. Saving installs what needs nobody; optional steps wait for you.
+        Pick the tools you want. For a tool you leave out, setup adds no config, server, permissions
+        or hooks and takes out only what it added itself: one you set up by hand stays as it is. You
+        can add a tool later. Saving installs what needs nobody; optional steps wait for you.
       </p>
       <div className={styles.controls}>
         <Button onClick={() => setPicked(new Set(runnable))}>Pick all</Button>

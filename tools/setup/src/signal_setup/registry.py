@@ -86,6 +86,10 @@ class Tool:
     verify: tuple[str, ...] = ()
     # The sentence a failed verify shows when the check doesn't give its own fix.
     fix: str | None = None
+    # Local, gitignored paths only a machine where the tool was set up has (its venv, a
+    # run-log folder). A tool setup has no record of counts as set up only when they all
+    # exist and its check passes (detect.py); with none it is never found that way.
+    evidence: tuple[str, ...] = ()
     prereqs: tuple[str, ...] = ()
     needs: tuple[str, ...] = ()
     mcp: tuple[str, ...] = ()

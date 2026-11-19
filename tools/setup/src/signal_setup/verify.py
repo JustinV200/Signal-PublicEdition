@@ -1,4 +1,5 @@
-"""Checks a finished tool by running its verify command (a cheap, read-only command).
+"""Checks a tool by running its verify command (a cheap, read-only command): a finished
+tool's, or that of a tool that looks set up by hand (detect.py).
 
 The contract (tools/setup/README.md, "Verify checks"): the exit code says pass or fail,
 and the last stdout line may be one JSON object {words, fix, command} (one line each) that
@@ -12,6 +13,8 @@ import os
 import re
 import shutil
 import subprocess
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +23,9 @@ from signal_setup import platforms, progress, settings
 from signal_setup.registry import Tool
 
 VERIFY_TIMEOUT_S = 120
+# For a list someone is waiting on (`setup status`, `setup list`). Short on purpose: the
+# list waits on the slowest check, and a hung daemon reads as a failed one.
+QUICK_TIMEOUT_S = 8
 # Set by `uv run` for setup's own venv; passed on, a nested `uv run --project tools/x` warns
 # about it on stderr on every check.
 _PARENT_VENV_VARS = ("VIRTUAL_ENV",)
@@ -160,6 +166,20 @@ def check(
     except subprocess.TimeoutExpired:
         return CheckResult(False, f"timed out after {timeout_s:g} s", tool.fix)
     return _result(tool, done)
+
+
+def check_all(
+    root: Path, tools: Sequence[Tool], data: dict[str, Any], timeout_s: float = QUICK_TIMEOUT_S
+) -> dict[str, CheckResult]:
+    """check() for every tool in `tools` at once (in threads), by tool id.
+
+    The caller waits on the slowest check only, so a list stays quick to refresh.
+    """
+    if not tools:
+        return {}
+    with ThreadPoolExecutor(max_workers=len(tools)) as pool:
+        results = pool.map(lambda tool: check(root, tool, data, timeout_s), tools)
+        return {tool.id: result for tool, result in zip(tools, results, strict=True)}
 
 
 def report_line(root: Path, tool: Tool, data: dict[str, Any]) -> str:

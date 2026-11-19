@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Set up Signal or one of its tools (opening the setup window), and give the guided tour. Use when the repo isn't set up yet (no .setup/progress.json), or the user says "setup", "set up", "get started", "first run", "/setup", "setup <tool>", "add <tool>", "remove <tool>", "change <tool> settings", "tour", "how does this work", or "explain <tool>".
+description: Set up Signal or one of its tools (opening the setup window), and give the guided tour. Use when nothing is set up yet (`setup status` shows every tool as not set up), or the user says "setup", "set up", "get started", "first run", "/setup", "setup <tool>", "add <tool>", "remove <tool>", "change <tool> settings", "tour", "how does this work", or "explain <tool>".
 argument-hint: [tool id, "tour", "--no-ui", or blank for the full setup]
 ---
 
@@ -37,7 +37,7 @@ It installs and builds the console if needed (long the first time), then opens t
 
 1. Show the intro: the text of `tools/setup/src/signal_setup/data/intro.txt`.
 2. `setup prereqs` and tell the user what's missing, with the links it gives.
-3. `setup list`. Show the tools as a short checklist: name, one-line description, platform label (`Windows` or `Windows + Linux (untested)`), status. Ask which they want. Mention `needs` (calendar and mail-digest build on mail; mail-digest also on audiohub; jobhunt on browser).
+3. `setup list`. Show the tools as a short checklist: name, one-line description, platform label (`Windows` or `Windows + Linux (untested)`), status (for a tool with `detected: true`, `done, found already set up`: it was set up by hand, works as it is, and needs no picking). Ask which they want. Mention `needs` (calendar and mail-digest build on mail; mail-digest also on audiohub; jobhunt on browser).
 4. `setup choose <id,id,...>` with their picks, then `setup auto`: it runs every pick's automatic steps (required `run`/`copy` steps that need nobody: not terminal, not a browser sign-in) in one go, asks nothing, never wires, and ends with JSON naming where each tool stopped (`stopped`; exit 1 a step failed, 2 none of the named tools is picked, 3 a step needs the user). Then carry on with step 5 from those stops.
 5. For each chosen tool, for each step in order whose status isn't `done`:
    - Optional step: ask (one line, say the default). If they decline, `setup mark <tool> <step> skipped`.
@@ -54,7 +54,7 @@ It installs and builds the console if needed (long the first time), then opens t
 7. `setup verify` and report each tool as OK or the problem (placeholders left count as a problem: fix them with `setup config`; a failed check that printed no summary line also has `output`, its last output line, to diagnose from). Tell the user to restart Claude Code or run `/mcp` to load new MCP servers.
 8. Offer the tour (default no).
 
-`setup <tool>` from the user: open the window at that tool (`setup ui <tool>`), or in chat do step 5 for that one tool (offering to redo finished steps), then 6 and 7. "Remove <tool>": `setup choose` with the tool left out, then 6. "Change <tool>'s settings": `setup config <tool> --list`, ask, `--set`. The context-handoff threshold in AGENTS.md section 4 is the `agents` tool's setting: `setup config agents --set context-handoff-percent=<30-90>` (lower hands off sooner, with fresher context but more handoffs).
+`setup <tool>` from the user: open the window at that tool (`setup ui <tool>`), or in chat do step 5 for that one tool (offering to redo finished steps), then 6 and 7. "Remove <tool>": `setup choose` with the tool left out, then 6. That takes out only what setup itself added for it (`.setup/ledger.json` lists it). Setup never removes entries made by hand, so for a tool set up by hand (`detected` in `setup list`, or still in Claude Code after 6) name the entries for the user to delete themselves: its server under `mcpServers` in `.mcp.json`, and its `mcp__<server>` rules under `permissions.allow`, its name in `enabledMcpjsonServers` and its hooks under `hooks` in `.claude/settings.local.json`. "Change <tool>'s settings": `setup config <tool> --list`, ask, `--set`. The context-handoff threshold in AGENTS.md section 4 is the `agents` tool's setting: `setup config agents --set context-handoff-percent=<30-90>` (lower hands off sooner, with fresher context but more handoffs).
 
 ## copytone samples
 

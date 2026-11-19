@@ -3,11 +3,17 @@
 Shape: {"chosen": [tool ids], "answers": {"email": ..., "port": ...},
         "tools": {id: {"skipped": bool, "steps": {step id: "done"|"skipped"|"failed"}}}}
 A tool is done when every required step that applies here is done (one with only optional
-steps, when one of them is done or skipped); nothing else is stored.
+steps, when one of them is done or skipped); nothing else is stored. A tool setup never
+touched has no entry at all; the lists then look at the machine instead (detect.py).
+
+Setup has a record of a tool once it is skipped or one of its steps has a result
+(has_record). The record says what the lists show and what `setup wire` adds. What wire
+may take out again is decided by its own ledger (wiring/ledger.py), never by a record.
 """
 
+import copy
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Collection, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -65,13 +71,17 @@ def load(root: Path) -> dict[str, Any]:
     return data
 
 
-def save(root: Path, data: dict[str, Any]) -> None:
-    """Write the progress (atomically, so a Ctrl+C mid-write can't corrupt it)."""
-    path = root / PROGRESS_FILE
+def write_state(path: Path, data: Any) -> None:
+    """Write one of setup's own .setup/ files as JSON (atomically: a Ctrl+C can't corrupt it)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=2) + "\n", "utf-8")
     tmp.replace(path)
+
+
+def save(root: Path, data: dict[str, Any]) -> None:
+    """Write the progress (atomically, see write_state)."""
+    write_state(root / PROGRESS_FILE, data)
 
 
 def _entry(data: dict[str, Any], tool_id: str) -> dict[str, Any]:
@@ -92,10 +102,56 @@ def set_step(data: dict[str, Any], tool_id: str, step_id: str, status: str) -> N
 
 
 def set_skipped(data: dict[str, Any], tool_id: str, skipped: bool = True) -> None:
-    """Mark the whole tool skipped (it gets no config, MCP server, permissions or hooks)."""
+    """Mark the whole tool skipped: setup adds no MCP server, permissions or hooks for it."""
     _entry(data, tool_id)["skipped"] = skipped
     if skipped and tool_id in data["chosen"]:
         data["chosen"].remove(tool_id)
+
+
+def unpick(data: dict[str, Any], tool_id: str) -> None:
+    """Take the tool out of the picks: skipped when setup has a record of it, else forgotten.
+
+    A tool that was only picked (no step run) goes back to having no record, so one set up
+    by hand still reads as found (detect.py), not as skipped.
+    """
+    if has_record(data, tool_id):
+        set_skipped(data, tool_id)
+        return
+    data["tools"].pop(tool_id, None)
+    if tool_id in data["chosen"]:
+        data["chosen"].remove(tool_id)
+
+
+def skip_unpicked(data: dict[str, Any], tool_ids: Iterable[str], chosen: Collection[str]) -> None:
+    """Un-pick (unpick) every tool outside `chosen`: skipped only if setup has a record of it.
+
+    A tool setup never touched, or only picked, stays without a record: picking one tool
+    says nothing about the rest, which may have been set up by hand (detect.py), and a tool
+    with no record is no part of the plan either way.
+    """
+    for tool_id in tool_ids:
+        if tool_id not in chosen:
+            unpick(data, tool_id)
+
+
+def has_record(data: dict[str, Any], tool_id: str) -> bool:
+    """True once setup has something to say about the tool: it's skipped, or a step ran.
+
+    A tool that was only picked (a record with no step in it) has nothing recorded yet.
+    """
+    entry = data["tools"].get(tool_id, {})
+    return bool(entry.get("skipped") or entry.get("steps"))
+
+
+def adopt(data: dict[str, Any], tool_id: str, record: dict[str, Any] | None) -> None:
+    """Start the tool's record from `record`, unless setup already has one for it.
+
+    Called just before a step's result is written. `record` is what a finished setup would
+    have left for a tool found already set up (detect.record_to_adopt; None when it isn't
+    found), so the step's result lands on a tool that stays done.
+    """
+    if record and not has_record(data, tool_id):
+        data["tools"][tool_id] = copy.deepcopy(record)
 
 
 def applicable_steps(tool: Tool, platform: str) -> tuple[Step, ...]:

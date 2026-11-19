@@ -60,12 +60,14 @@ export interface SetupTool {
   cost: string;
   platform: string;
   supportedHere: boolean;
-  /** done, skipped, failed, started or "not set up". */
+  /** done, skipped, failed, started or "not set up"; done too for a `detected` tool. */
   status: string;
   /** Among the owner's picks (`setup choose`); a tool whose steps ran unpicked is not. */
   picked: boolean;
   /** Finished, and its servers and hooks are in Claude Code's config. */
   wired: boolean;
+  /** Setup has no record of it, and found it already set up; its steps keep reading to do. */
+  detected: boolean;
   needs: string[];
   prereqs: string[];
   steps: SetupStep[];
@@ -106,7 +108,10 @@ export interface ToolHealth {
   supportedHere: boolean;
   setupStatus: string;
   state: HealthState;
-  /** What the check found (or why setup isn't finished); "" for a tool never picked. */
+  /**
+   * What the check found (or why setup isn't finished); "" for a tool never picked. A tool
+   * setup has no record of that it found already set up ends `· found already set up`.
+   */
   words: string;
   /** What to do, in one sentence, or "": an Active tool may have one too ("not running"). */
   fix: string;

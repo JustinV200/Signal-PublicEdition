@@ -11,7 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
-from signal_setup import progress
+from signal_setup import detect, progress
 from signal_setup.prereqs import missing
 from signal_setup.registry import Step, Tool
 from signal_setup.samples import collect
@@ -124,8 +124,12 @@ def run_step(root: Path, tool: Tool, step: Step, data: dict[str, Any], asker: As
     """Run `step` of `tool` and record the result in `data` (unless it still needs input).
 
     The samples kind is terminal-only (it prompts directly); the agent uses `setup samples`.
+    A tool found already set up (detect.py) is taken on with its first result: its record
+    starts as the one its detection assumed, so the tool stays done.
     Returns 'done', 'skipped', 'failed' or NEEDS_INPUT.
     """
+    # Read before the step runs: an install makes the very evidence detection looks for.
+    found_record = detect.record_to_adopt(root, tool, data)
     if step.kind == "confirm":
         answer = asker.confirm(step.title, step.default)
         status = NEEDS_INPUT if answer is None else (progress.DONE if answer else progress.SKIPPED)
@@ -147,5 +151,6 @@ def run_step(root: Path, tool: Tool, step: Step, data: dict[str, Any], asker: As
     else:
         status = _env(root, step, asker)
     if status != NEEDS_INPUT:
+        progress.adopt(data, tool.id, found_record)
         progress.set_step(data, tool.id, step.id, status)
     return status

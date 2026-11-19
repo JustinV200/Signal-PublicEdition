@@ -72,9 +72,12 @@ def _run_tool(root: Path, tool: Tool, ran: list[dict[str, str]]) -> Stop | None:
         print(f"\n== {tool.name}: {step.title} ==", flush=True)
         # Run on a copy, then save only this step's status onto the progress as it is now:
         # an install takes minutes, and a terminal's `setup step` may save meanwhile.
-        status = run_step(root, tool, step, progress.load(root), _LogAsker())
+        ran_on = progress.load(root)
+        status = run_step(root, tool, step, ran_on, _LogAsker())
         if status != NEEDS_INPUT:
             fresh = progress.load(root)
+            # The copy's record is the one a tool found already set up was taken on with.
+            progress.adopt(fresh, tool.id, ran_on["tools"].get(tool.id))
             progress.set_step(fresh, tool.id, step.id, status)
             progress.save(root, fresh)
         ran.append({"tool": tool.id, "step": step.id, "status": status})

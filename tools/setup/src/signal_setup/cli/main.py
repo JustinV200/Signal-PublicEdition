@@ -11,7 +11,8 @@
   setup auto [tools]        run the picks' automatic steps (required run and copy steps
                             that need nobody), asking nothing; see cli/auto.py
   setup tour [topic]        the guided tour of GUIDE.md (--json: its sections, for the wizard)
-  setup status              each tool's platform, status and placeholders left
+  setup status              each tool's platform, status and placeholders left; a tool
+                            found already set up by hand reads done, and says so
                             (--json: each tool's health for the console's System tab)
   setup config [tool]       change a tool's settings (--list, --set id=value for the agent)
   setup intro               the intro paragraph (the wizard's first screen)
@@ -27,7 +28,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from signal_setup import health, platforms, progress, registry, settings
+from signal_setup import detect, health, platforms, progress, registry, settings
 from signal_setup.cli import agent, config, doc, ui_launch
 from signal_setup.cli.auto import run_automatic
 from signal_setup.intro import intro_text
@@ -131,16 +132,21 @@ def _parser() -> argparse.ArgumentParser:
 def _status(root: Path, as_json: bool) -> int:
     """Print one line per tool: status, platform label, and any placeholders left.
 
-    With `as_json`, each tool's health (active, down, not set up) as JSON instead.
+    A tool setup has no record of that was found already set up (detect.py) reads `done`,
+    and its line says how setup knows. With `as_json`, each tool's health (active, down,
+    not set up) as JSON instead.
     """
     if as_json:
         print(json.dumps(health.health_rows(root), indent=2))
         return 0
-    data, platform = progress.load(root), platforms.current()
+    platform = platforms.current()
+    data, found, _ = detect.find(root, progress.load(root))
     for tool in registry.load():
         status = progress.tool_status(data, tool, platform) or "not set up"
         left = settings.tool_leftovers(root, tool, data)
         note = f"  placeholders left: {', '.join(left)}" if left else ""
+        if tool.id in found:
+            note += f"  {detect.FOUND_WORDS}"
         print(f"{tool.id:12} {status:10} {platforms.label(tool)}{note}")
     return 0
 

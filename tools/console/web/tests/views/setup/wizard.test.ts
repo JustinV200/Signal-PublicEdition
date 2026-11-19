@@ -51,6 +51,7 @@ function tool(
     status,
     picked,
     wired: status === "done",
+    detected: false,
     needs: [],
     prereqs: [],
     steps: [],

@@ -1,5 +1,5 @@
-"""Wiring writes only finished, chosen tools, keeps the user's own settings and backs them up;
-wired_tools only reads which are in."""
+"""Wiring writes only finished, chosen tools, keeps the user's own settings and backs them
+up; wired_tools only reads which are in. What wire may take out again: test_ledger.py."""
 
 import dataclasses
 import json
@@ -10,7 +10,7 @@ import pytest
 
 from signal_setup import progress, registry, wiring
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = Path(__file__).resolve().parents[4]
 
 
 @pytest.fixture(autouse=True)
@@ -49,14 +49,13 @@ def test_only_finished_tools_are_wired_and_user_entries_survive(tmp_path: Path) 
     _finish(data, "brief")
     progress.set_step(data, "browser", "install", progress.DONE)  # browser unfinished
     progress.set_skipped(data, "mail")
-    tools = registry.load()
-    wiring.apply_plan(tmp_path, tools, wiring.build_plan(tools, data, "windows"), "windows")
+    wiring.apply_plan(tmp_path, wiring.build_plan(registry.load(), data, "windows"), "windows")
 
     mcp = json.loads((tmp_path / ".mcp.json").read_text())["mcpServers"]
     settings = json.loads((tmp_path / ".claude" / "settings.local.json").read_text())
     assert set(mcp) == {"other", "brief"}
-    # The user's own rule stays; the skipped mail tool's rule is removed.
-    assert settings["permissions"]["allow"] == ["Bash(git status)", "mcp__brief"]
+    # The user's own rules stay, the one for the skipped mail tool too: setup didn't add it.
+    assert settings["permissions"]["allow"] == [*user["permissions"]["allow"], "mcp__brief"]
     assert settings["permissions"]["defaultMode"] == "default" and settings["model"] == "opus"
     assert settings["enabledMcpjsonServers"] == ["brief"]
     assert settings["hooks"]["Stop"] == user["hooks"]["Stop"]
@@ -86,9 +85,8 @@ def _wire(root: Path) -> None:
     """Wire with brief finished and usage's status line wanted."""
     data = progress.load(root)
     _finish(data, "brief")
-    tools = registry.load()
-    plan = dataclasses.replace(wiring.build_plan(tools, data, "windows"), statusline=True)
-    wiring.apply_plan(root, tools, plan, "windows")
+    plan = wiring.build_plan(registry.load(), data, "windows")
+    wiring.apply_plan(root, dataclasses.replace(plan, statusline=True), "windows")
 
 
 def test_wire_backs_up_each_file_before_changing_it(tmp_path: Path) -> None:
@@ -109,16 +107,41 @@ def test_a_bad_user_settings_file_stops_wire_before_any_write(tmp_path: Path) ->
 
 
 def test_a_second_wire_changes_nothing_and_keeps_other_keys(tmp_path: Path) -> None:
+    def snapshot() -> dict[Path, bytes]:
+        return {path: path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+
     files = _user_files(tmp_path)
     _wire(tmp_path)
-    first = {path: path.read_bytes() for path in files}
+    # Entries made after setup's, as Claude Code adds each approval to the allow list.
+    local_file = tmp_path / ".claude" / "settings.local.json"
+    local = json.loads(local_file.read_text())
+    local["permissions"]["allow"].append("Bash(git status)")
+    local["enabledMcpjsonServers"].append("other")
+    own_hook = {"type": "command", "command": "mine"}
+    local["hooks"]["UserPromptSubmit"][0]["hooks"].append(own_hook)
+    local["hooks"]["UserPromptSubmit"].append({"hooks": [own_hook]})
+    local_file.write_text(json.dumps(local))
+    first = snapshot()
+
     _wire(tmp_path)
-    assert {path: path.read_bytes() for path in files} == first
-    mcp, local, user = (json.loads(raw) for raw in first.values())
+
+    # Regression: setup's entries were taken out and added back last, so this wire
+    # reordered the lists, rewrote the file and overwrote its backup.
+    assert snapshot() == first  # byte for byte, the backups too
+    mcp, local, user = (json.loads(first[path]) for path in files)
     assert mcp["mine"] and set(mcp["mcpServers"]) == {"other", "brief"}
-    assert local["permissions"]["allow"] == ["Bash(ls)", "mcp__brief"]
+    assert local["permissions"]["allow"] == ["Bash(ls)", "mcp__brief", "Bash(git status)"]
     assert user["attribution"] == {"commit": ""} and user["model"] == "opus"
     assert "usage.statusline" in user["statusLine"]["command"]
+
+    # Setup's entries the owner deletes come back while their tool is still wanted.
+    local["permissions"]["allow"].remove("mcp__brief")
+    brief_hook = local["hooks"]["UserPromptSubmit"][0]["hooks"].pop(0)
+    local_file.write_text(json.dumps(local))
+    _wire(tmp_path)
+    local = json.loads(local_file.read_text())
+    assert local["permissions"]["allow"] == ["Bash(ls)", "Bash(git status)", "mcp__brief"]
+    assert local["hooks"]["UserPromptSubmit"][-1] == {"hooks": [brief_hook]}
 
 
 def test_wired_only_reads_and_needs_every_server_and_hook(tmp_path: Path) -> None:
@@ -135,8 +158,7 @@ def test_wired_only_reads_and_needs_every_server_and_hook(tmp_path: Path) -> Non
     data = progress.load(tmp_path)
     _finish(data, "brief")
     assert wired() == set()  # finished, but wire never ran
-    tools = registry.load()
-    wiring.apply_plan(tmp_path, tools, wiring.build_plan(tools, data, "windows"), "windows")
+    wiring.apply_plan(tmp_path, wiring.build_plan(registry.load(), data, "windows"), "windows")
     assert wired() == {"brief"}
     local = tmp_path / ".claude" / "settings.local.json"
     hooks = json.loads(local.read_text()).pop("hooks")

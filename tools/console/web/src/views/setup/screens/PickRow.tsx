@@ -1,11 +1,16 @@
 // One tool on Pick tools: its checkbox, name, platform, status and cost tag
 // (from the registry, in a bordered tag so it reads as one), its description,
-// and what it builds on. When a picked tool builds on one that isn't picked,
+// and what it builds on. A tool setup has no record of that it found already
+// set up reads `done · found already set up`, as in System's Tools list.
+// When a picked tool builds on one that isn't picked,
 // the "! not picked" warning comes with a button that adds it ("Add Gmail too").
 // Tools this OS can't run are shown but can't be picked.
 import type { SetupTool } from "../../../api";
 import { Button } from "../../../ui";
 import styles from "../setup.module.css";
+
+// How setup knows a tool it never ran is done; the CLI's own words (detect.FOUND_WORDS).
+const FOUND_WORDS = "found already set up";
 
 interface PickRowProps {
   tool: SetupTool;
@@ -42,6 +47,7 @@ export function PickRow({
           <span className={styles.stepTitle}>{tool.name}</span>{" "}
           <span className={styles.note}>
             [{tool.platform}] · {tool.status}
+            {tool.detected && ` · ${FOUND_WORDS}`}
             {!tool.supportedHere && " · can't run on this OS"}{" "}
             {tool.cost && <span className={styles.tag}>{tool.cost}</span>}
           </span>

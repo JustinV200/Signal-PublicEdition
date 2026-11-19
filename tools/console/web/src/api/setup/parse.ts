@@ -81,6 +81,7 @@ export function parseTools(value: unknown): SetupTool[] {
     status: stringOr(dict.status, "not set up"),
     picked: dict.picked === true,
     wired: dict.wired === true,
+    detected: dict.detected === true,
     needs: strings(dict.needs),
     prereqs: strings(dict.prereqs),
     steps: rows(dict.steps, parseStep),

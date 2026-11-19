@@ -2,11 +2,14 @@
 
 Public API: build_plan, apply_plan, summary_lines, wired_tools (read-only: which finished
 tools are already in the config), WiringError, check_object, and the small edits setup makes.
+
+apply_plan keeps a ledger of every entry it adds (ledger.py, .setup/ledger.json), and
+takes out or replaces only entries that ledger lists: nothing the owner made by hand.
 """
 
 from pathlib import Path
 
-from signal_setup.registry import Tool
+from signal_setup.wiring import ledger
 from signal_setup.wiring.edits import EMAIL_PATTERN, set_constant, set_env_value
 from signal_setup.wiring.json_file import WiringError, check_object
 from signal_setup.wiring.plan import Plan
@@ -68,8 +71,14 @@ def _exact_lines(plan: Plan) -> list[str]:
     return lines
 
 
-def apply_plan(root: Path, tools: tuple[Tool, ...], plan: Plan, platform: str) -> list[str]:
+def apply_plan(root: Path, plan: Plan, platform: str) -> list[str]:
     """Write the plan. Returns notes for the user (e.g. a status line that was kept).
+
+    Adds the plan's servers, rules and hooks that aren't there yet and records each in
+    the ledger; takes out what the ledger says setup added that the plan no longer has.
+    Every entry setup didn't add stays as it is, the plan's own included: where the plan
+    wants a server or hook the owner already made, theirs is left alone. With no ledger,
+    setup added nothing, so nothing is taken out.
 
     Raises WiringError, with one sentence for the user, when a file can't be safely
     rewritten; that file is left as it was. A file that isn't a JSON object is refused
@@ -78,9 +87,15 @@ def apply_plan(root: Path, tools: tuple[Tool, ...], plan: Plan, platform: str) -
     targets = [root / MCP_FILE, root / SETTINGS_FILE, *([USER_SETTINGS] if plan.statusline else [])]
     for path in targets:
         check_object(path)
-    write_mcp(root, tools, plan)
-    write_settings(root, tools, plan, platform)
-    notes = []
-    if plan.statusline and not write_statusline(root, USER_SETTINGS, platform):
-        notes.append(f"Kept your own status line in {USER_SETTINGS}; see tools/usage/README.md.")
-    return notes
+    # Saved after each file: a later file's refusal mustn't lose what an earlier one recorded.
+    added = write_mcp(root, plan, ledger.load(root))
+    ledger.save(root, added)
+    added = write_settings(root, plan, added, platform)
+    ledger.save(root, added)
+    if not plan.statusline:
+        return []
+    added, is_usage = write_statusline(root, USER_SETTINGS, platform, added)
+    ledger.save(root, added)
+    if is_usage:
+        return []
+    return [f"Kept your own status line in {USER_SETTINGS}; see tools/usage/README.md."]

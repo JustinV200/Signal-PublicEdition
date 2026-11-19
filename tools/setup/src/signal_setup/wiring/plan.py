@@ -83,15 +83,6 @@ def build(tools: tuple[Tool, ...], data: dict[str, Any], platform: str) -> Plan:
     )
 
 
-def owned(tools: tuple[Tool, ...]) -> tuple[set[str], set[str], set[str]]:
-    """Every server, allow rule and hook module setup could ever write (to replace on re-run)."""
-    servers = {s for t in tools for s in (*t.mcp, *(m for st in t.steps for m in st.mcp))}
-    allow = {r for t in tools for r in t.permissions}
-    allow |= {r for t in tools for s in t.steps for r in s.permissions}
-    modules = {h.module for t in tools for h in t.hooks}
-    return servers, allow, modules
-
-
 def hook_entry(root: Path, tool_id: str, hook: Hook, platform: str) -> dict[str, Any]:
     """The settings.json command hook for `hook`, run in exec form with the tool's venv Python."""
     args = ["-I", "-m", hook.module] if hook.isolated else ["-m", hook.module]

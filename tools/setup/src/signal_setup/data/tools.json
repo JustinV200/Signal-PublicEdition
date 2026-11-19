@@ -1,5 +1,5 @@
 {
-  "_comment": "Signal's tool registry, read by the setup CLI (tools/setup) and the setup skill (.claude/skills/setup). Paths are relative to the repo root, where every command runs. {email} is the address the user gave in an 'email' step; {port} is the console's port (setup --port, default 8790). Step kinds: run (a command), copy (an example config, kept if it already exists), manual (instructions the user follows), confirm (a yes/no choice), email (asks an address and writes it into source constants), env (asks a non-secret value for .env), settings (creates the tool's config files from their examples and asks its settings, from data/settings/<tool>.json; done only when no placeholder is left; 'group' picks an optional group such as the assignment checker), samples (copytone writing samples). 'terminal' steps need the user's own interactive terminal, so the agent never runs them. 'opens_browser' steps open the user's browser to sign in, so someone must be there. 'Automatic' steps (required run and copy steps that are neither terminal nor opens_browser) are the ones `setup auto` runs unasked; optional steps always wait for their own click. 'group' (Core, Everyday, Hardware, Extras) and 'cost' (a few words: time, account, hardware) are how the setup window's Pick page lists a tool. A step's mcp/permissions apply only once that step is done; a tool's apply once all its required steps are done. 'verify' is a cheap read-only check: exit 0 passes, and its last stdout line may be one JSON object {words, fix, command} (tools/setup/README.md, Verify checks). 'fix' is the sentence a failed check shows when it gives none. 'consent' is one plain line for the consent page (setup plan, before the exact entries): what Claude may do without asking once the tool is added, shown once a granting part is done (its rules or hooks, or a done 'unattended_claude' step). Every tool with permissions, hooks or an 'unattended_claude' step has one. 'unattended_claude' marks a step that registers a scheduled Claude run with tools, which acts with nobody asked.",
+  "_comment": "Signal's tool registry, read by the setup CLI (tools/setup) and the setup skill (.claude/skills/setup). Paths are relative to the repo root, where every command runs. {email} is the address the user gave in an 'email' step; {port} is the console's port (setup --port, default 8790). Step kinds: run (a command), copy (an example config, kept if it already exists), manual (instructions the user follows), confirm (a yes/no choice), email (asks an address and writes it into source constants), env (asks a non-secret value for .env), settings (creates the tool's config files from their examples and asks its settings, from data/settings/<tool>.json; done only when no placeholder is left; 'group' picks an optional group such as the assignment checker), samples (copytone writing samples). 'terminal' steps need the user's own interactive terminal, so the agent never runs them. 'opens_browser' steps open the user's browser to sign in, so someone must be there. 'Automatic' steps (required run and copy steps that are neither terminal nor opens_browser) are the ones `setup auto` runs unasked; optional steps always wait for their own click. 'group' (Core, Everyday, Hardware, Extras) and 'cost' (a few words: time, account, hardware) are how the setup window's Pick page lists a tool. A step's mcp/permissions apply only once that step is done; a tool's apply once all its required steps are done. 'verify' is a cheap read-only check: exit 0 passes, and its last stdout line may be one JSON object {words, fix, command} (tools/setup/README.md, Verify checks). 'fix' is the sentence a failed check shows when it gives none. 'evidence' lists local, gitignored paths only a machine where the tool was set up has (its venv; the job runner's run-log folder): a tool setup has no record of reads as set up only when they all exist, its servers and hooks are in Claude Code's config and its verify check passes (tools/setup/README.md, Found already set up). A tool with no 'evidence' is never found that way, and a path checked into the repo must never be listed (a fresh clone has it). 'consent' is one plain line for the consent page (setup plan, before the exact entries): what Claude may do without asking once the tool is added, shown once a granting part is done (its rules or hooks, or a done 'unattended_claude' step). Every tool with permissions, hooks or an 'unattended_claude' step has one. 'unattended_claude' marks a step that registers a scheduled Claude run with tools, which acts with nobody asked.",
   "tools": [
     {
       "id": "agents",
@@ -74,7 +74,10 @@
         "away",
         "status"
       ],
-      "fix": "Set the brief up again with setup brief."
+      "fix": "Set the brief up again with setup brief.",
+      "evidence": [
+        "tools/brief/.venv"
+      ]
     },
     {
       "id": "usage",
@@ -136,7 +139,10 @@
         "usage",
         "show"
       ],
-      "fix": "Set the usage tracker up again with setup usage."
+      "fix": "Set the usage tracker up again with setup usage.",
+      "evidence": [
+        "tools/usage/.venv"
+      ]
     },
     {
       "id": "contextmeter",
@@ -193,7 +199,10 @@
         "-m",
         "contextmeter.check"
       ],
-      "fix": "Set the context meter up again with setup contextmeter."
+      "fix": "Set the context meter up again with setup contextmeter.",
+      "evidence": [
+        "tools/contextmeter/.venv"
+      ]
     },
     {
       "id": "copytone",
@@ -352,7 +361,10 @@
         "doctor",
         "--summary-json"
       ],
-      "fix": "Set the console up again with setup console."
+      "fix": "Set the console up again with setup console.",
+      "evidence": [
+        "tools/console/.venv"
+      ]
     },
     {
       "id": "audiohub",
@@ -446,7 +458,10 @@
         "audiohub",
         "check"
       ],
-      "fix": "Set the voice hub up again with setup audiohub."
+      "fix": "Set the voice hub up again with setup audiohub.",
+      "evidence": [
+        "tools/audiohub/.venv"
+      ]
     },
     {
       "id": "browser",
@@ -536,7 +551,10 @@
         "browser-tool",
         "--check"
       ],
-      "fix": "Set the browser up again with setup browser."
+      "fix": "Set the browser up again with setup browser.",
+      "evidence": [
+        "tools/browser/.venv"
+      ]
     },
     {
       "id": "vault",
@@ -599,7 +617,10 @@
         "vault",
         "list"
       ],
-      "fix": "Create the vault again with setup vault."
+      "fix": "Create the vault again with setup vault.",
+      "evidence": [
+        "tools/vault/.venv"
+      ]
     },
     {
       "id": "mail",
@@ -698,7 +719,10 @@
         "mail",
         "check"
       ],
-      "fix": "Set Gmail up again with setup mail."
+      "fix": "Set Gmail up again with setup mail.",
+      "evidence": [
+        "tools/mail/.venv"
+      ]
     },
     {
       "id": "calendar",
@@ -789,7 +813,10 @@
         "--days",
         "1"
       ],
-      "fix": "Set the calendar up again with setup calendar."
+      "fix": "Set the calendar up again with setup calendar.",
+      "evidence": [
+        "tools/calendar/.venv"
+      ]
     },
     {
       "id": "mail-digest",
@@ -882,7 +909,10 @@
         "mail-digest",
         "status"
       ],
-      "fix": "Set the mail digest up again with setup mail-digest."
+      "fix": "Set the mail digest up again with setup mail-digest.",
+      "evidence": [
+        "tools/mail-digest/.venv"
+      ]
     },
     {
       "id": "sessions",
@@ -941,7 +971,10 @@
         "sessions",
         "check"
       ],
-      "fix": "Add it to Claude Code (setup wire, which also creates .env), or set background sessions up again with setup sessions."
+      "fix": "Add it to Claude Code (setup wire, which also creates .env), or set background sessions up again with setup sessions.",
+      "evidence": [
+        "tools/sessions/.venv"
+      ]
     },
     {
       "id": "whiteboard",
@@ -1052,7 +1085,10 @@
         "whiteboard",
         "status"
       ],
-      "fix": "Check tools/whiteboard/whiteboard.toml, or set the whiteboard up again with setup whiteboard."
+      "fix": "Check tools/whiteboard/whiteboard.toml, or set the whiteboard up again with setup whiteboard.",
+      "evidence": [
+        "tools/whiteboard/.venv"
+      ]
     },
     {
       "id": "analysis-chamber",
@@ -1140,7 +1176,10 @@
         "analysis-chamber",
         "check"
       ],
-      "fix": "Check tools/analysis-chamber/config.toml, or set it up again with setup analysis-chamber."
+      "fix": "Check tools/analysis-chamber/config.toml, or set it up again with setup analysis-chamber.",
+      "evidence": [
+        "tools/analysis-chamber/.venv"
+      ]
     },
     {
       "id": "sleepmode",
@@ -1201,7 +1240,10 @@
         "sleepmode",
         "status"
       ],
-      "fix": "Set sleep mode up again with setup sleepmode."
+      "fix": "Set sleep mode up again with setup sleepmode.",
+      "evidence": [
+        "tools/sleepmode/.venv"
+      ]
     },
     {
       "id": "jobhunt",
@@ -1272,7 +1314,10 @@
         "-File",
         "tools/jobhunt/status.ps1"
       ],
-      "fix": "Set the job runner up again with setup jobhunt."
+      "fix": "Set the job runner up again with setup jobhunt.",
+      "evidence": [
+        "tools/jobhunt/.logs"
+      ]
     }
   ]
 }

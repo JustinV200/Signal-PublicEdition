@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from signal_setup import (
+    detect,
     platforms,
     prereqs,
     progress,
@@ -52,14 +53,17 @@ def _print(data: Any) -> None:
 
 
 def list_tools(root: Path) -> int:
-    """Every tool with its group, cost, platform label, support here, status, steps, and two flags.
+    """Every tool with its group, cost, platform label, support here, status, steps and flags.
 
     `picked`: the tool is among the user's picks (progress `chosen`), so a tool whose steps
     ran without a pick (the console the setup window builds first) isn't one. `wired`: a
-    finished tool's servers and hooks are in Claude Code's config (read only).
+    finished tool's servers and hooks are in Claude Code's config (read only). `detected`:
+    setup has no record of the tool, and it was found already set up (detect.py), so its
+    status reads done while its steps keep what setup saved: nothing.
     """
-    data, platform = progress.load(root), platforms.current()
+    saved, platform = progress.load(root), platforms.current()
     tools = registry.load()
+    data, found, _ = detect.find(root, saved)
     wired = wiring.wired_tools(root, tools, data, platform)
     _print(
         [
@@ -74,6 +78,7 @@ def list_tools(root: Path) -> int:
                 "status": progress.tool_status(data, t, platform) or "not set up",
                 "picked": t.id in data["chosen"],
                 "wired": t.id in wired,
+                "detected": t.id in found,
                 "needs": list(t.needs),
                 "prereqs": list(t.prereqs),
                 "steps": [
@@ -89,7 +94,7 @@ def list_tools(root: Path) -> int:
                         "doc": s.doc,
                         "group": s.group,
                         "command": " ".join(s.argv),
-                        "status": progress.step_status(data, t.id, s.id),
+                        "status": progress.step_status(saved, t.id, s.id),
                     }
                     for s in progress.applicable_steps(t, platform)
                 ],
@@ -109,11 +114,17 @@ def check_prereqs(tool_ids: list[str]) -> int:
 
 
 def choose(root: Path, tool_ids: list[str]) -> int:
-    """Record the user's picks; every other tool is marked skipped (gets no wiring)."""
+    """Record the user's picks; every other tool setup has a record for is marked skipped.
+
+    A skipped tool is no part of the plan, so the next `wire` takes out what setup added
+    for it. An unpicked tool setup never touched, or only ever picked, is left without a
+    record (progress.skip_unpicked), so one set up by hand still reads as found.
+    """
     data = progress.load(root)
     chosen = [registry.by_id(i).id for i in tool_ids]
-    for tool in registry.load():
-        progress.set_skipped(data, tool.id, tool.id not in chosen)
+    for tool_id in chosen:
+        progress.set_skipped(data, tool_id, False)
+    progress.skip_unpicked(data, (tool.id for tool in registry.load()), chosen)
     data["chosen"] = chosen
     progress.save(root, data)
     _print({"chosen": chosen})
@@ -141,14 +152,17 @@ def mark(root: Path, tool_id: str, step_id: str, status: str) -> int:
 
     Exit 3, with the ids left, when `done` is asked for a settings step whose config
     still holds placeholders or is missing a file: the step isn't done until every
-    value is set.
+    value is set. A tool found already set up is taken on first (progress.adopt), so
+    skipping one optional step doesn't leave it reading half set up.
     """
-    step = registry.by_id(tool_id).step(step_id)  # validates both ids
+    tool = registry.by_id(tool_id)
+    step = tool.step(step_id)  # validates both ids
     left = _placeholders_left(root, tool_id, step) if status == progress.DONE else []
     if left:
         _print({"tool": tool_id, "step": step_id, "status": NEEDS_INPUT, "placeholders_left": left})
         return 3
     data = progress.load(root)
+    progress.adopt(data, tool_id, detect.record_to_adopt(root, tool, data))
     progress.set_step(data, tool_id, step_id, status)
     progress.save(root, data)
     _print({"tool": tool_id, "step": step_id, "status": status})
@@ -171,14 +185,17 @@ def plan(root: Path) -> int:
 
 
 def wire(root: Path, confirmed: bool) -> int:
-    """Write the plan; refuses without --yes (the user's one confirmation)."""
+    """Write the plan; refuses without --yes (the user's one confirmation).
+
+    It adds what the finished tools need and takes out what setup added earlier that the
+    plan no longer has. Entries setup didn't add stay as they are (wiring.apply_plan).
+    """
     if not confirmed:
         print("Show the user `setup plan`, get their OK, then run `setup wire --yes`.")
         return 3
-    tools, platform = registry.load(), platforms.current()
-    notes = wiring.apply_plan(
-        root, tools, wiring.build_plan(tools, progress.load(root), platform), platform
-    )
+    platform = platforms.current()
+    plan = wiring.build_plan(registry.load(), progress.load(root), platform)
+    notes = wiring.apply_plan(root, plan, platform)
     _print({"written": [".mcp.json", ".claude/settings.local.json"], "notes": notes})
     return 0
 

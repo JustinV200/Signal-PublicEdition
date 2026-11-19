@@ -1,23 +1,25 @@
-"""Tool health for the console's System Tools list, and the setup window's terminal fallback."""
+"""Tool health for the console's System Tools list (tools found already set up by hand
+included), and what a verify check's output reads as."""
 
 import dataclasses
+import json
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from signal_setup import health, progress, registry, verify
+from signal_setup import detect, health, platforms, progress, registry, verify
+from signal_setup.cli import agent, main
+
+REPO = Path(__file__).resolve().parents[3]
 
 
 @pytest.mark.parametrize(
     ("setup_status", "check", "state"),
     [
-        ("", None, health.NOT_SET_UP),
-        (progress.SKIPPED, None, health.NOT_SET_UP),
+        # The other states are rows of test_health_rows_find_a_tool_set_up_by_hand.
         (progress.STARTED, None, health.NOT_SET_UP),
-        (progress.FAILED, None, health.NOT_SET_UP),
-        (progress.DONE, verify.CheckResult(True, "installed"), health.ACTIVE),
-        (progress.DONE, verify.CheckResult(False, "timed out after 8 s"), health.DOWN),
         (progress.DONE, None, health.DOWN),
     ],
 )
@@ -25,23 +27,146 @@ def test_classify(setup_status, check, state) -> None:
     assert health.classify(setup_status, check)[0] == state
 
 
-def test_health_rows_only_check_finished_tools(tmp_path: Path, monkeypatch) -> None:
+BRIEF_HOOK = {"type": "command", "args": ["-I", "-m", "brief_tool.hooks.prompt"]}
+
+
+def _set_up_brief_by_hand(root: Path, has_evidence: bool = True, is_wired: bool = True) -> None:
+    """Make `root` look as if brief was set up without setup: its venv, server and hook."""
+    if has_evidence:
+        (root / "tools" / "brief" / ".venv").mkdir(parents=True)
+    if is_wired:
+        (root / ".claude").mkdir()
+        settings = {"hooks": {"UserPromptSubmit": [{"hooks": [BRIEF_HOOK]}]}}
+        (root / ".claude" / "settings.local.json").write_text(json.dumps(settings))
+        (root / ".mcp.json").write_text(json.dumps({"mcpServers": {"brief": {}}}))
+
+
+def _fake_checks(monkeypatch, passes: bool) -> list[str]:
+    """Replace every verify check with one that passes or fails; returns the ids it's asked for."""
+    checked: list[str] = []
+    result = verify.CheckResult(passes, "installed" if passes else "check failed (exit 1)")
+    monkeypatch.setattr(verify, "check", lambda root, tool, *_: checked.append(tool.id) or result)
+    return checked
+
+
+FOUND = f"installed · {detect.FOUND_WORDS}"
+
+
+@pytest.mark.parametrize(
+    ("record", "has_evidence", "is_wired", "passes", "state", "words", "is_checked"),
+    [
+        # No record, but it works and is in Claude Code: found, and the row says how it knows.
+        (None, True, True, True, health.ACTIVE, FOUND, True),
+        # Picked only (what Re-run setup records before any step runs): still found.
+        ("picked", True, True, True, health.ACTIVE, FOUND, True),
+        # A failing check is never Down without a record that says finished.
+        (None, True, True, False, health.NOT_SET_UP, "", True),
+        # A check that would pass proves nothing without local evidence (a fresh clone
+        # that ships the config), or while Claude Code's config lacks the tool.
+        (None, False, True, True, health.NOT_SET_UP, "", False),
+        (None, True, False, True, health.NOT_SET_UP, "", False),
+        # The record wins: a skip, a failed step, and a finished tool whose check fails.
+        ("skipped", True, True, True, health.NOT_SET_UP, "skipped", False),
+        (progress.FAILED, True, True, True, health.NOT_SET_UP, "a setup step failed", False),
+        (progress.DONE, False, True, False, health.DOWN, "check failed (exit 1)", True),
+    ],
+)
+def test_health_rows_find_a_tool_set_up_by_hand(
+    tmp_path: Path, monkeypatch, record, has_evidence, is_wired, passes, state, words, is_checked
+) -> None:
+    _set_up_brief_by_hand(tmp_path, has_evidence, is_wired)
     data = progress.load(tmp_path)
-    progress.set_step(data, "brief", "install", progress.DONE)
-    progress.set_skipped(data, "usage")
-    progress.save(tmp_path, data)
-    checked = []
+    if record == "skipped":
+        progress.set_skipped(data, "brief")
+    elif record == "picked":
+        progress.set_skipped(data, "brief", False)
+    elif record:
+        progress.set_step(data, "brief", "install", record)
+    if record:
+        progress.save(tmp_path, data)
+    checked = _fake_checks(monkeypatch, passes)
+
+    rows = {row["id"]: row for row in health.health_rows(tmp_path)}
+
+    assert (rows["brief"]["state"], rows["brief"]["words"]) == (state, words)
+    assert rows["brief"]["detected"] == (words == FOUND)
+    # Only brief is ever looked at: nothing else has a record or evidence.
+    assert checked == (["brief"] if is_checked else [])
+    assert rows["usage"]["state"] == rows["mail"]["state"] == health.NOT_SET_UP
+
+
+def _lists(root: Path, monkeypatch, capsys) -> tuple[dict, dict, str]:
+    """Brief's row in `status --json` and in `list`, and terminal `status`'s lines."""
+    health_row = next(row for row in health.health_rows(root) if row["id"] == "brief")
+    capsys.readouterr()
+    agent.list_tools(root)
+    listed = next(tool for tool in json.loads(capsys.readouterr().out) if tool["id"] == "brief")
+    monkeypatch.setattr(main, "REPO_ROOT", root)
+    assert main.main(["status"]) == 0
+    return health_row, listed, capsys.readouterr().out
+
+
+def test_a_fresh_clone_lists_every_tool_as_not_set_up(tmp_path: Path, monkeypatch, capsys) -> None:
+    # Every check would pass (a fresh clone fools some: they only read checked-in files),
+    # and none is even run: no tool has its evidence, so nothing reads set up.
+    checked = _fake_checks(monkeypatch, passes=True)
+
+    states = {row["state"] for row in health.health_rows(tmp_path)}
+    _, listed, lines = _lists(tmp_path, monkeypatch, capsys)
+
+    assert states == {health.NOT_SET_UP}
+    assert listed["status"] == "not set up" and "done" not in lines
+    assert checked == []
+    assert list(tmp_path.iterdir()) == []  # reading the lists writes nothing
+
+
+def test_a_found_tool_reads_the_same_in_every_list(tmp_path: Path, monkeypatch, capsys) -> None:
+    _set_up_brief_by_hand(tmp_path)
+    _fake_checks(monkeypatch, passes=True)
+
+    health_row, listed, lines = _lists(tmp_path, monkeypatch, capsys)
+
+    assert (health_row["state"], health_row["wired"]) == (health.ACTIVE, True)
+    assert (listed["status"], listed["wired"], listed["detected"]) == (progress.DONE, True, True)
+    # Setup ran none of its steps, and says so: the record stays what was saved (nothing).
+    assert [step["status"] for step in listed["steps"]] == [""]
+    brief_line = next(line for line in lines.splitlines() if line.startswith("brief"))
+    assert progress.DONE in brief_line and detect.FOUND_WORDS in brief_line
+    assert not (tmp_path / ".setup").exists()
+
+
+def test_a_found_tool_runs_on_defaults_without_its_optional_config(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # Only the check's command is faked: the real verify.check scans for placeholders, and
+    # would call the config file that was never made (sleepmode.toml) missing.
+    monkeypatch.setattr(platforms, "current", lambda: platforms.WINDOWS)  # sleepmode's OS
+    monkeypatch.setattr(verify.shutil, "which", lambda name: f"/bin/{name}")
     monkeypatch.setattr(
-        health.verify,
-        "check",
-        lambda root, tool, data, t: checked.append(tool.id) or verify.CheckResult(False, "x"),
+        verify.subprocess, "run", lambda argv, **_: subprocess.CompletedProcess(argv, 0, "", "")
     )
+    (tmp_path / "tools" / "sleepmode" / ".venv").mkdir(parents=True)
+    (tmp_path / ".mcp.json").write_text(json.dumps({"mcpServers": {"sleepmode": {}}}))
 
-    rows = {r["id"]: r["state"] for r in health.health_rows(tmp_path)}
+    def row() -> dict:
+        return next(row for row in health.health_rows(tmp_path) if row["id"] == "sleepmode")
 
-    assert checked == ["brief"]
-    assert rows["brief"] == health.DOWN
-    assert rows["usage"] == rows["mail"] == health.NOT_SET_UP
+    assert (row()["state"], row()["detected"]) == (health.ACTIVE, True)
+    # Taken on with its first step result: the record setup saves carries the skip too.
+    assert agent.mark(tmp_path, "sleepmode", "openrgb", progress.SKIPPED) == 0
+    assert (row()["state"], row()["detected"]) == (health.ACTIVE, False)
+
+
+def test_no_evidence_path_is_checked_in() -> None:
+    # A path in the repo exists on a fresh clone, so it could never show a tool was set up.
+    paths = sorted({path for tool in registry.load() for path in tool.evidence})
+    git = shutil.which("git")
+    listed = git and subprocess.run(
+        [git, "ls-files", "--", *paths], cwd=REPO, capture_output=True, text=True
+    )
+    if not listed or listed.returncode != 0:
+        pytest.skip("not a git checkout")
+    assert listed.stdout == ""
 
 
 # Nothing to run, so nothing to check: Signal's own rules (AGENTS.md) and copytone's samples.

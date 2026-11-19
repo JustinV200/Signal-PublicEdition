@@ -9,7 +9,7 @@ import copy
 from pathlib import Path
 from typing import Any
 
-from signal_setup import platforms, progress, registry, verify, wiring
+from signal_setup import detect, platforms, progress, registry, verify, wiring
 from signal_setup.intro import intro_text
 from signal_setup.prereqs import missing
 from signal_setup.registry import Tool
@@ -44,8 +44,21 @@ def _announce(tool: Tool, asker: TerminalAsker) -> None:
         asker.say(f"Needs {prereq.name}: {prereq.how_to_get()}")
 
 
+def _drop_tool(tool: Tool, data: dict[str, Any], asker: TerminalAsker) -> None:
+    """Take `tool` out of the picks after a required step was declined, and say what that did.
+
+    Skipped only once setup has a record of it. One it never ran a step of just stops
+    being picked, so a tool set up by hand goes on reading as found.
+    """
+    if progress.has_record(data, tool.id):
+        asker.say(f"That step is required, so {tool.name} is skipped for now.")
+    else:
+        asker.say(f"That step is required, so {tool.name} is left as it is: no longer picked.")
+    progress.unpick(data, tool.id)
+
+
 def _run_tool(root: Path, tool: Tool, data: dict[str, Any], rerun: bool) -> None:
-    """Run the tool's steps in order. Skipping a required step skips the whole tool.
+    """Run the tool's steps in order. Declining a required step drops the whole tool.
 
     A required run or copy step just runs (the tool was picked, so there's nothing to
     ask); other steps ask first, so an optional one can be skipped.
@@ -64,9 +77,10 @@ def _run_tool(root: Path, tool: Tool, data: dict[str, Any], rerun: bool) -> None
             wanted = asker.confirm(f"{tool.name}: {step.title}?", step.default)
         if not wanted:
             if not step.optional:
-                asker.say(f"That step is required, so {tool.name} is skipped for now.")
-                progress.set_skipped(data, tool.id)
+                _drop_tool(tool, data, asker)
                 return
+            # A found tool is taken on first, as run_step does: one skip mustn't half-finish it.
+            progress.adopt(data, tool.id, detect.record_to_adopt(root, tool, data))
             progress.set_step(data, tool.id, step.id, progress.SKIPPED)
             continue
         status = run_step(root, tool, step, data, asker)
@@ -89,16 +103,27 @@ def _say_missing_programs(tools: tuple[Tool, ...]) -> None:
 
 def _wire(root: Path, data: dict[str, Any]) -> None:
     """Show the permissions summary, ask once, then write the config."""
-    tools, platform = registry.load(), platforms.current()
-    plan = wiring.build_plan(tools, data, platform)
+    platform = platforms.current()
+    plan = wiring.build_plan(registry.load(), data, platform)
     print(style("\nWhat setup will add to Claude Code:", BOLD))
     print("\n".join(wiring.summary_lines(plan)))
     if not TerminalAsker().confirm("Add to Claude Code?", True):
         print("Nothing written. Run `setup` again when you're ready.")
         return
-    for note in wiring.apply_plan(root, tools, plan, platform):
+    for note in wiring.apply_plan(root, plan, platform):
         print(note)
     print("Written. Restart Claude Code (or run /mcp) to load the tools.")
+
+
+def _report(root: Path, tool_ids: list[str], data: dict[str, Any]) -> None:
+    """Print each tool's closing line, read as `setup status` reads it.
+
+    A tool found already set up (detect.py) is done there, so it is here, and says so.
+    """
+    found = detect.find(root, data)
+    for tool_id in tool_ids:
+        line = verify.report_line(root, registry.by_id(tool_id), found.progress)
+        print(f"{line}; {detect.FOUND_WORDS}" if tool_id in found.ids else line)
 
 
 def _save_changes(root: Path, before: dict[str, Any], after: dict[str, Any]) -> None:
@@ -106,7 +131,8 @@ def _save_changes(root: Path, before: dict[str, Any], after: dict[str, Any]) -> 
 
     `setup step` may wait at a prompt for minutes while the setup window records other
     steps, picks and skips; saving its whole early snapshot would undo those. A settings
-    step can re-run other steps, so every status that changed counts, not just one.
+    step can re-run other steps, and a tool found already set up is taken on with its
+    first result (progress.adopt), so every status that changed counts, not just one.
     Nothing changed (say the step still needs input): nothing is written.
     """
     fresh = progress.load(root)
@@ -160,18 +186,20 @@ def run_setup(root: Path, only_tool: str | None = None) -> None:
     else:
         print(intro_text())
         _say_missing_programs(tools)
-        chosen = choose(tools, data, platforms.current())
-        for tool in tools:
-            if tool.id not in chosen:
-                progress.set_skipped(data, tool.id)
-        data["chosen"] = chosen
+        # The checklist reads a tool found already set up by hand as done, as the lists do.
+        chosen = choose(tools, detect.find(root, data), platforms.current())
+        progress.skip_unpicked(data, (tool.id for tool in tools), chosen)
+        # A copy: a declined required step takes its tool out of the saved picks, which
+        # mustn't drop it (and so the tool after it) from the run and the closing report.
+        data["chosen"] = list(chosen)
     progress.save(root, data)
     for tool_id in chosen:
         tool = registry.by_id(tool_id)
         _warn_needs(tool, data["chosen"], TerminalAsker())
         _run_tool(root, tool, data, rerun=bool(only_tool))
+    # A declined step is recorded without a save: keep the file in step with what wire reads.
+    progress.save(root, data)
     _wire(root, data)
-    for tool_id in chosen:
-        print(verify.report_line(root, registry.by_id(tool_id), data))
+    _report(root, chosen, data)
     if not only_tool and TerminalAsker().confirm("Take the short tour of how it all works?", False):
         tour.run(root)

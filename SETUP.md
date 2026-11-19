@@ -38,7 +38,7 @@ Close it any time: it reopens at the first unfinished tool. The Tools list in th
 Setup goes in this order:
 
 1. A short intro and a check for missing programs.
-2. A checklist of tools with their platform. Pick the ones you want; the rest are skipped and get nothing.
+2. A checklist of tools with their platform. Pick the ones you want; setup adds nothing for the rest. A tool you set up by hand reads `done; found already set up`. Picked or not, the entries you made for it in Claude Code stay as they are.
 3. Each tool's steps: install, config, sign-ins, settings. Required installs just run; other steps ask first. Optional steps say their default; press Enter to take it or `s` to skip.
 4. One summary of what it will add to Claude Code (MCP servers, permission rules, hooks). You confirm once.
 5. A check of every tool you picked, then an optional tour.
@@ -67,7 +67,7 @@ setup config mail-digest --set RunTimes=07:00,18:00
 ## What setup writes
 
 - Each tool's config, copied from its example and filled in with your values (gitignored), or a tracked file such as a `schedule.psd1`.
-- `.mcp.json` with the servers of the tools you picked, and `.claude/settings.local.json` with their permission rules and hooks. Your own entries in both are kept. It never sets a permission mode.
+- `.mcp.json` with the servers of the tools you picked, and `.claude/settings.local.json` with their permission rules and hooks. Your own entries in both are kept: setup lists what it added in `.setup/ledger.json` and only ever takes out or replaces those. It never sets a permission mode.
 - `.env` (from `.env.example`) for non-secret values such as a Spotify client ID.
 - Your email address in the mail tool's `SELF_ADDRESS` and the calendar's `OWNER_EMAIL`. These are source constants on purpose: the digest only ever goes to that address, and nothing at runtime can change it.
 - Optionally, usage in Claude Code's status line (`~/.claude/settings.json`), only if you have no status line already.
@@ -82,7 +82,7 @@ Never type a password, token, code or client secret into the chat. Steps that ne
 
 ## Removing a tool
 
-`setup choose` with the tool left out, then `setup wire --yes`, or tell Claude "remove <tool>". Its MCP server, permission rules and hooks are taken out; its local files stay until you delete them. To remove a scheduled task, run the tool's `unregister.ps1` (or `install-schedule.ps1 -Uninstall` for jobhunt).
+`setup choose` with the tool left out, then `setup wire --yes`, or tell Claude "remove <tool>". The MCP server, permission rules and hooks setup added for it are taken out; its local files stay until you delete them. Setup can't remove entries you made by hand, so delete those yourself: the tool's server under `mcpServers` in `.mcp.json`, and its rules under `permissions.allow`, its name in `enabledMcpjsonServers` and its hooks under `hooks` in `.claude/settings.local.json`. To remove a scheduled task, run the tool's `unregister.ps1` (or `install-schedule.ps1 -Uninstall` for jobhunt).
 
 ## Linux
 

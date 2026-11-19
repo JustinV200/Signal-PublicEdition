@@ -1,11 +1,10 @@
 """The tool checklist: every tool with its platform label and status; the user picks by number.
 
 Tools that don't run on this OS are dimmed and labelled "not on <os>", and can't be picked.
+A tool found already set up by hand (detect.py) reads `done; found already set up`.
 """
 
-from typing import Any
-
-from signal_setup import platforms, progress
+from signal_setup import detect, platforms, progress
 from signal_setup.registry import Tool
 from signal_setup.terminal import DIM, style
 
@@ -18,9 +17,8 @@ STATUS_WORDS = {
 }
 
 
-def _row(number: int, tool: Tool, data: dict[str, Any], picked: bool, platform: str) -> str:
-    """One checklist line: tick, number, name, platform label, status, any OS limit."""
-    status = STATUS_WORDS[progress.tool_status(data, tool, platform)]
+def _row(number: int, tool: Tool, status: str, picked: bool, platform: str) -> str:
+    """One checklist line: tick, number, name, platform label, status words, any OS limit."""
     mark = "x" if picked else " "
     line = f"[{mark}] {number:2}. {tool.name}  ({platforms.label(tool)}; {status})"
     if not platforms.is_supported(tool, platform):
@@ -45,13 +43,27 @@ def _toggle(answer: str, tools: tuple[Tool, ...], picked: set[str], platform: st
     return ""
 
 
-def choose(tools: tuple[Tool, ...], data: dict[str, Any], platform: str) -> list[str]:
-    """Show the checklist until the user presses Enter. Returns the picked ids in setup order."""
-    picked = {t for t in data["chosen"] if any(t == tool.id for tool in tools)}
+def _status_words(tool: Tool, found: detect.Found, platform: str) -> str:
+    """The tool's status in words; a tool found already set up says how setup knows."""
+    words = STATUS_WORDS[progress.tool_status(found.progress, tool, platform)]
+    return f"{words}; {detect.FOUND_WORDS}" if tool.id in found.ids else words
+
+
+def choose(tools: tuple[Tool, ...], found: detect.Found, platform: str) -> list[str]:
+    """Show the checklist until the user presses Enter. Returns the picked ids in setup order.
+
+    Args:
+        tools: The registry tools, in setup order.
+        found: detect.find's result: the progress to read (a tool found already set up
+            reads done) and which tools were found, so their rows say so.
+        platform: The current platform.
+    """
+    picked = {t for t in found.progress["chosen"] if any(t == tool.id for tool in tools)}
     while True:
         print("\nPick the tools you want (type numbers to tick or untick, 'all', 'none'):")
         for number, tool in enumerate(tools, 1):
-            print(_row(number, tool, data, tool.id in picked, platform))
+            status = _status_words(tool, found, platform)
+            print(_row(number, tool, status, tool.id in picked, platform))
         answer = input("\nNumbers, or Enter when done: ").strip().lower()
         if not answer:
             return [t.id for t in tools if t.id in picked]
