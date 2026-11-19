@@ -53,7 +53,7 @@ See [schedule/README.md](schedule/README.md) to remove it again.
 
 ## 5. Let Claude use it
 
-Setup's **Add to Claude Code** puts the `calendar` server in `.mcp.json` (here it's already there). Restart Claude Code so it loads. Changing an event the tool didn't add opens an Allow/Deny dialog on your PC; to turn that off, see Security in [README.md](README.md).
+Setup's **Add to Claude Code** puts the `calendar` server in `.mcp.json`. Restart Claude Code so it loads. Changing an event the tool didn't add opens an Allow/Deny dialog on your PC; to turn that off, see Security in [README.md](README.md).
 
 ## Later
 
