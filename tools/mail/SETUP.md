@@ -27,7 +27,9 @@ Run every command below from the repo root (the folder with `setup.ps1`).
    - **Finish**: tick "I agree to the Google API Services: User Data Policy", click **Continue**, then click **Create**.
 3. In the left menu click **Audience**, or open https://console.cloud.google.com/auth/audience.
    - Under **Test users** click **+ Add users**, add your Gmail address (and any other account you plan to add in section 5), and click **Save**.
+   - If **Publish app** is greyed out ("complete your configuration on the Branding page"), open https://console.cloud.google.com/auth/branding, fill in **Application home page**, **Application privacy policy link** and an **Authorized domain** matching both, then click **Save**. Any public page works for the links, e.g. your repo's page and its mail README, with authorized domain `github.com`.
    - Under **Publishing status** (it says "Testing") click **Publish app**, then **Confirm**. The status should now say **In production**.
+   - Sign-ins made while the app was "Testing" keep their 7-day expiry even after you publish. Re-run `mail add <alias>` once for every account already signed in.
    - **This matters.** While the app is "Testing", Google expires every sign-in after 7 days and you'd have to re-run `mail add` each week. In production, sign-ins last until you revoke them.
    - Don't submit the app for verification. You're its only user, and the warning described in step 4 is how Google handles unverified personal apps.
 4. Optional: in the left menu click **Data Access** → **Add or remove scopes**. Under "Manually add scopes", paste the line below, click **Add to table**, **Update**, then **Save**:
