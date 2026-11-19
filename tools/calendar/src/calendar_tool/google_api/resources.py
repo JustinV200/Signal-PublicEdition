@@ -1,7 +1,9 @@
-"""The three Calendar API reads the tool makes: the primary calendar, the calendar list, events.
+"""The list reads the tool makes: the primary calendar, the calendar list, events.
 
 Each asks only for the fields it uses (the `fields` parameter), so descriptions,
-attendees, locations and links never even reach this process.
+locations and links never even reach this process. Attendees come back without
+addresses (self and response only): with two or more, maxAttendees cuts the list
+to the owner's own entry; with exactly one, Google returns that one, whoever it is.
 """
 
 from dataclasses import dataclass
@@ -15,7 +17,16 @@ from calendar_tool.google_api.client import CalendarClient
 # The API's own page-size maximum for events.list.
 EVENTS_PAGE_SIZE = 250
 CALENDAR_FIELDS = "items(id,summary,summaryOverride,selected),nextPageToken"
-EVENT_FIELDS = "items(status,summary,start,end),nextPageToken"
+# id and the rest beyond status/summary/start/end are what an edit needs: which event,
+# whether it repeats, whether the tool made it (the private marker), and the owner's
+# own response to an invite.
+EVENT_FIELDS = (
+    "items(id,status,summary,start,end,recurringEventId,organizer/self,"
+    "attendees(self,responseStatus),extendedProperties/private),nextPageToken"
+)
+# With more attendees than this, Google returns only the owner's own entry; with
+# exactly this many, it returns that entry whoever's it is.
+MAX_ATTENDEES = 1
 
 
 @dataclass(frozen=True)
@@ -76,7 +87,15 @@ def list_events(
         "singleEvents": "true",
         "orderBy": "startTime",
         "maxResults": EVENTS_PAGE_SIZE,
+        "maxAttendees": MAX_ATTENDEES,
         "fields": EVENT_FIELDS,
     }
-    # Calendar ids hold '@' and '#', which must not rewrite the URL path.
-    return client.get_all_items(f"calendars/{quote(calendar_id, safe='')}/events", params)
+    return client.get_all_items(f"calendars/{quote_id(calendar_id)}/events", params)
+
+
+def quote_id(identifier: str) -> str:
+    """A calendar or event id made safe for one URL path segment.
+
+    Calendar ids hold '@' and '#', which must not rewrite the URL path.
+    """
+    return quote(identifier, safe="")

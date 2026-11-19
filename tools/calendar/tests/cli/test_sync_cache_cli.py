@@ -8,8 +8,8 @@ import requests
 from google.auth.exceptions import RefreshError
 from support.fakes import SECRET_CLIENT_SECRET, SECRET_REFRESH_TOKEN, FakeSession
 
+from calendar_tool.agenda import describe_sync_status
 from calendar_tool.cli import commands, main
-from calendar_tool.cli.sync_status import describe_sync_status
 from calendar_tool.google_api import CalendarClient
 
 OLD_CACHE = '{"updated": "2026-10-20T08:00:00-04:00", "events": []}'

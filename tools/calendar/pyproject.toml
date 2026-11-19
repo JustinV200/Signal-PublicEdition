@@ -1,7 +1,7 @@
 [project]
 name = "calendar-tool"
 version = "0.1.0"
-description = "Read-only Google Calendar access for the owner's idle board: agenda and a cached JSON file."
+description = "Google Calendar for the owner: the idle board's cached agenda, plus Claude tools to add and change events."
 authors = [
     { email = "owner@example.com" }
 ]
@@ -10,12 +10,18 @@ license = "PolyForm-Noncommercial-1.0.0"
 dependencies = [
     # Credentials, token refresh and AuthorizedSession for the Calendar REST calls.
     "google-auth==2.62.0",
+    # The stdio MCP server (`calendar mcp`). Same pin as tools/mail and the other tools.
+    "mcp==2.3.0",
     # The HTTP transport AuthorizedSession is built on. Same pin as tools/mail.
     "requests==2.34.2",
+    # The owner's Allow/Deny dialog before changing an event the tool didn't create (packages/confirm).
+    "signal-confirm",
     # Shared Google OAuth plumbing: client file, browser sign-in, DPAPI (packages/googleauth).
     "signal-googleauth",
     # The atomic JSON writer for .state/agenda.json (packages/jsonstate, stdlib only).
     "signal-jsonstate",
+    # The data frame around Google-derived text in MCP results (packages/untrusted, stdlib only).
+    "signal-untrusted",
 ]
 
 [project.scripts]
@@ -31,6 +37,8 @@ module-name = "calendar_tool"
 [tool.uv.sources]
 signal-googleauth = { path = "../../packages/googleauth", editable = true }
 signal-jsonstate = { path = "../../packages/jsonstate", editable = true }
+signal-confirm = { path = "../../packages/confirm", editable = true }
+signal-untrusted = { path = "../../packages/untrusted", editable = true }
 
 [dependency-groups]
 dev = [

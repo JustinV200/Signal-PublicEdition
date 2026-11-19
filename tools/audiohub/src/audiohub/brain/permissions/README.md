@@ -44,7 +44,10 @@ adapts it to `can_use_tool`.
     or device path, or a failed resolve counts as secret (fails closed).
   - Every tool call reaches the gate: `sdk_options`' PreToolUse hook answers "ask" for every
     tool. The account's claude.ai connectors (Gmail, Docs, Calendar) are off
-    (`disableClaudeAiConnectors`), so voice has no calendar tool.
+    (`disableClaudeAiConnectors`). The repo's own `calendar` server does load: its write tools
+    (`calendar_create`, `calendar_update`, `calendar_delete`, `calendar_respond`) are kept out
+    by `sdk_options.HIDDEN_MCP_TOOLS`, and `calendar_agenda` isn't in the defaults, so the gate
+    refuses it and voice hands calendar questions off.
 - `PermissionRequest(tool_name, tool_input)`, `PermissionDecision(is_allowed, refusal=None)`,
   and the type alias `PermissionDecider`.
 - `is_auto_allowed(tool_name, auto_allow_tools, auto_allow_mcp_servers)`: the name check alone.

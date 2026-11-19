@@ -22,8 +22,11 @@ TOKEN_PATH: Path = STATE_DIR / "token.bin"
 # The idle board's agenda, rewritten by `calendar sync-cache`.
 CACHE_PATH: Path = STATE_DIR / "agenda.json"
 
-# The last sync-cache outcome (cli/sync_status.py), since the scheduled run has no stderr.
+# The last sync-cache outcome (agenda/sync_status.py), since the scheduled run has no stderr.
 SYNC_STATUS_PATH: Path = STATE_DIR / "sync_status.json"
+
+# Optional settings: `[changes] confirm` (changes/settings.py). Absent means the defaults.
+CONFIG_PATH: Path = STATE_DIR / "calendar.toml"
 
 # The Desktop-app OAuth client is the mail tool's (same Google Cloud project).
 CLIENT_SECRETS_PATH: Path = REPO_ROOT / "tools" / "mail" / ".state" / "google_client.json"

@@ -1,4 +1,4 @@
-"""Tests for sign_in: only the two read-only scopes; saves the token only for the right account."""
+"""Tests for sign_in: exactly the two calendar scopes; saves the token only for the right one."""
 
 import json
 import os
@@ -13,8 +13,9 @@ from calendar_tool.errors import CalendarError
 
 pytestmark = pytest.mark.skipif(os.name != "nt", reason="DPAPI is Windows-only")
 
-READ_ONLY_SCOPES = {
-    "https://www.googleapis.com/auth/calendar.events.readonly",
+# Events read/write, and the calendar list read-only: nothing that can change calendars themselves.
+EXPECTED_SCOPES = {
+    "https://www.googleapis.com/auth/calendar.events",
     "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
 }
 
@@ -33,7 +34,7 @@ def write_client(path: Path) -> None:
     ("signed_in_as", "is_saved"),
     [("owner@example.com", True), ("someone-else@example.com", False)],
 )
-def test_sign_in_asks_only_read_only_scopes_and_checks_the_account(
+def test_sign_in_asks_only_the_two_scopes_and_checks_the_account(
     tmp_path: Path, signed_in_as: str, is_saved: bool
 ) -> None:
     client_path, token_path = tmp_path / "google_client.json", tmp_path / "token.bin"
@@ -50,11 +51,12 @@ def test_sign_in_asks_only_read_only_scopes_and_checks_the_account(
 
     if is_saved:
         run()
-        assert load_sign_in(token_path).refresh_token == SECRET_REFRESH_TOKEN
+        saved = load_sign_in(token_path)
+        assert saved.refresh_token == SECRET_REFRESH_TOKEN and saved.scopes == SCOPES
         assert SECRET_REFRESH_TOKEN.encode() not in token_path.read_bytes()
     else:
         with pytest.raises(CalendarError, match="nothing was saved"):
             run()
         assert not token_path.exists()
-    assert set(SCOPES) == READ_ONLY_SCOPES and len(SCOPES) == 2
+    assert set(SCOPES) == EXPECTED_SCOPES and len(SCOPES) == 2
     assert asked == [tuple(SCOPES)]
